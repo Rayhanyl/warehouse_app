@@ -1,6 +1,8 @@
 import { ArrowLeft, ArrowRight, Eye, EyeOff, MapPin, ShieldCheck, Waypoints } from "lucide-react";
 import { FormEvent, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import axios from "axios";
+import { login } from "@/features/auth/api";
 
 const benefits = [
   {
@@ -21,14 +23,35 @@ const benefits = [
 ];
 
 export function LoginPage() {
+  const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [isSubmitted, setIsSubmitted] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setIsSubmitted(true);
+    setErrorMessage(null);
+    setIsSubmitting(true);
+
+    try {
+      await login({ username: username.trim(), password });
+      navigate("/dashboard", { replace: true });
+    } catch (error) {
+      if (axios.isAxiosError<{ error?: { code?: string; message?: string } }>(error)) {
+        const code = error.response?.data?.error?.code;
+        setErrorMessage(
+          code === "AUTH_TOO_MANY_ATTEMPTS"
+            ? "Terlalu banyak percobaan login. Silakan coba lagi nanti."
+            : error.response?.data?.error?.message ?? "Nama pengguna atau kata sandi tidak valid.",
+        );
+      } else {
+        setErrorMessage("Login gagal. Periksa koneksi ke server lalu coba lagi.");
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   return (
@@ -98,16 +121,7 @@ export function LoginPage() {
               <form className="mt-9 space-y-5" onSubmit={handleSubmit}>
                 <div>
                   <label className="text-sm font-semibold" htmlFor="username">Nama pengguna</label>
-                  <input
-                    autoComplete="username"
-                    className="mt-2 h-12 w-full rounded-md border border-[#c7c1b6] bg-white px-4 text-sm outline-none transition-colors placeholder:text-[#8a948d] focus:border-[#2f7a68] focus:ring-2 focus:ring-[#2f7a68]/15"
-                    id="username"
-                    maxLength={64}
-                    onChange={(event) => setUsername(event.target.value)}
-                    placeholder="Masukkan nama pengguna"
-                    required
-                    value={username}
-                  />
+                  <input autoComplete="username" className="mt-2 h-12 w-full rounded-md border border-[#c7c1b6] bg-white px-4 text-sm outline-none transition-colors placeholder:text-[#8a948d] focus:border-[#2f7a68] focus:ring-2 focus:ring-[#2f7a68]/15" id="username" maxLength={64} onChange={(event) => setUsername(event.target.value)} placeholder="Masukkan nama pengguna" required value={username} />
                 </div>
                 <div>
                   <div className="flex items-center justify-between">
@@ -115,38 +129,23 @@ export function LoginPage() {
                     <span className="text-xs text-[#7a8781]">Wajib diisi</span>
                   </div>
                   <div className="relative mt-2">
-                    <input
-                      autoComplete="current-password"
-                      className="h-12 w-full rounded-md border border-[#c7c1b6] bg-white px-12 pr-12 text-sm outline-none transition-colors placeholder:text-[#8a948d] focus:border-[#2f7a68] focus:ring-2 focus:ring-[#2f7a68]/15"
-                      id="password"
-                      maxLength={255}
-                      onChange={(event) => setPassword(event.target.value)}
-                      placeholder="Masukkan kata sandi"
-                      required
-                      type={showPassword ? "text" : "password"}
-                      value={password}
-                    />
+                    <input autoComplete="current-password" className="h-12 w-full rounded-md border border-[#c7c1b6] bg-white px-12 pr-12 text-sm outline-none transition-colors placeholder:text-[#8a948d] focus:border-[#2f7a68] focus:ring-2 focus:ring-[#2f7a68]/15" id="password" maxLength={255} onChange={(event) => setPassword(event.target.value)} placeholder="Masukkan kata sandi" required type={showPassword ? "text" : "password"} value={password} />
                     <ShieldCheck className="pointer-events-none absolute top-1/2 left-4 -translate-y-1/2 text-[#7a8781]" size={17} aria-hidden="true" />
-                    <button
-                      aria-label={showPassword ? "Sembunyikan kata sandi" : "Tampilkan kata sandi"}
-                      className="absolute top-1/2 right-3 grid size-8 -translate-y-1/2 place-items-center rounded text-[#7a8781] hover:text-[#17252a]"
-                      onClick={() => setShowPassword(!showPassword)}
-                      type="button"
-                    >
+                    <button aria-label={showPassword ? "Sembunyikan kata sandi" : "Tampilkan kata sandi"} className="absolute top-1/2 right-3 grid size-8 -translate-y-1/2 place-items-center rounded text-[#7a8781] hover:text-[#17252a]" onClick={() => setShowPassword(!showPassword)} type="button">
                       {showPassword ? <EyeOff size={17} aria-hidden="true" /> : <Eye size={17} aria-hidden="true" />}
                     </button>
                   </div>
                 </div>
 
-                {isSubmitted && (
+                {errorMessage && (
                   <p className="rounded-md border border-[#f1c7b5] bg-[#f9e8df] px-4 py-3 text-sm leading-6 text-[#8d422d]" role="status">
-                    Form login siap dihubungkan ke endpoint autentikasi backend.
+                    {errorMessage}
                   </p>
                 )}
 
-                <button className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-md bg-[#2f7a68] px-5 text-sm font-semibold text-white transition-colors hover:bg-[#3b8f79] focus:ring-2 focus:ring-[#2f7a68]/30 focus:ring-offset-2 focus:outline-none" type="submit">
-                  Masuk ke ruang kerja
-                  <ArrowRight size={17} aria-hidden="true" />
+                <button className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-md bg-[#2f7a68] px-5 text-sm font-semibold text-white transition-colors hover:bg-[#3b8f79] focus:ring-2 focus:ring-[#2f7a68]/30 focus:ring-offset-2 focus:outline-none disabled:cursor-not-allowed disabled:opacity-60" disabled={isSubmitting} type="submit">
+                  {isSubmitting ? "Memeriksa akun..." : "Masuk ke ruang kerja"}
+                  {!isSubmitting && <ArrowRight size={17} aria-hidden="true" />}
                 </button>
               </form>
 

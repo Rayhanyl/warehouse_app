@@ -1,35 +1,29 @@
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
 
 export interface AuthUser {
-  id: string;
-  name: string;
+  id: number;
+  username: string;
+  email: string;
+  full_name: string;
+  role_id: number;
+  role_name: string;
+  is_active: boolean;
   permissions: string[];
+  warehouse_ids: number[];
 }
 
 interface AuthState {
   accessToken: string | null;
-  refreshToken: string | null;
   user: AuthUser | null;
-  setSession: (session: {
-    accessToken: string;
-    refreshToken?: string;
-  }) => void;
+  setAccessToken: (accessToken: string | null) => void;
   setUser: (user: AuthUser | null) => void;
   logout: () => void;
 }
 
-export const useAuthStore = create<AuthState>()(
-  persist(
-    (set) => ({
-      accessToken: null,
-      refreshToken: null,
-      user: null,
-      setSession: ({ accessToken, refreshToken = "" }) =>
-        set({ accessToken, refreshToken }),
-      setUser: (user) => set({ user }),
-      logout: () => set({ accessToken: null, refreshToken: null, user: null }),
-    }),
-    { name: "wms-auth" },
-  ),
-);
+export const useAuthStore = create<AuthState>((set) => ({
+  accessToken: null,
+  user: null,
+  setAccessToken: (accessToken) => set({ accessToken }),
+  setUser: (user) => set({ user }),
+  logout: () => set({ accessToken: null, user: null }),
+}));

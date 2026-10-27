@@ -1,7 +1,10 @@
 import { createBrowserRouter } from "react-router-dom";
 import { AppShell } from "@/components/layout/AppShell";
 import { LandingPage } from "@/pages/LandingPage";
-import { LoginPage } from "@/pages/LoginPage";
+import { LoginPage } from "@/features/auth/pages/LoginPage";
+import { ProtectedRoute } from "@/features/auth/components/ProtectedRoute";
+import { AdminPlaceholderPage, DashboardPage } from "@/pages/DashboardPage";
+import { AuditLogsPage } from "@/features/audit-logs/pages/AuditLogsPage";
 
 export const router = createBrowserRouter([
   {
@@ -13,17 +16,24 @@ export const router = createBrowserRouter([
     element: <LoginPage />,
   },
   {
-    path: "/dashboard",
-    element: <AppShell />,
+    element: <ProtectedRoute />,
     children: [
       {
-        index: true,
-        element: (
-          <main>
-            <h1>Dashboard</h1>
-            <p>Warehouse Management System</p>
-          </main>
-        ),
+        element: <AppShell />,
+        children: [
+          {
+            path: "/dashboard",
+            element: <DashboardPage />,
+          },
+          {
+            path: "/audit-logs",
+            element: <AuditLogsPage />,
+          },
+          {
+            path: "*",
+            element: <AdminPlaceholderPage />,
+          },
+        ],
       },
     ],
   },
