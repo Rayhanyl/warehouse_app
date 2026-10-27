@@ -1,0 +1,12 @@
+node_modules
+dist
+coverage
+.env
+.env.local
+*.local
+*.tsbuildinfo
+
+# Local project documentation and agent instructions
+docs/
+AGENTS.MD
+AGENTS.md
