@@ -1,0 +1,17 @@
+[
+  {
+    "label": "Stok hingga tingkat lokasi",
+    "description": "Saldo dapat ditelusuri hingga lokasi penyimpanan di setiap gudang.",
+    "icon": "boxes"
+  },
+  {
+    "label": "Alur kerja terkendali",
+    "description": "Posting dan transfer mengikuti status serta permission pengguna.",
+    "icon": "route"
+  },
+  {
+    "label": "Aktivitas terlacak",
+    "description": "Perubahan dapat dilihat kembali oleh pengguna yang berwenang.",
+    "icon": "shield-check"
+  }
+]

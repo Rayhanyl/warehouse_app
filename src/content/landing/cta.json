@@ -1,0 +1,6 @@
+{
+  "eyebrow": "Lihat cara kerjanya",
+  "title": "Setiap pergerakan stok tercatat dengan jelas.",
+  "description": "Mulai dari alur kerja, lalu masuk ke Jejakstok saat siap mengelola operasi gudang.",
+  "button": { "label": "Masuk ke Jejakstok", "href": "/login" }
+}

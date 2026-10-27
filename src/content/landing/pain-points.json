@@ -1,0 +1,17 @@
+[
+  {
+    "problem": "Stok di sistem tidak sama dengan stok di rak.",
+    "answer": "Stock opname membekukan lokasi, menyimpan snapshot, lalu menerapkan selisih setelah disetujui.",
+    "accent": "teal"
+  },
+  {
+    "problem": "Barang dalam perjalanan tidak jelas posisinya.",
+    "answer": "Transfer dua tahap menandai stok dalam perjalanan sampai gudang tujuan menerimanya.",
+    "accent": "amber"
+  },
+  {
+    "problem": "Sulit menelusuri siapa mengubah apa.",
+    "answer": "Stock ledger dan audit log mencatat aktor, waktu, dan objek untuk setiap perubahan.",
+    "accent": "blue"
+  }
+]

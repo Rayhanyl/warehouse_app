@@ -1,0 +1,13 @@
+{
+  "eyebrow": "Sistem manajemen gudang",
+  "title": "Satu kendali untuk setiap pergerakan stok.",
+  "description": "Pantau saldo per lokasi, proses penerimaan dan transfer, lalu telusuri setiap perubahan melalui alur kerja yang sesuai permission.",
+  "primaryCta": { "label": "Lihat alur kerja", "href": "#workflow" },
+  "secondaryCta": { "label": "Masuk ke ruang kerja", "href": "/login" },
+  "visualLabel": "Alur operasional",
+  "visualCaption": "Contoh alur dari purchase order sampai stock ledger.",
+  "image": {
+    "src": "/assets/image/warehouse.jpg",
+    "alt": "Ilustrasi gudang dengan rak, palet, dan meja kerja operasional"
+  }
+}

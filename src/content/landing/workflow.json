@@ -1,0 +1,11 @@
+{
+  "eyebrow": "Alur kerja yang jelas",
+  "title": "Dari penerimaan sampai stock opname, dalam satu sistem.",
+  "description": "Setiap langkah memberi konteks yang dibutuhkan untuk menjaga saldo dan perpindahan stok tetap dapat ditelusuri.",
+  "steps": [
+    { "number": "01", "label": "Terima", "description": "Catat penerimaan barang terhadap purchase order, penuh maupun sebagian.", "image": { "src": "/assets/image/receive.jpg", "alt": "Ilustrasi penerimaan barang dengan daftar pemeriksaan dan kardus" } },
+    { "number": "02", "label": "Simpan", "description": "Saldo tersimpan per gudang dan lokasi penyimpanan.", "image": { "src": "/assets/image/store.jpg", "alt": "Ilustrasi kardus yang tersimpan pada rak gudang" } },
+    { "number": "03", "label": "Pindahkan", "description": "Transfer antar-gudang melalui persetujuan, pengiriman, dan penerimaan.", "image": { "src": "/assets/image/transfer.jpg", "alt": "Ilustrasi pemindahan kardus menggunakan troli palet" } },
+    { "number": "04", "label": "Hitung", "description": "Cocokkan stok fisik dengan sistem lewat stock opname yang disetujui.", "image": { "src": "/assets/image/count.jpg", "alt": "Ilustrasi pemeriksaan stok menggunakan daftar dan kaca pembesar" } }
+  ]
+}

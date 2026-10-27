@@ -1,0 +1,22 @@
+{
+  "eyebrow": "Kendali untuk operasi yang dapat ditelusuri",
+  "title": "Setiap perubahan memiliki konteks.",
+  "description": "Atur akses, batasi pekerjaan berdasarkan gudang, dan simpan jejak perubahan tanpa menampilkan data operasional pada halaman publik.",
+  "points": [
+    "Akses sesuai peran",
+    "Pembatasan per gudang",
+    "Catatan yang tidak dapat diubah"
+  ],
+  "controlPanel": {
+    "label": "Kontrol ruang kerja",
+    "items": [
+      { "label": "Akses sesuai peran", "status": "Aktif" },
+      { "label": "Pembatasan per gudang", "status": "Terjaga" },
+      { "label": "Catatan perubahan", "status": "Tercatat" }
+    ]
+  },
+  "image": {
+    "src": "/assets/image/rack.jpg",
+    "alt": "Ilustrasi rak gudang dan daftar pemeriksaan lokasi"
+  }
+}
