@@ -17,6 +17,11 @@ interface LoginCredentials {
   password: string;
 }
 
+interface ChangePasswordCredentials {
+  current_password: string;
+  new_password: string;
+}
+
 function getRefreshToken() {
   return localStorage.getItem(refreshTokenKey);
 }
@@ -134,4 +139,8 @@ export async function logout() {
     useAuthStore.getState().logout();
     clearRefreshToken();
   }
+}
+
+export async function changePassword(credentials: ChangePasswordCredentials) {
+  await apiClient.post("/auth/change-password", credentials);
 }

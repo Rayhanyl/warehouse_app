@@ -5,6 +5,7 @@ import { LoginPage } from "@/features/auth/pages/LoginPage";
 import { ProtectedRoute } from "@/features/auth/components/ProtectedRoute";
 import { AdminPlaceholderPage, DashboardPage } from "@/pages/DashboardPage";
 import { AuditLogsPage } from "@/features/audit-logs/pages/AuditLogsPage";
+import { ProfilePage } from "@/features/auth/pages/ProfilePage";
 
 export const router = createBrowserRouter([
   {
@@ -28,6 +29,10 @@ export const router = createBrowserRouter([
           {
             path: "/audit-logs",
             element: <AuditLogsPage />,
+          },
+          {
+            path: "/profile",
+            element: <ProfilePage />,
           },
           {
             path: "*",
