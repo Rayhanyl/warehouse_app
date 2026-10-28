@@ -10,3 +10,6 @@ coverage
 docs/
 AGENTS.MD
 AGENTS.md
+.codex/
+.agents/
+CLAUDE.md
