@@ -9,8 +9,9 @@ import {
   Waypoints,
 } from "lucide-react";
 import { FormEvent, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { login } from "@/features/auth/api";
+import { extractApiErrorInfo } from "@/lib/errors";
 
 interface ApiErrorPayload {
   error?: {
@@ -20,6 +21,10 @@ interface ApiErrorPayload {
       locked_until?: string;
     };
   };
+}
+
+interface LoginLocationState {
+  from?: string;
 }
 
 const operationalBenefits = [
@@ -62,8 +67,25 @@ function formatLockoutMessage(
   );
 }
 
+function resolvePostLoginPath(state: unknown): string {
+  if (!state || typeof state !== "object" || !("from" in state)) {
+    return "/dashboard";
+  }
+  const from = (state as LoginLocationState).from;
+  if (
+    typeof from === "string" &&
+    from.startsWith("/") &&
+    !from.startsWith("//") &&
+    from !== "/login"
+  ) {
+    return from;
+  }
+  return "/dashboard";
+}
+
 export function LoginPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [showPassword, setShowPassword] = useState(false);
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -72,11 +94,13 @@ export function LoginPage() {
     password?: string;
   }>({});
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [errorRequestId, setErrorRequestId] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setErrorMessage(null);
+    setErrorRequestId(null);
     setFieldErrors({});
 
     const trimmedUsername = username.trim();
@@ -101,8 +125,14 @@ export function LoginPage() {
 
     try {
       await login({ username: trimmedUsername, password });
-      navigate("/dashboard", { replace: true });
+      const destination = resolvePostLoginPath(location.state);
+      navigate(destination, { replace: true });
     } catch (error) {
+      const info = extractApiErrorInfo(error);
+      if (info.requestId) {
+        setErrorRequestId(info.requestId);
+      }
+
       if (axios.isAxiosError<ApiErrorPayload>(error)) {
         const status = error.response?.status;
         const apiError = error.response?.data?.error;
@@ -120,6 +150,18 @@ export function LoginPage() {
         } else if (status === 422 || code === "VALIDATION_ERROR") {
           setErrorMessage(
             "Format nama pengguna atau kata sandi tidak sesuai ketentuan.",
+          );
+        } else if (info.isTimeout) {
+          setErrorMessage(
+            "Permintaan masuk melewati batas waktu. Periksa koneksi jaringan Anda lalu coba lagi.",
+          );
+        } else if (info.isNetworkError || !error.response) {
+          setErrorMessage(
+            "Tidak dapat terhubung ke server. Periksa koneksi jaringan lalu coba lagi.",
+          );
+        } else if (status !== undefined && status >= 500) {
+          setErrorMessage(
+            "Terjadi gangguan sementara pada server. Silakan coba masuk beberapa saat lagi.",
           );
         } else {
           setErrorMessage(
@@ -151,11 +193,6 @@ export function LoginPage() {
           aria-label="Informasi ruang kerja Jejakstok"
           className="relative hidden overflow-hidden bg-ink-950 px-10 py-10 text-canvas-50 lg:flex lg:flex-col lg:justify-between xl:px-14"
         >
-          <div
-            aria-hidden="true"
-            className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_18%,rgb(38_104_87_/_0.28),transparent_58%)]"
-          />
-
           <div className="relative flex items-center justify-between gap-4">
             <Link
               className="inline-flex min-h-11 items-center gap-3 rounded-[var(--radius-sm)] py-1 pr-2"
@@ -178,7 +215,7 @@ export function LoginPage() {
           </div>
 
           <div className="relative my-auto py-8">
-            <div className="overflow-hidden rounded-[var(--radius-lg)] border border-[#8a9995]/50 bg-ink-800 shadow-[0_20px_50px_rgb(0_0_0_/_0.35)]">
+            <div className="overflow-hidden rounded-[var(--radius-lg)] border border-[#8a9995]/50 bg-ink-800 shadow-[var(--shadow-2)]">
               <img
                 className="aspect-[16/7] w-full object-cover object-center"
                 src="/assets/image/login.jpg"
@@ -270,11 +307,11 @@ export function LoginPage() {
 
           <div className="mx-auto my-auto w-full max-w-md py-8 sm:py-12">
             <div className="rounded-[var(--radius-lg)] border border-line-200 bg-surface-0 p-6 shadow-[var(--shadow-2)] sm:p-9">
-              <div className="inline-flex items-center gap-2 rounded-[var(--radius-sm)] bg-teal-100 px-2.5 py-1 text-xs font-semibold text-teal-700">
-                <span>Gerbang ruang kerja</span>
-              </div>
+              <p className="text-xs font-semibold text-teal-700">
+                Gerbang ruang kerja operasional
+              </p>
 
-              <h1 className="mt-3 text-[clamp(1.625rem,2vw+1rem,2rem)] leading-[1.25] font-bold tracking-[-0.015em] text-ink-950">
+              <h1 className="mt-2 text-[clamp(1.625rem,2vw+1rem,2rem)] leading-[1.25] font-bold tracking-[-0.015em] text-ink-950">
                 Masuk ke Jejakstok
               </h1>
               <p className="mt-2 text-sm leading-[1.6] text-slate-700">
@@ -289,7 +326,12 @@ export function LoginPage() {
                   aria-live="polite"
                   className="mt-5 rounded-[var(--radius-sm)] border border-red-600 bg-red-100 px-4 py-3 text-sm leading-relaxed font-medium text-red-700"
                 >
-                  {errorMessage}
+                  <p>{errorMessage}</p>
+                  {errorRequestId && (
+                    <p className="mt-1 tabular-nums text-xs text-red-700">
+                      ID Permintaan: {errorRequestId}
+                    </p>
+                  )}
                 </div>
               )}
 
