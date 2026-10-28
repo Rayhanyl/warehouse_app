@@ -4,14 +4,20 @@ import type { MenuItem } from "./types";
 
 export const menuQueryKey = ["navigation", "my-menu"];
 
-function normalizeMenu(items: MenuItem[]): MenuItem[] {
+export function normalizeMenu(items: MenuItem[]): MenuItem[] {
   return items
     .filter((item) => item.is_visible !== false && item.is_active !== false)
-    .sort((left, right) => left.sort_order - right.sort_order)
+    .sort((left, right) => left.sort_order - right.sort_order || left.id - right.id)
     .map((item) => ({
       ...item,
       children: normalizeMenu(Array.isArray(item.children) ? item.children : []),
-    }));
+    }))
+    .filter((item) => {
+      if (item.menu_type === "group") {
+        return item.children.length > 0;
+      }
+      return true;
+    });
 }
 
 async function fetchMyMenu() {

@@ -1,11 +1,13 @@
 import { createBrowserRouter } from "react-router-dom";
 import { AppShell } from "@/components/layout/AppShell";
-import { LandingPage } from "@/pages/LandingPage";
-import { LoginPage } from "@/features/auth/pages/LoginPage";
-import { ProtectedRoute } from "@/features/auth/components/ProtectedRoute";
-import { AdminPlaceholderPage, DashboardPage } from "@/pages/DashboardPage";
 import { AuditLogsPage } from "@/features/audit-logs/pages/AuditLogsPage";
+import { ProtectedRoute } from "@/features/auth/components/ProtectedRoute";
+import { LoginPage } from "@/features/auth/pages/LoginPage";
 import { ProfilePage } from "@/features/auth/pages/ProfilePage";
+import { CategoriesPage } from "@/features/master-data/categories/pages/CategoriesPage";
+import { UomsPage } from "@/features/master-data/uoms/pages/UomsPage";
+import { AdminPlaceholderPage, DashboardPage } from "@/pages/DashboardPage";
+import { LandingPage } from "@/pages/LandingPage";
 
 export const router = createBrowserRouter([
   {
@@ -25,6 +27,30 @@ export const router = createBrowserRouter([
           {
             path: "/dashboard",
             element: <DashboardPage />,
+          },
+          {
+            path: "/master/categories",
+            element: <CategoriesPage />,
+          },
+          {
+            path: "/categories",
+            element: <CategoriesPage />,
+          },
+          {
+            path: "/master/uom",
+            element: <UomsPage />,
+          },
+          {
+            path: "/master/uoms",
+            element: <UomsPage />,
+          },
+          {
+            path: "/uom",
+            element: <UomsPage />,
+          },
+          {
+            path: "/uoms",
+            element: <UomsPage />,
           },
           {
             path: "/audit-logs",

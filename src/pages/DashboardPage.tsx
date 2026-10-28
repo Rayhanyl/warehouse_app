@@ -1,63 +1,166 @@
-import { ArrowRight, ClipboardCheck, PackageCheck, Repeat2, Truck } from "lucide-react";
+import {
+  ArrowRight,
+  Boxes,
+  ClipboardCheck,
+  PackageCheck,
+  Repeat2,
+} from "lucide-react";
 import { Link } from "react-router-dom";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { getMenuIconComponent } from "@/features/navigation/icons";
+import { useAuthStore } from "@/features/auth/store";
 import { useMyMenu } from "@/features/navigation/api";
+import type { MenuItem } from "@/features/navigation/types";
 
 const workflow = [
-  { label: "Purchase order", icon: ClipboardCheck },
-  { label: "Goods receipt", icon: PackageCheck },
-  { label: "Saldo stok", icon: Truck },
-  { label: "Transfer / stock opname", icon: Repeat2 },
+  {
+    step: "01",
+    label: "Purchase order",
+    detail: "Buat atau pantau dokumen pesanan ke pemasok.",
+    icon: ClipboardCheck,
+  },
+  {
+    step: "02",
+    label: "Penerimaan barang",
+    detail: "Verifikasi fisik barang masuk melalui goods receipt.",
+    icon: PackageCheck,
+  },
+  {
+    step: "03",
+    label: "Saldo & lokasi stok",
+    detail: "Periksa posisi stok aktual per gudang dan lokasi rak.",
+    icon: Boxes,
+  },
+  {
+    step: "04",
+    label: "Transfer & stock opname",
+    detail: "Catat perpindahan antar-lokasi dan penyesuaian fisik.",
+    icon: Repeat2,
+  },
 ];
 
+interface ShortcutEntry {
+  item: MenuItem;
+  category: string | null;
+}
+
+function collectShortcuts(
+  items: MenuItem[],
+  parentCategory: string | null = null,
+): ShortcutEntry[] {
+  return items.flatMap((item) => {
+    const descendants = collectShortcuts(item.children, item.name);
+    if (
+      item.path &&
+      item.path !== "/dashboard" &&
+      item.menu_type !== "group" &&
+      item.children.length === 0
+    ) {
+      return [{ item, category: parentCategory }, ...descendants];
+    }
+    return descendants;
+  });
+}
+
 export function DashboardPage() {
+  const user = useAuthStore((state) => state.user);
   const { data: menu = [] } = useMyMenu();
-  const shortcuts = menu.flatMap((item) => [item, ...item.children]).filter((item) => item.path !== "/dashboard").slice(0, 6);
+  const shortcuts = collectShortcuts(menu).slice(0, 9);
+  const displayName = user?.full_name || user?.username;
 
   return (
     <>
       <PageHeader
-        description="Jejakstok membantu Anda mencatat penerimaan, transfer, dan stock opname dengan jejak yang dapat ditelusuri."
-        title="Selamat datang"
+        description="Pantau alur dokumen operasional gudang dari penerimaan barang hingga penyesuaian stok."
+        title={displayName ? `Selamat datang, ${displayName}` : "Selamat datang"}
       />
-      <section aria-labelledby="workflow-title" className="rounded-2xl border border-[#d9dfd8] bg-white p-5 shadow-sm sm:p-6">
-        <div className="mb-6">
-          <h2 className="text-lg font-bold" id="workflow-title">Alur kerja gudang</h2>
-          <p className="mt-1 text-sm text-[#667876]">Ikuti setiap pergerakan stok dari dokumen sampai pencatatan.</p>
+      <section
+        aria-labelledby="workflow-title"
+        className="rounded-[var(--radius-lg)] border border-line-200 bg-surface-0 p-5 shadow-[var(--shadow-1)] sm:p-6"
+      >
+        <div className="mb-5">
+          <h2 className="text-lg font-bold text-ink-950" id="workflow-title">
+            Alur kerja gudang
+          </h2>
+          <p className="mt-1 text-sm text-slate-700">
+            Ikuti setiap pergerakan stok dari dokumen pemesanan hingga pencatatan buku besar.
+          </p>
         </div>
-        <div className="grid gap-3 md:grid-cols-4">
-          {workflow.map(({ label, icon: Icon }, index) => (
-            <div className="flex items-center gap-3" key={label}>
-              <div className="grid size-11 shrink-0 place-items-center rounded-xl bg-[#e3ebe3] text-[#2f7a68]">
-                <Icon aria-hidden="true" size={21} />
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {workflow.map(({ step, label, detail, icon: Icon }) => (
+            <div
+              className="flex flex-col justify-between rounded-[var(--radius-md)] border border-line-200 bg-canvas-50/55 p-4"
+              key={step}
+            >
+              <div className="flex items-center justify-between gap-2">
+                <div className="grid size-11 shrink-0 place-items-center rounded-[var(--radius-md)] bg-teal-100 text-teal-700">
+                  <Icon aria-hidden="true" size={20} />
+                </div>
+                <span className="rounded-full bg-surface-0 px-2.5 py-1 text-xs font-bold text-slate-600 tabular-nums">
+                  Tahap {step}
+                </span>
               </div>
-              <div className="flex items-center gap-3">
-                <span className="text-sm font-semibold">{label}</span>
-                {index < workflow.length - 1 && <ArrowRight aria-hidden="true" className="hidden text-[#9aacab] md:block" size={17} />}
+              <div className="mt-4">
+                <p className="text-sm font-semibold text-ink-950">{label}</p>
+                <p className="mt-1 text-xs leading-5 text-slate-700">{detail}</p>
               </div>
             </div>
           ))}
         </div>
       </section>
-      <section aria-labelledby="shortcut-title" className="mt-6">
+      <section aria-labelledby="shortcut-title" className="mt-6 sm:mt-8">
         <div className="mb-4">
-          <h2 className="text-lg font-bold" id="shortcut-title">Pintasan modul</h2>
-          <p className="mt-1 text-sm text-[#667876]">Buka modul yang tersedia untuk akun Anda.</p>
+          <h2 className="text-lg font-bold text-ink-950" id="shortcut-title">
+            Pintasan modul
+          </h2>
+          <p className="mt-1 text-sm text-slate-700">
+            Buka modul kerja yang tersedia sesuai izin peran akun Anda.
+          </p>
         </div>
         {shortcuts.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-[#b8c5c1] bg-white p-6 text-sm text-[#667876]">Belum ada pintasan modul yang tersedia.</div>
+          <div className="rounded-[var(--radius-lg)] border border-dashed border-line-500 bg-surface-0 p-6 text-sm text-slate-700">
+            Belum ada pintasan modul yang tersedia untuk akun Anda.
+          </div>
         ) : (
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {shortcuts.map((item) => (
-              <Link className="rounded-xl border border-[#d9dfd8] bg-white p-4 transition hover:-translate-y-0.5 hover:border-[#2f7a68] hover:shadow-sm focus-visible:ring-2 focus-visible:ring-[#2f7a68]" key={item.id} to={item.path}>
-                <p className="font-semibold">{item.name}</p>
-                <p className="mt-1 text-xs leading-5 text-[#667876]">Buka halaman {item.name.toLocaleLowerCase()}.</p>
-              </Link>
-            ))}
+            {shortcuts.map(({ item, category }) => {
+              const Icon = getMenuIconComponent(item);
+              return (
+                <Link
+                  className="group flex min-h-14 items-start justify-between gap-3 rounded-[var(--radius-lg)] border border-line-200 bg-surface-0 p-4 shadow-[var(--shadow-1)] transition hover:border-teal-600"
+                  key={item.id}
+                  to={item.path}
+                >
+                  <div className="flex min-w-0 items-start gap-3">
+                    <div className="grid size-10 shrink-0 place-items-center rounded-[var(--radius-md)] bg-teal-100 text-teal-700">
+                      <Icon aria-hidden="true" size={18} />
+                    </div>
+                    <div className="min-w-0">
+                      {category && (
+                        <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-600">
+                          {category}
+                        </p>
+                      )}
+                      <p className="font-semibold text-ink-950">{item.name}</p>
+                      <p className="mt-1 text-xs leading-5 text-slate-700">
+                        Buka halaman {item.name.toLocaleLowerCase()}.
+                      </p>
+                    </div>
+                  </div>
+                  <ArrowRight
+                    aria-hidden="true"
+                    className="mt-1 shrink-0 text-slate-600 transition-transform duration-150 group-hover:translate-x-0.5 group-hover:text-teal-700"
+                    size={16}
+                  />
+                </Link>
+              );
+            })}
           </div>
         )}
       </section>
-      <p className="mt-8 text-sm text-[#667876]">Data operasional tersedia di halaman masing-masing modul.</p>
+      <p className="mt-8 text-sm text-slate-600">
+        Ringkasan metrik operasional akan tampil otomatis setelah modul transaksi gudang diaktifkan.
+      </p>
     </>
   );
 }

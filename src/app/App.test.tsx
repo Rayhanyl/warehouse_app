@@ -5,35 +5,245 @@ import { vi } from "vitest";
 import { AppShell } from "@/components/layout/AppShell";
 import * as authApi from "@/features/auth/api";
 import { LoginPage } from "@/features/auth/pages/LoginPage";
-import { menuQueryKey } from "@/features/navigation/api";
+import { ProfilePage } from "@/features/auth/pages/ProfilePage";
+import { useAuthStore } from "@/features/auth/store";
+import { menuQueryKey, normalizeMenu } from "@/features/navigation/api";
+import type { MenuItem } from "@/features/navigation/types";
+import { DashboardPage } from "@/pages/DashboardPage";
 import { LandingPage } from "@/pages/LandingPage";
 
-describe("AppShell", () => {
-  it("renders the application navigation", () => {
-    const queryClient = new QueryClient();
-    queryClient.setQueryData(menuQueryKey, [
+const sampleNestedMenu: MenuItem[] = [
+  {
+    id: 1,
+    code: "dashboard",
+    name: "Dasbor",
+    short_name: "Dasbor",
+    path: "/dashboard",
+    icon: "layout-dashboard",
+    menu_type: "item",
+    parent_id: null,
+    sort_order: 1,
+    permission_code: null,
+    children: [],
+  },
+  {
+    id: 2,
+    code: "master_data",
+    name: "Data Master",
+    short_name: "Master",
+    path: "/master",
+    icon: "database",
+    menu_type: "group",
+    parent_id: null,
+    sort_order: 2,
+    permission_code: null,
+    children: [
       {
-        id: 1,
-        code: "dashboard",
-        name: "Dasbor",
-        path: "/dashboard",
-        icon: "dashboard",
+        id: 21,
+        code: "items",
+        name: "Barang",
+        short_name: "Barang",
+        path: "/items",
+        icon: "package",
+        menu_type: "item",
+        parent_id: 2,
+        sort_order: 1,
+        permission_code: "items:read",
+        children: [],
+      },
+      {
+        id: 22,
+        code: "warehouses",
+        name: "Gudang",
+        short_name: "Gudang",
+        path: "/warehouses",
+        icon: "warehouse",
+        menu_type: "item",
+        parent_id: 2,
+        sort_order: 2,
+        permission_code: "warehouses:read",
+        children: [],
+      },
+    ],
+  },
+];
+
+describe("normalizeMenu", () => {
+  it("filters inactive/invisible items, sorts by sort_order, and removes empty group nodes", () => {
+    const raw: MenuItem[] = [
+      {
+        id: 10,
+        code: "empty_group",
+        name: "Grup Kosong",
+        path: "/empty",
+        icon: "database",
+        menu_type: "group",
         parent_id: null,
-        sort_order: 0,
+        sort_order: 1,
+        permission_code: null,
+        children: [
+          {
+            id: 11,
+            code: "hidden_child",
+            name: "Anak Tersembunyi",
+            path: "/hidden",
+            icon: "package",
+            menu_type: "item",
+            parent_id: 10,
+            sort_order: 1,
+            permission_code: null,
+            is_visible: false,
+            children: [],
+          },
+        ],
+      },
+      {
+        id: 2,
+        code: "second",
+        name: "Menu Kedua",
+        path: "/second",
+        icon: "boxes",
+        menu_type: "item",
+        parent_id: null,
+        sort_order: 20,
         permission_code: null,
         children: [],
       },
-    ]);
-    render(
+      {
+        id: 1,
+        code: "first",
+        name: "Menu Pertama",
+        path: "/first",
+        icon: "layout-dashboard",
+        menu_type: "item",
+        parent_id: null,
+        sort_order: 10,
+        permission_code: null,
+        children: [],
+      },
+    ];
+
+    const normalized = normalizeMenu(raw);
+    expect(normalized.map((item) => item.code)).toEqual(["first", "second"]);
+  });
+});
+
+describe("AppShell, Sidebar, DashboardPage, & ProfilePage", () => {
+  beforeEach(() => {
+    useAuthStore.getState().setAuthenticated("token-uji", {
+      id: 1,
+      username: "budi.supervisor",
+      email: "budi@wms.local",
+      full_name: "Budi Santoso",
+      role_id: 2,
+      role_name: "Warehouse Supervisor",
+      is_active: true,
+      permissions: ["items:read", "warehouses:read"],
+      warehouse_ids: [1, 2],
+    });
+  });
+
+  afterEach(() => {
+    useAuthStore.getState().logout();
+  });
+
+  it("renders sidebar, topbar with visible Menu label, collapsed group flyout, command palette keyboard nav, and dashboard workflow", () => {
+    const queryClient = new QueryClient();
+    queryClient.setQueryData(menuQueryKey, sampleNestedMenu);
+
+    const { container } = render(
       <QueryClientProvider client={queryClient}>
         <MemoryRouter initialEntries={["/dashboard"]}>
-          <AppShell />
+          <Routes>
+            <Route element={<AppShell />}>
+              <Route path="/dashboard" element={<DashboardPage />} />
+              <Route path="/items" element={<div>Halaman Barang</div>} />
+              <Route path="/profile" element={<ProfilePage />} />
+            </Route>
+          </Routes>
         </MemoryRouter>
       </QueryClientProvider>,
     );
 
+    expect(container.textContent).not.toMatch(/[—–]/);
     expect(screen.getByText("Jejakstok")).toBeInTheDocument();
-    expect(screen.getAllByText("Dasbor").length).toBeGreaterThan(0);
+    expect(
+      screen.getByRole("heading", { level: 1, name: "Selamat datang, Budi Santoso" }),
+    ).toBeInTheDocument();
+
+    const mobileMenuButton = screen.getByRole("button", { name: "Buka menu navigasi" });
+    expect(mobileMenuButton).toHaveTextContent("Menu");
+    expect(mobileMenuButton).toHaveAttribute("aria-expanded", "false");
+
+    fireEvent.click(mobileMenuButton);
+    expect(mobileMenuButton).toHaveAttribute("aria-expanded", "true");
+    fireEvent.keyDown(window, { key: "Escape" });
+    expect(mobileMenuButton).toHaveAttribute("aria-expanded", "false");
+
+    const warehouseSelect = screen.getByLabelText("Pilih gudang aktif") as HTMLSelectElement;
+    expect(warehouseSelect.value).toBe("1");
+    fireEvent.change(warehouseSelect, { target: { value: "2" } });
+    expect(warehouseSelect.value).toBe("2");
+
+    const expandedGroupBtn = screen.getByRole("button", { name: "Data Master" });
+    expect(expandedGroupBtn).toHaveAttribute("aria-expanded", "false");
+    fireEvent.click(expandedGroupBtn);
+    expect(expandedGroupBtn).toHaveAttribute("aria-expanded", "true");
+    fireEvent.click(expandedGroupBtn);
+    expect(expandedGroupBtn).toHaveAttribute("aria-expanded", "false");
+
+    const collapseButtons = screen.getAllByRole("button", { name: "Ciutkan navigasi" });
+    fireEvent.click(collapseButtons[0]);
+
+    const expandButtons = screen.getAllByRole("button", { name: "Perluas navigasi" });
+    expect(expandButtons.length).toBeGreaterThan(0);
+
+    const collapsedGroupBtn = screen.getByRole("button", { name: "Data Master" });
+    expect(collapsedGroupBtn).toHaveAttribute("aria-expanded", "false");
+    fireEvent.click(collapsedGroupBtn);
+    expect(collapsedGroupBtn).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByRole("region", { name: "Submenu Data Master" })).toBeInTheDocument();
+
+    fireEvent.keyDown(window, { key: "k", ctrlKey: true });
+    const paletteDialog = screen.getByRole("dialog", { name: "Pencarian menu" });
+    expect(paletteDialog).toBeInTheDocument();
+
+    const paletteInput = screen.getByLabelText("Ketik nama menu atau rute");
+    fireEvent.keyDown(paletteInput, { key: "ArrowDown" });
+    fireEvent.keyDown(paletteInput, { key: "Enter" });
+
+    expect(screen.getByText("Halaman Barang")).toBeInTheDocument();
+  });
+
+  it("renders empty menu message when user has no visible menus and supports ProfilePage password visibility toggles", () => {
+    const queryClient = new QueryClient();
+    queryClient.setQueryData(menuQueryKey, []);
+
+    const { container } = render(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter initialEntries={["/profile"]}>
+          <Routes>
+            <Route element={<AppShell />}>
+              <Route path="/profile" element={<ProfilePage />} />
+            </Route>
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+
+    expect(container.textContent).not.toMatch(/[—–]/);
+    expect(
+      screen.getByText("Belum ada menu yang tersedia untuk peran akun Anda."),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 1, name: "Profil" })).toBeInTheDocument();
+
+    const toggleCurrentBtn = screen.getByRole("button", {
+      name: "Tampilkan kata sandi saat ini",
+    });
+    fireEvent.click(toggleCurrentBtn);
+    expect(
+      screen.getByRole("button", { name: "Sembunyikan kata sandi saat ini" }),
+    ).toHaveAttribute("aria-pressed", "true");
   });
 });
 
