@@ -1,53 +1,136 @@
-import { ArrowLeft, ArrowRight, Eye, EyeOff, MapPin, ShieldCheck, Waypoints } from "lucide-react";
+import axios from "axios";
+import {
+  ArrowLeft,
+  ArrowRight,
+  Eye,
+  EyeOff,
+  MapPin,
+  ShieldCheck,
+  Waypoints,
+} from "lucide-react";
 import { FormEvent, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import axios from "axios";
 import { login } from "@/features/auth/api";
 
-const benefits = [
+interface ApiErrorPayload {
+  error?: {
+    code?: string;
+    message?: string;
+    details?: {
+      locked_until?: string;
+    };
+  };
+}
+
+const operationalBenefits = [
   {
     icon: MapPin,
-    title: "Lihat posisi barang",
+    title: "Stok hingga tingkat lokasi",
     description: "Saldo dapat ditelusuri sampai gudang dan lokasi penyimpanan.",
   },
   {
     icon: Waypoints,
-    title: "Ikuti alur transaksi",
-    description: "Penerimaan dan transfer berjalan melalui status yang jelas.",
+    title: "Alur transaksi terkendali",
+    description:
+      "Penerimaan, transfer, dan stock opname berjalan mengikuti status dokumen.",
   },
   {
     icon: ShieldCheck,
-    title: "Bekerja sesuai akses",
-    description: "Menu dan tindakan mengikuti peran serta gudang yang ditugaskan.",
+    title: "Akses sesuai peran dan gudang",
+    description:
+      "Menu dan tindakan menyesuaikan permission serta penugasan gudang akun Anda.",
   },
-];
+] as const;
+
+function formatLockoutMessage(
+  lockedUntilIso?: string,
+  fallbackMessage?: string,
+) {
+  if (lockedUntilIso) {
+    const parsedDate = new Date(lockedUntilIso);
+    if (!Number.isNaN(parsedDate.getTime())) {
+      const formattedTime = new Intl.DateTimeFormat("id-ID", {
+        hour: "2-digit",
+        minute: "2-digit",
+      }).format(parsedDate);
+      return `Akun dikunci sementara karena terlalu banyak percobaan masuk. Silakan coba lagi setelah pukul ${formattedTime}.`;
+    }
+  }
+  return (
+    fallbackMessage ??
+    "Akun dikunci sementara karena terlalu banyak percobaan masuk. Silakan coba lagi beberapa saat lagi."
+  );
+}
 
 export function LoginPage() {
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<{
+    username?: string;
+    password?: string;
+  }>({});
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setErrorMessage(null);
+    setFieldErrors({});
+
+    const trimmedUsername = username.trim();
+    const nextFieldErrors: { username?: string; password?: string } = {};
+
+    if (trimmedUsername.length < 1 || trimmedUsername.length > 64) {
+      nextFieldErrors.username =
+        "Nama pengguna wajib diisi (1 sampai 64 karakter).";
+    }
+    if (password.length < 1 || password.length > 255) {
+      nextFieldErrors.password =
+        "Kata sandi wajib diisi (1 sampai 255 karakter).";
+    }
+
+    if (nextFieldErrors.username || nextFieldErrors.password) {
+      setFieldErrors(nextFieldErrors);
+      setErrorMessage("Periksa kembali isian form yang belum sesuai.");
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
-      await login({ username: username.trim(), password });
+      await login({ username: trimmedUsername, password });
       navigate("/dashboard", { replace: true });
     } catch (error) {
-      if (axios.isAxiosError<{ error?: { code?: string; message?: string } }>(error)) {
-        const code = error.response?.data?.error?.code;
-        setErrorMessage(
-          code === "AUTH_TOO_MANY_ATTEMPTS"
-            ? "Terlalu banyak percobaan login. Silakan coba lagi nanti."
-            : error.response?.data?.error?.message ?? "Nama pengguna atau kata sandi tidak valid.",
-        );
+      if (axios.isAxiosError<ApiErrorPayload>(error)) {
+        const status = error.response?.status;
+        const apiError = error.response?.data?.error;
+        const code = apiError?.code;
+
+        if (status === 429 || code === "AUTH_TOO_MANY_ATTEMPTS") {
+          setErrorMessage(
+            formatLockoutMessage(
+              apiError?.details?.locked_until,
+              apiError?.message,
+            ),
+          );
+        } else if (status === 401 || code === "AUTH_INVALID_CREDENTIALS") {
+          setErrorMessage("Nama pengguna atau kata sandi salah.");
+        } else if (status === 422 || code === "VALIDATION_ERROR") {
+          setErrorMessage(
+            "Format nama pengguna atau kata sandi tidak sesuai ketentuan.",
+          );
+        } else {
+          setErrorMessage(
+            apiError?.message ??
+              "Gagal memproses permintaan masuk. Silakan coba kembali.",
+          );
+        }
       } else {
-        setErrorMessage("Login gagal. Periksa koneksi ke server lalu coba lagi.");
+        setErrorMessage(
+          "Tidak dapat terhubung ke server. Periksa koneksi jaringan lalu coba lagi.",
+        );
       }
     } finally {
       setIsSubmitting(false);
@@ -55,109 +138,340 @@ export function LoginPage() {
   }
 
   return (
-    <main className="min-h-screen bg-[#f5f0e8] text-[#17252a]">
-      <div className="mx-auto grid min-h-screen max-w-[1440px] lg:grid-cols-[minmax(0,0.9fr)_minmax(480px,1.1fr)]">
-        <section className="relative hidden overflow-hidden bg-[#17252a] px-10 py-10 text-[#f5f0e8] lg:flex lg:flex-col lg:justify-between xl:px-16">
-          <div className="absolute inset-x-0 top-0 h-[48%] overflow-hidden" aria-hidden="true">
-            <img className="h-full w-full object-cover object-left opacity-35" src="/assets/image/login.jpg" alt="" />
-            <div className="absolute inset-0 bg-gradient-to-b from-[#17252a]/20 via-[#17252a]/60 to-[#17252a]" />
-          </div>
-          <div className="absolute -right-36 -bottom-36 size-[460px] rounded-full border border-[#52625d]/50" aria-hidden="true" />
-          <div className="absolute right-16 -bottom-20 size-[280px] rounded-full border border-[#52625d]/30" aria-hidden="true" />
-          <Link className="relative flex w-fit items-center gap-3" to="/" aria-label="Beranda Jejakstok">
-            <img className="size-10 rounded-lg object-cover" src="/assets/image/icon/icon.jpg" alt="" />
-            <span className="text-sm font-bold tracking-[0.12em] uppercase">Jejakstok</span>
-          </Link>
+    <div className="min-h-screen bg-canvas-50 text-ink-950">
+      <a
+        href="#login-form-section"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-4 focus:z-50 focus:inline-flex focus:min-h-11 focus:items-center focus:rounded-[var(--radius-sm)] focus:bg-teal-600 focus:px-4 focus:py-2.5 focus:text-sm focus:font-semibold focus:text-surface-0"
+      >
+        Lompat ke form masuk
+      </a>
 
-          <div className="relative max-w-xl py-16">
-            <p className="text-xs font-bold tracking-[0.14em] text-[#f1ad88] uppercase">Ruang kerja gudang</p>
-            <h1 className="mt-5 max-w-lg text-4xl leading-[1.15] font-bold tracking-[-0.025em] xl:text-5xl">
-              Lanjutkan pekerjaan dari tempat terakhir.
-            </h1>
-            <p className="mt-6 max-w-md text-base leading-8 text-[#d3d5ca]">
-              Masuk untuk melihat pekerjaan yang sesuai dengan peran dan gudang Anda.
+      <div className="mx-auto grid min-h-screen max-w-[1440px] lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
+        <aside
+          aria-label="Informasi ruang kerja Jejakstok"
+          className="relative hidden overflow-hidden bg-ink-950 px-10 py-10 text-canvas-50 lg:flex lg:flex-col lg:justify-between xl:px-14"
+        >
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_18%,rgb(38_104_87_/_0.28),transparent_58%)]"
+          />
+
+          <div className="relative flex items-center justify-between gap-4">
+            <Link
+              className="inline-flex min-h-11 items-center gap-3 rounded-[var(--radius-sm)] py-1 pr-2"
+              to="/"
+            >
+              <img
+                className="size-9 rounded-[var(--radius-sm)] border border-[#8a9995]/50 object-cover"
+                src="/assets/image/icon/icon.jpg"
+                alt=""
+              />
+              <span className="flex flex-col">
+                <span className="text-base leading-tight font-bold text-canvas-50">
+                  Jejakstok
+                </span>
+                <span className="text-xs leading-tight text-[#c8d0cd]">
+                  Sistem manajemen gudang
+                </span>
+              </span>
+            </Link>
+          </div>
+
+          <div className="relative my-auto py-8">
+            <div className="overflow-hidden rounded-[var(--radius-lg)] border border-[#8a9995]/50 bg-ink-800 shadow-[0_20px_50px_rgb(0_0_0_/_0.35)]">
+              <img
+                className="aspect-[16/7] w-full object-cover object-center"
+                src="/assets/image/login.jpg"
+                alt="Aktivitas pemeriksaan dan pencatatan stok di ruang kerja gudang"
+              />
+              <div className="flex flex-wrap items-center justify-between gap-2 border-t border-[#8a9995]/40 bg-ink-950 px-4 py-3">
+                <span className="text-xs font-medium text-[#e2e6e4]">
+                  Siklus terkendali: PO → GR → Transfer → Stock Opname
+                </span>
+                <span className="inline-flex rounded-[var(--radius-sm)] bg-teal-100 px-2.5 py-0.5 text-xs font-semibold text-teal-700">
+                  RBAC & Audit Aktif
+                </span>
+              </div>
+            </div>
+
+            <p className="mt-7 text-xs font-semibold text-amber-400">
+              Ruang kerja operasional gudang
             </p>
-            <div className="mt-10 space-y-5">
-              {benefits.map((benefit) => {
+            <h2 className="mt-2 max-w-lg text-[clamp(1.75rem,2.5vw+1rem,2.375rem)] leading-[1.2] font-bold tracking-[-0.02em] text-canvas-50">
+              Satu kendali untuk setiap pergerakan stok.
+            </h2>
+            <p className="mt-3 max-w-lg text-sm leading-[1.65] text-[#e2e6e4]">
+              Masuk untuk memproses purchase order, penerimaan barang, transfer
+              antar-gudang, serta stock opname sesuai peran dan penugasan gudang.
+            </p>
+
+            <dl className="mt-6 grid gap-3">
+              {operationalBenefits.map((benefit) => {
                 const Icon = benefit.icon;
                 return (
-                  <div className="flex max-w-md gap-4" key={benefit.title}>
-                    <span className="grid size-9 shrink-0 place-items-center rounded-md bg-[#293b3d] text-[#a6c7b5]">
+                  <div
+                    className="flex items-start gap-3.5 rounded-[var(--radius-md)] border border-[#8a9995]/40 bg-ink-800 p-3.5"
+                    key={benefit.title}
+                  >
+                    <span className="mt-0.5 inline-flex size-9 shrink-0 items-center justify-center rounded-[var(--radius-sm)] bg-teal-100 text-teal-700">
                       <Icon size={18} aria-hidden="true" />
                     </span>
-                    <div>
-                      <h2 className="text-sm font-semibold">{benefit.title}</h2>
-                      <p className="mt-1 text-sm leading-6 text-[#aebbb0]">{benefit.description}</p>
+                    <div className="min-w-0">
+                      <dt className="text-sm font-bold text-canvas-50">
+                        {benefit.title}
+                      </dt>
+                      <dd className="mt-0.5 text-xs leading-relaxed text-[#c8d0cd]">
+                        {benefit.description}
+                      </dd>
                     </div>
                   </div>
                 );
               })}
-            </div>
+            </dl>
           </div>
 
-          <p className="relative text-xs text-[#8fa19b]">Satu kendali untuk setiap pergerakan stok.</p>
-        </section>
+          <p className="relative text-xs text-[#c8d0cd]">
+            Jejakstok: Sistem manajemen gudang
+          </p>
+        </aside>
 
-        <section className="flex min-h-screen flex-col px-5 py-6 sm:px-10 lg:px-16 lg:py-10 xl:px-24">
-          <header className="flex items-center justify-between">
-            <Link className="flex items-center gap-3 lg:hidden" to="/" aria-label="Beranda Jejakstok">
-              <img className="size-9 rounded-lg object-cover" src="/assets/image/icon/icon.jpg" alt="" />
-              <span className="text-sm font-bold tracking-[0.12em] uppercase">Jejakstok</span>
+        <main
+          id="login-form-section"
+          className="flex min-h-screen flex-col justify-between px-4 py-6 sm:px-8 lg:px-14 lg:py-10 xl:px-20"
+        >
+          <header className="flex flex-wrap items-center justify-between gap-3">
+            <Link
+              className="inline-flex min-h-11 items-center gap-3 rounded-[var(--radius-sm)] py-1 pr-2 lg:hidden"
+              to="/"
+            >
+              <img
+                className="size-9 rounded-[var(--radius-sm)] border border-line-200 object-cover shadow-[var(--shadow-1)]"
+                src="/assets/image/icon/icon.jpg"
+                alt=""
+              />
+              <span className="flex flex-col">
+                <span className="text-base leading-tight font-bold text-ink-950">
+                  Jejakstok
+                </span>
+                <span className="text-xs leading-tight text-slate-600">
+                  Sistem manajemen gudang
+                </span>
+              </span>
             </Link>
-            <Link className="ml-auto inline-flex items-center gap-2 text-sm font-medium text-[#2f7a68] transition-colors hover:text-[#17252a]" to="/">
+
+            <Link
+              className="ml-auto inline-flex min-h-11 items-center gap-2 rounded-[var(--radius-sm)] border border-line-500 bg-surface-0 px-3.5 py-2 text-sm font-semibold text-ink-950 shadow-[var(--shadow-1)] transition-colors duration-150 hover:border-teal-600 hover:text-teal-600"
+              to="/"
+            >
               <ArrowLeft size={16} aria-hidden="true" />
-              Kembali ke beranda
+              <span>Kembali ke beranda</span>
             </Link>
           </header>
 
-          <div className="mx-auto flex w-full max-w-md flex-1 items-center py-12">
-            <div className="w-full">
-              <p className="text-xs font-bold tracking-[0.14em] text-[#2f7a68] uppercase">Akses ruang kerja</p>
-              <h1 className="mt-4 text-3xl leading-[1.2] font-bold tracking-[-0.02em] sm:text-4xl">Masuk ke Jejakstok</h1>
-              <p className="mt-4 text-sm leading-7 text-[#4e5e5d]">
-                Gunakan akun yang telah diberikan untuk mengakses pekerjaan gudang.
+          <div className="mx-auto my-auto w-full max-w-md py-8 sm:py-12">
+            <div className="rounded-[var(--radius-lg)] border border-line-200 bg-surface-0 p-6 shadow-[var(--shadow-2)] sm:p-9">
+              <div className="inline-flex items-center gap-2 rounded-[var(--radius-sm)] bg-teal-100 px-2.5 py-1 text-xs font-semibold text-teal-700">
+                <span>Gerbang ruang kerja</span>
+              </div>
+
+              <h1 className="mt-3 text-[clamp(1.625rem,2vw+1rem,2rem)] leading-[1.25] font-bold tracking-[-0.015em] text-ink-950">
+                Masuk ke Jejakstok
+              </h1>
+              <p className="mt-2 text-sm leading-[1.6] text-slate-700">
+                Gunakan akun yang telah ditugaskan untuk mengakses modul dan
+                gudang sesuai hak akses Anda.
               </p>
 
-              <form className="mt-9 space-y-5" onSubmit={handleSubmit}>
-                <div>
-                  <label className="text-sm font-semibold" htmlFor="username">Nama pengguna</label>
-                  <input autoComplete="username" className="mt-2 h-12 w-full rounded-md border border-[#c7c1b6] bg-white px-4 text-sm outline-none transition-colors placeholder:text-[#8a948d] focus:border-[#2f7a68] focus:ring-2 focus:ring-[#2f7a68]/15" id="username" maxLength={64} onChange={(event) => setUsername(event.target.value)} placeholder="Masukkan nama pengguna" required value={username} />
+              {errorMessage && (
+                <div
+                  id="login-form-error"
+                  role="alert"
+                  aria-live="polite"
+                  className="mt-5 rounded-[var(--radius-sm)] border border-red-600 bg-red-100 px-4 py-3 text-sm leading-relaxed font-medium text-red-700"
+                >
+                  {errorMessage}
                 </div>
+              )}
+
+              <form
+                className="mt-6 space-y-5"
+                noValidate
+                onSubmit={handleSubmit}
+              >
                 <div>
-                  <div className="flex items-center justify-between">
-                    <label className="text-sm font-semibold" htmlFor="password">Kata sandi</label>
-                    <span className="text-xs text-[#7a8781]">Wajib diisi</span>
+                  <div className="flex items-center justify-between gap-2">
+                    <label
+                      className="text-xs font-semibold text-ink-950"
+                      htmlFor="username"
+                    >
+                      Nama pengguna
+                    </label>
+                    <span
+                      id="username-hint"
+                      className="tabular-nums text-xs text-slate-600"
+                    >
+                      Wajib (1-64 karakter)
+                    </span>
+                  </div>
+                  <input
+                    id="username"
+                    name="username"
+                    type="text"
+                    autoComplete="username"
+                    maxLength={64}
+                    required
+                    disabled={isSubmitting}
+                    value={username}
+                    aria-invalid={
+                      Boolean(fieldErrors.username) || Boolean(errorMessage)
+                    }
+                    aria-describedby={
+                      fieldErrors.username
+                        ? "username-hint username-error"
+                        : errorMessage
+                          ? "username-hint login-form-error"
+                          : "username-hint"
+                    }
+                    onChange={(event) => {
+                      setUsername(event.target.value);
+                      if (fieldErrors.username) {
+                        setFieldErrors((prev) => ({
+                          ...prev,
+                          username: undefined,
+                        }));
+                      }
+                    }}
+                    placeholder="Contoh: staff.jkt"
+                    className={`mt-2 h-12 w-full rounded-[var(--radius-sm)] border bg-surface-0 px-3.5 text-sm text-ink-950 shadow-[var(--shadow-1)] transition-colors duration-150 placeholder:text-slate-600 disabled:cursor-not-allowed disabled:bg-canvas-50 ${
+                      fieldErrors.username
+                        ? "border-red-600"
+                        : "border-line-500 hover:border-ink-950 focus:border-teal-600"
+                    }`}
+                  />
+                  {fieldErrors.username && (
+                    <p
+                      id="username-error"
+                      className="mt-1.5 text-xs font-medium text-red-700"
+                    >
+                      {fieldErrors.username}
+                    </p>
+                  )}
+                </div>
+
+                <div>
+                  <div className="flex items-center justify-between gap-2">
+                    <label
+                      className="text-xs font-semibold text-ink-950"
+                      htmlFor="password"
+                    >
+                      Kata sandi
+                    </label>
+                    <span
+                      id="password-hint"
+                      className="tabular-nums text-xs text-slate-600"
+                    >
+                      Wajib (1-255 karakter)
+                    </span>
                   </div>
                   <div className="relative mt-2">
-                    <input autoComplete="current-password" className="h-12 w-full rounded-md border border-[#c7c1b6] bg-white px-12 pr-12 text-sm outline-none transition-colors placeholder:text-[#8a948d] focus:border-[#2f7a68] focus:ring-2 focus:ring-[#2f7a68]/15" id="password" maxLength={255} onChange={(event) => setPassword(event.target.value)} placeholder="Masukkan kata sandi" required type={showPassword ? "text" : "password"} value={password} />
-                    <ShieldCheck className="pointer-events-none absolute top-1/2 left-4 -translate-y-1/2 text-[#7a8781]" size={17} aria-hidden="true" />
-                    <button aria-label={showPassword ? "Sembunyikan kata sandi" : "Tampilkan kata sandi"} className="absolute top-1/2 right-3 grid size-8 -translate-y-1/2 place-items-center rounded text-[#7a8781] hover:text-[#17252a]" onClick={() => setShowPassword(!showPassword)} type="button">
-                      {showPassword ? <EyeOff size={17} aria-hidden="true" /> : <Eye size={17} aria-hidden="true" />}
+                    <input
+                      id="password"
+                      name="password"
+                      type={showPassword ? "text" : "password"}
+                      autoComplete="current-password"
+                      maxLength={255}
+                      required
+                      disabled={isSubmitting}
+                      value={password}
+                      aria-invalid={
+                        Boolean(fieldErrors.password) || Boolean(errorMessage)
+                      }
+                      aria-describedby={
+                        fieldErrors.password
+                          ? "password-hint password-error"
+                          : errorMessage
+                            ? "password-hint login-form-error"
+                            : "password-hint"
+                      }
+                      onChange={(event) => {
+                        setPassword(event.target.value);
+                        if (fieldErrors.password) {
+                          setFieldErrors((prev) => ({
+                            ...prev,
+                            password: undefined,
+                          }));
+                        }
+                      }}
+                      placeholder="Masukkan kata sandi akun"
+                      className={`h-12 w-full rounded-[var(--radius-sm)] border bg-surface-0 pr-12 pl-3.5 text-sm text-ink-950 shadow-[var(--shadow-1)] transition-colors duration-150 placeholder:text-slate-600 disabled:cursor-not-allowed disabled:bg-canvas-50 ${
+                        fieldErrors.password
+                          ? "border-red-600"
+                          : "border-line-500 hover:border-ink-950 focus:border-teal-600"
+                      }`}
+                    />
+                    <button
+                      type="button"
+                      disabled={isSubmitting}
+                      aria-label={
+                        showPassword
+                          ? "Sembunyikan kata sandi"
+                          : "Tampilkan kata sandi"
+                      }
+                      aria-pressed={showPassword}
+                      onClick={() => setShowPassword((prev) => !prev)}
+                      className="absolute top-1/2 right-0.5 inline-flex size-11 -translate-y-1/2 items-center justify-center rounded-[var(--radius-sm)] text-slate-600 transition-colors duration-150 hover:bg-canvas-50 hover:text-ink-950 active:bg-teal-100 disabled:cursor-not-allowed"
+                    >
+                      {showPassword ? (
+                        <EyeOff size={18} aria-hidden="true" />
+                      ) : (
+                        <Eye size={18} aria-hidden="true" />
+                      )}
                     </button>
                   </div>
+                  {fieldErrors.password && (
+                    <p
+                      id="password-error"
+                      className="mt-1.5 text-xs font-medium text-red-700"
+                    >
+                      {fieldErrors.password}
+                    </p>
+                  )}
                 </div>
 
-                {errorMessage && (
-                  <p className="rounded-md border border-[#f1c7b5] bg-[#f9e8df] px-4 py-3 text-sm leading-6 text-[#8d422d]" role="status">
-                    {errorMessage}
-                  </p>
-                )}
-
-                <button className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-md bg-[#2f7a68] px-5 text-sm font-semibold text-white transition-colors hover:bg-[#3b8f79] focus:ring-2 focus:ring-[#2f7a68]/30 focus:ring-offset-2 focus:outline-none disabled:cursor-not-allowed disabled:opacity-60" disabled={isSubmitting} type="submit">
-                  {isSubmitting ? "Memeriksa akun..." : "Masuk ke ruang kerja"}
-                  {!isSubmitting && <ArrowRight size={17} aria-hidden="true" />}
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-[var(--radius-sm)] bg-teal-600 px-5 py-3 text-sm font-semibold text-surface-0 shadow-[var(--shadow-1)] transition-all duration-150 hover:-translate-y-0.5 hover:bg-teal-700 active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-70"
+                >
+                  {isSubmitting && (
+                    <span
+                      aria-hidden="true"
+                      className="size-4 animate-spin rounded-full border-2 border-surface-0 border-t-transparent"
+                    />
+                  )}
+                  <span>
+                    {isSubmitting
+                      ? "Memverifikasi kredensial..."
+                      : "Masuk ke ruang kerja"}
+                  </span>
+                  {!isSubmitting && (
+                    <ArrowRight size={17} aria-hidden="true" />
+                  )}
                 </button>
               </form>
 
-              <p className="mt-8 border-t border-[#ddd8ce] pt-6 text-xs leading-6 text-[#7a8781]">
-                Belum memiliki akses? Hubungi administrator sistem Anda.
+              <p className="mt-6 border-t border-line-200 pt-5 text-xs leading-relaxed text-slate-600">
+                Belum memiliki akun atau lupa kata sandi? Hubungi Super Admin
+                atau pengelola pengguna di organisasi Anda.
               </p>
             </div>
           </div>
 
-          <p className="text-center text-xs text-[#7a8781] lg:text-right">Jejakstok — Sistem manajemen gudang</p>
-        </section>
+          <footer className="text-center text-xs text-slate-600 lg:text-right">
+            Jejakstok: Sistem manajemen gudang
+          </footer>
+        </main>
       </div>
-    </main>
+    </div>
   );
 }

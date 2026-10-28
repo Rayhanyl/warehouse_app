@@ -1,11 +1,60 @@
 {
-  "eyebrow": "Alur kerja yang jelas",
+  "eyebrow": "Alur kerja operasional",
   "title": "Dari penerimaan sampai stock opname, dalam satu sistem.",
-  "description": "Setiap langkah memberi konteks yang dibutuhkan untuk menjaga saldo dan perpindahan stok tetap dapat ditelusuri.",
+  "description": "Pilih tahapan operasi untuk melihat bagaimana setiap langkah mengikat dokumen, lokasi penyimpanan, dan saldo stok secara berurutan.",
+  "sampleBadge": "Contoh data",
   "steps": [
-    { "number": "01", "label": "Terima", "description": "Catat penerimaan barang terhadap purchase order, penuh maupun sebagian.", "image": { "src": "/assets/image/receive.jpg", "alt": "Ilustrasi penerimaan barang dengan daftar pemeriksaan dan kardus" } },
-    { "number": "02", "label": "Simpan", "description": "Saldo tersimpan per gudang dan lokasi penyimpanan.", "image": { "src": "/assets/image/store.jpg", "alt": "Ilustrasi kardus yang tersimpan pada rak gudang" } },
-    { "number": "03", "label": "Pindahkan", "description": "Transfer antar-gudang melalui persetujuan, pengiriman, dan penerimaan.", "image": { "src": "/assets/image/transfer.jpg", "alt": "Ilustrasi pemindahan kardus menggunakan troli palet" } },
-    { "number": "04", "label": "Hitung", "description": "Cocokkan stok fisik dengan sistem lewat stock opname yang disetujui.", "image": { "src": "/assets/image/count.jpg", "alt": "Ilustrasi pemeriksaan stok menggunakan daftar dan kaca pembesar" } }
+    {
+      "number": "01",
+      "label": "Terima",
+      "moduleLabel": "Purchase Orders & Goods Receipts",
+      "documentExample": "PO-2026-0042 → GR-2026-0019",
+      "statusBadge": "POSTED",
+      "outcome": "Validasi kuantitas sisa PO & cegah over-receipt sebelum stok bertambah.",
+      "description": "Catat penerimaan barang terhadap purchase order, penuh maupun sebagian, dengan pencegahan over-receipt.",
+      "image": {
+        "src": "/assets/image/receive.jpg",
+        "alt": "Petugas gudang memeriksa daftar penerimaan barang di dekat tumpukan kardus"
+      }
+    },
+    {
+      "number": "02",
+      "label": "Simpan",
+      "moduleLabel": "Warehouses & Stock",
+      "documentExample": "Gudang Utama · RAK-A-02",
+      "statusBadge": "COMPLETED",
+      "outcome": "Saldo tercatat per gudang dan lokasi penyimpanan beserta riwayat di stock ledger.",
+      "description": "Saldo tersimpan per gudang dan lokasi penyimpanan setelah goods receipt diposting.",
+      "image": {
+        "src": "/assets/image/store.jpg",
+        "alt": "Kardus barang yang tertata rapi pada rak lokasi penyimpanan gudang"
+      }
+    },
+    {
+      "number": "03",
+      "label": "Pindahkan",
+      "moduleLabel": "Stock Transfers",
+      "documentExample": "TRF-2026-0014 · Asal ke Tujuan",
+      "statusBadge": "SHIPPED",
+      "outcome": "Stok gudang asal berkurang dan ditandai dalam perjalanan hingga diterima tujuan.",
+      "description": "Transfer antar-gudang melalui persetujuan, pengiriman berstatus dalam perjalanan, dan penerimaan tujuan.",
+      "image": {
+        "src": "/assets/image/transfer.jpg",
+        "alt": "Pemindahan kardus barang antar-lokasi gudang menggunakan troli palet"
+      }
+    },
+    {
+      "number": "04",
+      "label": "Hitung",
+      "moduleLabel": "Stock Opnames",
+      "documentExample": "SO-2026-0008 · Lokasi Dibekukan",
+      "statusBadge": "IN_PROGRESS",
+      "outcome": "Lokasi dibekukan sementara, snapshot saldo dikunci, dan selisih diterapkan setelah disetujui.",
+      "description": "Cocokkan stok fisik dengan sistem lewat stock opname yang membekukan lokasi dan menerapkan selisih setelah disetujui.",
+      "image": {
+        "src": "/assets/image/count.jpg",
+        "alt": "Pemeriksaan dan pencocokan jumlah stok fisik pada rak penyimpanan"
+      }
+    }
   ]
 }

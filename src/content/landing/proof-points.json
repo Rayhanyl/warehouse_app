@@ -6,12 +6,12 @@
   },
   {
     "label": "Alur kerja terkendali",
-    "description": "Posting dan transfer mengikuti status serta permission pengguna.",
+    "description": "Posting penerimaan dan transfer mengikuti status dokumen serta permission pengguna.",
     "icon": "route"
   },
   {
     "label": "Aktivitas terlacak",
-    "description": "Perubahan dapat dilihat kembali oleh pengguna yang berwenang.",
+    "description": "Perubahan dapat dilihat kembali pada stock ledger dan audit log oleh pengguna yang berwenang.",
     "icon": "shield-check"
   }
 ]

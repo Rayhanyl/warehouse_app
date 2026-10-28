@@ -1,6 +1,7 @@
 {
-  "eyebrow": "Lihat cara kerjanya",
-  "title": "Setiap pergerakan stok tercatat dengan jelas.",
-  "description": "Mulai dari alur kerja, lalu masuk ke Jejakstok saat siap mengelola operasi gudang.",
-  "button": { "label": "Masuk ke Jejakstok", "href": "/login" }
+  "eyebrow": "Mulai dari ruang kerja",
+  "title": "Lihat bagaimana setiap pergerakan stok tercatat.",
+  "description": "Pelajari urutan alur kerja operasional atau langsung masuk ke ruang kerja Jejakstok dengan akun yang telah ditugaskan.",
+  "button": { "label": "Masuk ke Jejakstok", "href": "/login" },
+  "secondaryLink": { "label": "Lihat alur kerja", "href": "#workflow" }
 }

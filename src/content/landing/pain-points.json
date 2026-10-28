@@ -1,17 +1,27 @@
-[
-  {
-    "problem": "Stok di sistem tidak sama dengan stok di rak.",
-    "answer": "Stock opname membekukan lokasi, menyimpan snapshot, lalu menerapkan selisih setelah disetujui.",
-    "accent": "teal"
-  },
-  {
-    "problem": "Barang dalam perjalanan tidak jelas posisinya.",
-    "answer": "Transfer dua tahap menandai stok dalam perjalanan sampai gudang tujuan menerimanya.",
-    "accent": "amber"
-  },
-  {
-    "problem": "Sulit menelusuri siapa mengubah apa.",
-    "answer": "Stock ledger dan audit log mencatat aktor, waktu, dan objek untuk setiap perubahan.",
-    "accent": "blue"
-  }
-]
+{
+  "eyebrow": "Masalah operasional sehari-hari",
+  "title": "Tiga kendala stok di gudang dan cara sistem menutup celahnya.",
+  "description": "Jejakstok mengikat perubahan saldo pada status dokumen, pembekuan lokasi saat hitung fisik, dan catatan mutasi yang tidak dapat diubah.",
+  "columnProblemLabel": "Kondisi di lapangan",
+  "columnSolutionLabel": "Mekanisme pengendalian di Jejakstok",
+  "items": [
+    {
+      "number": "01",
+      "moduleTag": "Stock Opnames",
+      "problem": "Stok di sistem tidak sama dengan stok di rak.",
+      "answer": "Stock opname membekukan lokasi penyimpanan, menyimpan snapshot saldo awal, lalu menerapkan selisih hanya setelah disetujui manajer."
+    },
+    {
+      "number": "02",
+      "moduleTag": "Stock Transfers",
+      "problem": "Barang dalam perjalanan tidak jelas posisinya.",
+      "answer": "Transfer dua tahap mengurangi stok gudang asal dan menandai stok dalam perjalanan (SHIPPED) sampai gudang tujuan memposting penerimaan (RECEIVED)."
+    },
+    {
+      "number": "03",
+      "moduleTag": "Stock Ledger & Audit Logs",
+      "problem": "Sulit menelusuri siapa mengubah apa.",
+      "answer": "Stock ledger dan audit log mencatat aktor, waktu, dokumen referensi, serta detail perubahan secara append-only."
+    }
+  ]
+}

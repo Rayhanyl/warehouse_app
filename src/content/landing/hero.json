@@ -1,13 +1,55 @@
 {
+  "skipLinkLabel": "Lompat ke konten utama",
+  "navigation": {
+    "ariaLabel": "Navigasi halaman utama",
+    "mobileAriaLabel": "Navigasi halaman utama pada perangkat seluler",
+    "openMenuLabel": "Menu",
+    "openMenuAriaLabel": "Buka menu navigasi",
+    "closeMenuLabel": "Tutup",
+    "closeMenuAriaLabel": "Tutup menu navigasi",
+    "links": [
+      { "label": "Alur kerja", "href": "#workflow" },
+      { "label": "Masalah operasional", "href": "#pain-points" },
+      { "label": "Keamanan", "href": "#security" }
+    ],
+    "loginLink": { "label": "Masuk", "href": "/login" },
+    "mobileLoginLink": { "label": "Masuk ke ruang kerja", "href": "/login" }
+  },
   "eyebrow": "Sistem manajemen gudang",
   "title": "Satu kendali untuk setiap pergerakan stok.",
   "description": "Pantau saldo per lokasi, proses penerimaan dan transfer, lalu telusuri setiap perubahan melalui alur kerja yang sesuai permission.",
   "primaryCta": { "label": "Lihat alur kerja", "href": "#workflow" },
   "secondaryCta": { "label": "Masuk ke ruang kerja", "href": "/login" },
-  "visualLabel": "Alur operasional",
-  "visualCaption": "Contoh alur dari purchase order sampai stock ledger.",
+  "visualLabel": "Jejak dokumen operasional",
+  "visualSubLabel": "Alur PO → GR → Stok bertambah → Stock ledger",
+  "sampleDataBadge": "Contoh data",
+  "traceSummaryTitle": "Mutasi stok tercatat secara atomik",
+  "visualCaption": "Saldo hanya berubah melalui dokumen yang diposting dan setiap baris merujuk ke nomor dokumen sumber.",
+  "traceRecords": [
+    {
+      "module": "Purchase Orders",
+      "documentCode": "PO-2026-0042",
+      "detail": "120 unit · Gudang Utama",
+      "status": "ISSUED",
+      "tone": "blue"
+    },
+    {
+      "module": "Goods Receipts",
+      "documentCode": "GR-2026-0019",
+      "detail": "+120 unit · Lokasi RAK-A-02",
+      "status": "POSTED",
+      "tone": "teal"
+    },
+    {
+      "module": "Stock Ledger",
+      "documentCode": "SL-2026-0884",
+      "detail": "Saldo akhir 420 unit · Append-only",
+      "status": "COMPLETED",
+      "tone": "teal"
+    }
+  ],
   "image": {
     "src": "/assets/image/warehouse.jpg",
-    "alt": "Ilustrasi gudang dengan rak, palet, dan meja kerja operasional"
+    "alt": "Area operasional gudang dengan susunan rak penyimpanan, palet barang, dan jalur kerja"
   }
 }

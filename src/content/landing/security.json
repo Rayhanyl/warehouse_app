@@ -1,22 +1,52 @@
 {
-  "eyebrow": "Kendali untuk operasi yang dapat ditelusuri",
-  "title": "Setiap perubahan memiliki konteks.",
-  "description": "Atur akses, batasi pekerjaan berdasarkan gudang, dan simpan jejak perubahan tanpa menampilkan data operasional pada halaman publik.",
-  "points": [
-    "Akses sesuai peran",
-    "Pembatasan per gudang",
-    "Catatan yang tidak dapat diubah"
+  "eyebrow": "Keamanan, ketertelusuran, dan hak akses",
+  "title": "Setiap perubahan stok memiliki aktor, izin, dan jejak dokumen.",
+  "description": "Atur hak akses berdasarkan peran, batasi ruang kerja per gudang yang ditugaskan, dan periksa kembali setiap mutasi tanpa mengandalkan catatan terpisah.",
+  "pillars": [
+    {
+      "title": "Akses sesuai peran",
+      "description": "Lima peran dengan 24 permission rinci mengatur siapa yang dapat membuat draf, menyetujui, atau memposting dokumen."
+    },
+    {
+      "title": "Pembatasan per gudang",
+      "description": "Staf gudang hanya melihat dan memproses transaksi pada gudang yang ditugaskan kepadanya."
+    },
+    {
+      "title": "Catatan yang tidak dapat diubah",
+      "description": "Stock ledger dan audit log hanya menerima catatan baru (append-only) dan dilindungi di tingkat database."
+    },
+    {
+      "title": "Sesi terjaga",
+      "description": "Akun dikunci sementara setelah beberapa kali gagal masuk untuk melindungi akses ruang kerja."
+    }
   ],
   "controlPanel": {
-    "label": "Kontrol ruang kerja",
+    "label": "Ringkasan pengendalian lokasi & akses",
+    "sampleBadge": "Contoh data",
+    "caption": "Simulasi status pengawasan lokasi penyimpanan dan aturan akses pada ruang kerja.",
     "items": [
-      { "label": "Akses sesuai peran", "status": "Aktif" },
-      { "label": "Pembatasan per gudang", "status": "Terjaga" },
-      { "label": "Catatan perubahan", "status": "Tercatat" }
+      {
+        "label": "Lokasi RAK-B-04 (Sesi Opname SO-2026-0008)",
+        "detail": "Mutasi masuk dan keluar ditahan selama penghitungan fisik",
+        "status": "IN_PROGRESS",
+        "tone": "amber"
+      },
+      {
+        "label": "Pembatasan ruang lingkup gudang",
+        "detail": "5 peran · 24 permission terverifikasi di backend",
+        "status": "AKTIF",
+        "tone": "teal"
+      },
+      {
+        "label": "Perlindungan stock ledger & audit log",
+        "detail": "Catatan mutasi bersifat append-only",
+        "status": "TERCATAT",
+        "tone": "blue"
+      }
     ]
   },
   "image": {
     "src": "/assets/image/rack.jpg",
-    "alt": "Ilustrasi rak gudang dan daftar pemeriksaan lokasi"
+    "alt": "Susunan rak gudang dengan penomoran lokasi dan daftar pemeriksaan stok"
   }
 }
