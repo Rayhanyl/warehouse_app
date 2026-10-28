@@ -56,6 +56,28 @@ function resolveRouteContext(
   ) {
     return { title: "Satuan ukur (UoM)", groupName: "Master data" };
   }
+  if (pathname === "/master/suppliers" || pathname === "/suppliers") {
+    return { title: "Pemasok", groupName: "Master data" };
+  }
+  if (
+    pathname === "/master/items" ||
+    pathname === "/items" ||
+    pathname === "/master/stocks" ||
+    pathname === "/stocks"
+  ) {
+    return { title: "Barang (SKU)", groupName: "Master data" };
+  }
+  if (pathname === "/master/warehouses" || pathname === "/warehouses") {
+    return { title: "Gudang", groupName: "Master data" };
+  }
+  if (
+    pathname === "/master/locations" ||
+    pathname === "/master/storage-locations" ||
+    pathname === "/locations" ||
+    pathname === "/storage-locations"
+  ) {
+    return { title: "Lokasi penyimpanan", groupName: "Master data" };
+  }
   if (pathname === "/audit-logs") {
     return { title: "Audit log", groupName: "Administrasi" };
   }
