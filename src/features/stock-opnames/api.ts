@@ -57,7 +57,7 @@ export function useOpnameReferences() {
     queryFn: async () => {
       const [warehouses, locations] = await Promise.all([
         apiClient.get<{ items: OpnameReference[] }>("/warehouses", { params: { limit: 200, offset: 0, is_active: true } }),
-        apiClient.get<{ items: OpnameReference[] }>("/locations", { params: { limit: 500, offset: 0, is_active: true } }),
+        apiClient.get<{ items: OpnameReference[] }>("/locations", { params: { limit: 200, offset: 0, is_active: true } }),
       ]);
       return { warehouses: warehouses.data.items, locations: locations.data.items };
     },

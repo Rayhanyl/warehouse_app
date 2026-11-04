@@ -57,9 +57,19 @@ function Dialog({ title, children, onClose }: { title: string; children: React.R
 function Actions({ isSubmitting, onClose, submitLabel }: { isSubmitting: boolean; onClose: () => void; submitLabel: string }) { return <div className="flex justify-end gap-2 border-t border-line-200 pt-4"><button className="min-h-11 rounded-[var(--radius-md)] border border-line-500 px-4 font-semibold" onClick={onClose} type="button">Batal</button><button className="min-h-11 rounded-[var(--radius-md)] bg-teal-600 px-4 font-semibold text-surface-0 disabled:opacity-50" disabled={isSubmitting} type="submit">{isSubmitting ? "Menyimpan..." : submitLabel}</button></div>; }
 
 function TransferDetail({ transfer, isLoading, can, actions, onClose }: { transfer?: StockTransfer; isLoading: boolean; can: (permission: string) => boolean; actions: { approve: ReturnType<typeof useTransferMutation>; ship: ReturnType<typeof useTransferMutation>; cancel: ReturnType<typeof useTransferMutation>; receive: ReturnType<typeof useTransferMutation> }; onClose: () => void }) {
-  async function run(actionName: "approve" | "ship" | "cancel") { try { await actions[actionName].mutateAsync({ id: transfer?.id }); toast.success("Status transfer berhasil diperbarui."); } catch (error) { toast.error(mapTransferError(error, "Aksi transfer belum berhasil.")); } }
+  async function run(actionName: "approve" | "ship" | "cancel") {
+    if (!transfer) return;
+    const messages = {
+      approve: `Setujui transfer ${transfer.transfer_number}?`,
+      ship: `Kirim transfer ${transfer.transfer_number}? Stok asal akan berkurang.`,
+      cancel: `Batalkan transfer ${transfer.transfer_number}? Aksi ini tidak dapat dibatalkan.`,
+    };
+    if (!window.confirm(messages[actionName])) return;
+    try { await actions[actionName].mutateAsync({ id: transfer.id }); toast.success("Status transfer berhasil diperbarui."); } catch (error) { toast.error(mapTransferError(error, "Aksi transfer belum berhasil.")); }
+  }
   async function receiveTransfer() {
     if (!transfer) return;
+    if (!window.confirm(`Terima transfer ${transfer.transfer_number}? Stok tujuan akan bertambah.`)) return;
     const lines: TransferReceiveLinePayload[] = (transfer.lines ?? []).map((line) => ({ line_id: line.id, qty_received: line.qty, variance_reason: null }));
     try { await actions.receive.mutateAsync({ id: transfer.id, lines }); toast.success("Transfer berhasil diterima."); } catch (error) { toast.error(mapTransferError(error, "Penerimaan transfer belum berhasil.")); }
   }

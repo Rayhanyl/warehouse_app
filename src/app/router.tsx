@@ -14,6 +14,8 @@ import { PurchaseOrdersPage } from "@/features/purchase-orders/pages/PurchaseOrd
 import { GoodsReceiptsPage } from "@/features/goods-receipts/pages/GoodsReceiptsPage";
 import { StockTransfersPage } from "@/features/stock-transfers/pages/StockTransfersPage";
 import { StockOpnamesPage } from "@/features/stock-opnames/pages/StockOpnamesPage";
+import { StockPage } from "@/features/stock/pages/StockPage";
+import { AdministrationPage } from "@/features/administration/pages/AdministrationPage";
 import { AdminPlaceholderPage, DashboardPage } from "@/pages/DashboardPage";
 import { LandingPage } from "@/pages/LandingPage";
 
@@ -113,7 +115,31 @@ export const router = createBrowserRouter([
             element: <AuditLogsPage />,
           },
           {
+            path: "/users",
+            element: <AdministrationPage />,
+          },
+          {
+            path: "/admin",
+            element: <AdministrationPage />,
+          },
+          {
+            path: "/admin/users",
+            element: <AdministrationPage />,
+          },
+          {
+            path: "/admin/roles",
+            element: <AdministrationPage />,
+          },
+          {
+            path: "/admin/menus",
+            element: <AdministrationPage />,
+          },
+          {
             path: "/purchase-orders",
+            element: <PurchaseOrdersPage />,
+          },
+          {
+            path: "/purchasing/purchase-orders",
             element: <PurchaseOrdersPage />,
           },
           {
@@ -121,11 +147,51 @@ export const router = createBrowserRouter([
             element: <GoodsReceiptsPage />,
           },
           {
+            path: "/purchasing/goods-receipts",
+            element: <GoodsReceiptsPage />,
+          },
+          {
+            path: "/stock",
+            element: <StockPage />,
+          },
+          {
+            path: "/stock/by-location",
+            element: <StockPage />,
+          },
+          {
+            path: "/stock/warehouse",
+            element: <StockPage />,
+          },
+          {
+            path: "/stock/by-warehouse",
+            element: <StockPage />,
+          },
+          {
+            path: "/stock/summary",
+            element: <StockPage />,
+          },
+          {
+            path: "/stock/in-transit",
+            element: <StockPage />,
+          },
+          {
+            path: "/stock/ledger",
+            element: <StockPage />,
+          },
+          {
             path: "/stock-transfers",
             element: <StockTransfersPage />,
           },
           {
+            path: "/operations/stock-transfers",
+            element: <StockTransfersPage />,
+          },
+          {
             path: "/stock-opnames",
+            element: <StockOpnamesPage />,
+          },
+          {
+            path: "/operations/stock-opnames",
             element: <StockOpnamesPage />,
           },
           {

@@ -81,17 +81,44 @@ function resolveRouteContext(
   if (pathname === "/audit-logs") {
     return { title: "Audit log", groupName: "Administrasi" };
   }
-  if (pathname === "/purchase-orders") {
+  if (pathname === "/users" || pathname === "/admin" || pathname === "/admin/users") {
+    return { title: "Pengguna dan peran", groupName: "Administrasi dan keamanan" };
+  }
+  if (pathname === "/admin/roles") {
+    return { title: "Peran dan permission", groupName: "Administrasi dan keamanan" };
+  }
+  if (pathname === "/admin/menus") {
+    return { title: "Menu", groupName: "Administrasi dan keamanan" };
+  }
+  if (pathname === "/purchase-orders" || pathname === "/purchasing/purchase-orders") {
     return { title: "Purchase order", groupName: "Pengadaan dan penerimaan" };
   }
-  if (pathname === "/goods-receipts") {
+  if (pathname === "/goods-receipts" || pathname === "/purchasing/goods-receipts") {
     return { title: "Penerimaan barang", groupName: "Pengadaan dan penerimaan" };
   }
-  if (pathname === "/stock-transfers") {
+  if (pathname === "/stock-transfers" || pathname === "/operations/stock-transfers") {
     return { title: "Transfer stok", groupName: "Operasional gudang" };
   }
-  if (pathname === "/stock-opnames") {
+  if (pathname === "/stock-opnames" || pathname === "/operations/stock-opnames") {
     return { title: "Stock opname", groupName: "Operasional gudang" };
+  }
+  if (pathname === "/stock") {
+    return { title: "Saldo stok per lokasi", groupName: "Stok dan buku besar" };
+  }
+  if (pathname === "/stock/warehouse" || pathname === "/stock/by-warehouse") {
+    return { title: "Saldo stok per gudang", groupName: "Stok dan buku besar" };
+  }
+  if (pathname === "/stock/by-location") {
+    return { title: "Saldo stok per lokasi", groupName: "Stok dan buku besar" };
+  }
+  if (pathname === "/stock/summary") {
+    return { title: "Ringkasan stok", groupName: "Stok dan buku besar" };
+  }
+  if (pathname === "/stock/in-transit") {
+    return { title: "Stok dalam perjalanan", groupName: "Stok dan buku besar" };
+  }
+  if (pathname === "/stock/ledger") {
+    return { title: "Buku besar stok", groupName: "Stok dan buku besar" };
   }
   return { title: "Dasbor", groupName: null };
 }

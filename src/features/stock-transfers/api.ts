@@ -20,7 +20,14 @@ export interface TransferListParams {
 }
 
 export async function fetchTransfers(params: TransferListParams): Promise<StockTransferPage> {
-  const query = { ...params, search: params.search.trim() || undefined, status: params.status === "all" ? undefined : params.status };
+  const query = {
+    limit: params.limit,
+    offset: params.offset,
+    search: params.search.trim() || undefined,
+    status: params.status === "all" ? undefined : params.status,
+    date_from: params.date_from || undefined,
+    date_to: params.date_to || undefined,
+  };
   const { data } = await apiClient.get<StockTransferPage>("/stock-transfers", { params: query });
   return data;
 }
@@ -69,7 +76,7 @@ export function useTransferReferences() {
     queryFn: async () => {
       const [warehouses, locations, items] = await Promise.all([
         apiClient.get<{ items: TransferReference[] }>("/warehouses", { params: { limit: 200, offset: 0, is_active: true } }),
-        apiClient.get<{ items: TransferReference[] }>("/locations", { params: { limit: 500, offset: 0, is_active: true } }),
+        apiClient.get<{ items: TransferReference[] }>("/locations", { params: { limit: 200, offset: 0, is_active: true } }),
         apiClient.get<{ items: TransferReference[] }>("/items", { params: { limit: 200, offset: 0, is_active: true } }),
       ]);
       return { warehouses: warehouses.data.items, locations: locations.data.items, items: items.data.items };
