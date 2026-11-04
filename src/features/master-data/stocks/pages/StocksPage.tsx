@@ -1,4 +1,4 @@
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import {
   CheckCircle2,
   Download,
@@ -15,7 +15,9 @@ import {
 import { toast } from "sonner";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { usePermission } from "@/hooks/usePermission";
-import { buildStockItemsCsv, initialSampleStockItems } from "../api";
+import { fetchCategories } from "@/features/master-data/categories/api";
+import { fetchUoms } from "@/features/master-data/uoms/api";
+import { buildStockItemsCsv, fetchStockItems } from "../api";
 import { StockDeleteDialog } from "../components/StockDeleteDialog";
 import { StockDetailDialog } from "../components/StockDetailDialog";
 import { StockFormDialog } from "../components/StockFormDialog";
@@ -29,7 +31,7 @@ export function StocksPage() {
   const { can } = usePermission();
   const canManage = can("master:manage");
 
-  const [records, setRecords] = useState<StockItem[]>(initialSampleStockItems);
+  const [records, setRecords] = useState<StockItem[]>([]);
   const [search, setSearch] = useState("");
   const [draftSearch, setDraftSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<StockStatusFilter>("all");
@@ -47,6 +49,77 @@ export function StocksPage() {
     item: null,
   });
   const [confirmTarget, setConfirmTarget] = useState<StockItem | null>(null);
+  const [categoryOptions, setCategoryOptions] = useState<
+    { id: number; name: string }[]
+  >([]);
+  const [uomOptions, setUomOptions] = useState<
+    { id: number; code: string; name: string; allow_decimal: boolean }[]
+  >([]);
+
+  useEffect(() => {
+    let active = true;
+    void fetchStockItems({
+      limit: 200,
+      offset: 0,
+      search: "",
+      status: "all",
+      category_id: null,
+      uom_id: null,
+      sort_by: "id",
+      sort_dir: "asc",
+    })
+      .then((page) => {
+        if (active) setRecords(page.items);
+      })
+      .catch(() => {
+        if (active) {
+          setNotice("Daftar barang belum dapat dimuat. Periksa koneksi lalu coba lagi.");
+        }
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    void Promise.all([
+      fetchCategories({
+        limit: 200,
+        offset: 0,
+        search: "",
+        status: "active",
+        sort_by: "name",
+        sort_dir: "asc",
+      }),
+      fetchUoms({
+        limit: 200,
+        offset: 0,
+        search: "",
+        status: "active",
+        sort_by: "name",
+        sort_dir: "asc",
+      }),
+    ])
+      .then(([categories, uoms]) => {
+        if (!active) return;
+        setCategoryOptions(categories.items.map(({ id, name }) => ({ id, name })));
+        setUomOptions(
+          uoms.items.map(({ id, code, name, allow_decimal }) => ({
+            id,
+            code,
+            name,
+            allow_decimal,
+          })),
+        );
+      })
+      .catch(() => {
+        if (active) setNotice("Referensi kategori dan satuan ukur belum dapat dimuat.");
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const filteredItems = useMemo(() => {
     const query = search.trim().toLocaleLowerCase();
@@ -163,9 +236,6 @@ export function StocksPage() {
       <PageHeader
         action={
           <>
-            <span className="inline-flex min-h-11 items-center rounded-full bg-amber-100 px-3.5 text-xs font-bold text-amber-700">
-              Contoh data
-            </span>
             <button
               className="inline-flex min-h-11 items-center gap-2 rounded-[var(--radius-md)] border border-line-500 bg-surface-0 px-4 text-sm font-semibold text-ink-950 transition hover:bg-canvas-50"
               onClick={handleDownloadCsv}
@@ -188,7 +258,7 @@ export function StocksPage() {
             )}
           </>
         }
-        description="Kelola data master SKU yang mengacu pada satu kategori aktif dan satu satuan ukur dasar. Saat ini menampilkan contoh data pratinjau antarmuka."
+        description="Kelola data master SKU yang mengacu pada satu kategori aktif dan satu satuan ukur dasar."
         title="Barang (SKU)"
       />
 
@@ -421,6 +491,8 @@ export function StocksPage() {
           setFormState((current) => ({ ...current, isOpen: false }))
         }
         onSubmit={handleSaveItem}
+        categoryOptions={categoryOptions}
+        uomOptions={uomOptions}
       />
 
       <StockDeleteDialog

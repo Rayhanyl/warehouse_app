@@ -1,4 +1,4 @@
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import {
   CheckCircle2,
   Download,
@@ -15,7 +15,7 @@ import {
 import { toast } from "sonner";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { usePermission } from "@/hooks/usePermission";
-import { buildSuppliersCsv, initialSampleSuppliers } from "../api";
+import { buildSuppliersCsv, fetchSuppliers } from "../api";
 import { SupplierDeleteDialog } from "../components/SupplierDeleteDialog";
 import { SupplierDetailDialog } from "../components/SupplierDetailDialog";
 import { SupplierFormDialog } from "../components/SupplierFormDialog";
@@ -29,7 +29,7 @@ export function SuppliersPage() {
   const { can } = usePermission();
   const canManage = can("master:manage");
 
-  const [records, setRecords] = useState<Supplier[]>(initialSampleSuppliers);
+  const [records, setRecords] = useState<Supplier[]>([]);
   const [search, setSearch] = useState("");
   const [draftSearch, setDraftSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<SupplierStatusFilter>("all");
@@ -47,6 +47,29 @@ export function SuppliersPage() {
     supplier: null,
   });
   const [confirmTarget, setConfirmTarget] = useState<Supplier | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    void fetchSuppliers({
+      limit: 200,
+      offset: 0,
+      search: "",
+      status: "all",
+      sort_by: "id",
+      sort_dir: "asc",
+    })
+      .then((page) => {
+        if (active) setRecords(page.items);
+      })
+      .catch(() => {
+        if (active) {
+          setNotice("Daftar pemasok belum dapat dimuat. Periksa koneksi lalu coba lagi.");
+        }
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const filteredSuppliers = useMemo(() => {
     const query = search.trim().toLocaleLowerCase();
@@ -163,9 +186,6 @@ export function SuppliersPage() {
       <PageHeader
         action={
           <>
-            <span className="inline-flex min-h-11 items-center rounded-full bg-amber-100 px-3.5 text-xs font-bold text-amber-700">
-              Contoh data
-            </span>
             <button
               className="inline-flex min-h-11 items-center gap-2 rounded-[var(--radius-md)] border border-line-500 bg-surface-0 px-4 text-sm font-semibold text-ink-950 transition hover:bg-canvas-50"
               onClick={handleDownloadCsv}
@@ -188,7 +208,7 @@ export function SuppliersPage() {
             )}
           </>
         }
-        description="Kelola data rekanan pemasok untuk penerbitan Purchase Order dan penerimaan barang. Saat ini menampilkan contoh data pratinjau antarmuka."
+        description="Kelola data rekanan pemasok untuk penerbitan purchase order dan penerimaan barang."
         title="Pemasok (supplier)"
       />
 

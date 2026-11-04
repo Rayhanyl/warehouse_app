@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   CheckCircle2,
   Download,
@@ -14,8 +14,8 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { usePermission } from "@/hooks/usePermission";
 import {
   buildStorageLocationsCsv,
-  initialSampleStorageLocations,
-  sampleWarehouseOptions,
+  fetchStorageLocationWarehouses,
+  fetchStorageLocations,
 } from "../api";
 import { StorageLocationDeleteDialog } from "../components/StorageLocationDeleteDialog";
 import { StorageLocationDetailDialog } from "../components/StorageLocationDetailDialog";
@@ -24,6 +24,7 @@ import type {
   StorageLocationFormPayload,
   StorageLocationRecord,
   StorageLocationStatusFilter,
+  StorageLocationWarehouseOption,
 } from "../types";
 
 interface NotificationBanner {
@@ -45,9 +46,10 @@ export function StorageLocationsPage() {
   const { can } = usePermission();
   const canManage = can("location:manage") || can("master:manage");
 
-  const [locations, setLocations] = useState<StorageLocationRecord[]>(
-    initialSampleStorageLocations,
-  );
+  const [locations, setLocations] = useState<StorageLocationRecord[]>([]);
+  const [warehouseOptions, setWarehouseOptions] = useState<
+    StorageLocationWarehouseOption[]
+  >([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [warehouseFilter, setWarehouseFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<StorageLocationStatusFilter>("all");
@@ -64,6 +66,45 @@ export function StorageLocationsPage() {
     record: null,
   });
   const [deleteTarget, setDeleteTarget] = useState<StorageLocationRecord | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    void Promise.all([
+      fetchStorageLocations({
+        limit: 200,
+        offset: 0,
+        search: "",
+        warehouse_id: null,
+        status: "all",
+      }),
+      fetchStorageLocationWarehouses(),
+    ])
+      .then(([locationPage, warehouses]) => {
+        if (!active) return;
+        setLocations(
+          locationPage.items.map((location) => ({
+            ...location,
+            id: String(location.id),
+            warehouse_id: String(location.warehouse_id),
+            created_by:
+              location.created_by === null ? null : String(location.created_by),
+          })),
+        );
+        setWarehouseOptions(warehouses);
+      })
+      .catch(() => {
+        if (active) {
+          setBanner({
+            type: "error",
+            message:
+              "Daftar lokasi penyimpanan belum dapat dimuat. Periksa koneksi lalu coba lagi.",
+          });
+        }
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const filteredLocations = useMemo(() => {
     const normalizedQuery = searchQuery.trim().toLowerCase();
@@ -100,8 +141,8 @@ export function StorageLocationsPage() {
   const handleFormSubmit = (payload: StorageLocationFormPayload) => {
     const nowIso = new Date().toISOString();
     const selectedWarehouse =
-      sampleWarehouseOptions.find((wh) => wh.id === payload.warehouse_id) ??
-      sampleWarehouseOptions[0];
+      warehouseOptions.find((wh) => wh.id === payload.warehouse_id) ??
+      warehouseOptions[0];
 
     if (formState.mode === "create") {
       const nextRecord: StorageLocationRecord = {
@@ -233,9 +274,6 @@ export function StorageLocationsPage() {
         description="Kelola daftar zona karantina, lorong rak, dan bin penyimpanan di setiap gudang."
         action={
           <>
-            <span className="inline-flex min-h-11 items-center rounded-md border border-amber-300 bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-900">
-              Contoh data
-            </span>
             <button
               type="button"
               onClick={handleDownloadCsv}
@@ -322,8 +360,8 @@ export function StorageLocationsPage() {
                 onChange={(event) => setWarehouseFilter(event.target.value)}
                 className="h-11 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-900 focus:border-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-700"
               >
-                <option value="all">Semua gudang ({sampleWarehouseOptions.length})</option>
-                {sampleWarehouseOptions.map((item) => (
+                <option value="all">Semua gudang ({warehouseOptions.length})</option>
+                {warehouseOptions.map((item) => (
                   <option key={item.id} value={item.id}>
                     {item.code} ({item.name})
                   </option>
@@ -510,7 +548,7 @@ export function StorageLocationsPage() {
         open={formState.open}
         mode={formState.mode}
         initialData={formState.record}
-        warehouseOptions={sampleWarehouseOptions}
+        warehouseOptions={warehouseOptions}
         existingLocations={locations}
         onClose={() => setFormState({ open: false, mode: "create", record: null })}
         onSubmit={handleFormSubmit}

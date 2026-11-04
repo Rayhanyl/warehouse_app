@@ -1,4 +1,6 @@
-import type { StockItem } from "./types";
+import { apiClient } from "@/lib/api-client";
+import type { Paginated } from "@/types/api";
+import type { StockItem, StockStatusFilter } from "./types";
 
 export const sampleCategoryOptions = [
   { id: 1, name: "Komponen Elektronik" },
@@ -62,6 +64,40 @@ export const initialSampleStockItems: StockItem[] = [
     updated_at: "2026-10-24T09:10:00Z",
   },
 ];
+
+export interface StockListParams {
+  limit: number;
+  offset: number;
+  search: string;
+  status: StockStatusFilter;
+  category_id: number | null;
+  uom_id: number | null;
+  sort_by: "id" | "sku" | "name" | "created_at";
+  sort_dir: "asc" | "desc";
+}
+
+export function toStockQueryParams(params: StockListParams): URLSearchParams {
+  const query = new URLSearchParams({
+    limit: String(params.limit),
+    offset: String(params.offset),
+    sort_by: params.sort_by,
+    sort_dir: params.sort_dir,
+  });
+  if (params.search.trim()) query.set("search", params.search.trim());
+  if (params.status !== "all") query.set("is_active", String(params.status === "active"));
+  if (params.category_id) query.set("category_id", String(params.category_id));
+  if (params.uom_id) query.set("uom_id", String(params.uom_id));
+  return query;
+}
+
+export async function fetchStockItems(
+  params: StockListParams,
+): Promise<Paginated<StockItem>> {
+  const { data } = await apiClient.get<Paginated<StockItem>>("/items", {
+    params: toStockQueryParams(params),
+  });
+  return data;
+}
 
 function escapeCsvCell(value: string | number | null | undefined): string {
   const raw = value === null || value === undefined ? "" : String(value);

@@ -1,19 +1,48 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it } from "vitest";
+import { apiClient } from "@/lib/api-client";
+import {
+  initialSampleStorageLocations,
+  sampleWarehouseOptions,
+} from "./api";
 import { StorageLocationsPage } from "./pages/StorageLocationsPage";
 
 describe("StorageLocationsPage (Contoh data pratinjau Lokasi Penyimpanan)", () => {
-  it("merender contoh data lokasi penyimpanan, mendukung detail, tambah, dan filter", () => {
+  it("merender data lokasi dari API, mendukung detail, tambah, dan filter", async () => {
+    const getSpy = vi.spyOn(apiClient, "get").mockImplementation(async (url) => {
+      if (url === "/warehouses") {
+        return {
+          data: {
+            items: sampleWarehouseOptions.map((warehouse) => ({
+              ...warehouse,
+              id: Number(warehouse.id.replace("wh-", "")),
+            })),
+            total: sampleWarehouseOptions.length,
+            limit: 200,
+            offset: 0,
+          },
+        };
+      }
+      return {
+        data: {
+          items: initialSampleStorageLocations,
+          total: initialSampleStorageLocations.length,
+          limit: 25,
+          offset: 0,
+        },
+      };
+    });
     const { container } = render(
       <MemoryRouter initialEntries={["/master/locations"]}>
         <StorageLocationsPage />
       </MemoryRouter>,
     );
 
+    await waitFor(() => {
+      expect(screen.getByText("Area Karantina Penerimaan")).toBeInTheDocument();
+    });
     expect(container.textContent).not.toMatch(/[—–]/);
-    expect(screen.getByText("Contoh data")).toBeInTheDocument();
-    expect(screen.getByText("Area Karantina Penerimaan")).toBeInTheDocument();
 
     fireEvent.click(
       screen.getByRole("button", {
@@ -40,5 +69,6 @@ describe("StorageLocationsPage (Contoh data pratinjau Lokasi Penyimpanan)", () =
 
     expect(screen.getByText("RACK-B02-01")).toBeInTheDocument();
     expect(screen.getByText("Rak B Lorong 2 Tingkat 1")).toBeInTheDocument();
+    getSpy.mockRestore();
   });
 });

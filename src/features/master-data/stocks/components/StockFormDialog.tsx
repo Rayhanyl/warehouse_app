@@ -3,12 +3,26 @@ import { Save, X } from "lucide-react";
 import { sampleCategoryOptions, sampleUomOptions } from "../api";
 import type { StockFormPayload, StockItem } from "../types";
 
+interface CategoryOption {
+  id: number;
+  name: string;
+}
+
+interface UomOption {
+  id: number;
+  code: string;
+  name: string;
+  allow_decimal: boolean;
+}
+
 interface StockFormDialogProps {
   isOpen: boolean;
   mode: "create" | "edit";
   initialItem: StockItem | null;
   onClose: () => void;
   onSubmit: (payload: StockFormPayload) => void;
+  categoryOptions?: CategoryOption[];
+  uomOptions?: UomOption[];
 }
 
 export function StockFormDialog({
@@ -17,17 +31,22 @@ export function StockFormDialog({
   initialItem,
   onClose,
   onSubmit,
+  categoryOptions = sampleCategoryOptions,
+  uomOptions = sampleUomOptions,
 }: StockFormDialogProps) {
+  const availableCategoryOptions =
+    categoryOptions.length > 0 ? categoryOptions : sampleCategoryOptions;
+  const availableUomOptions = uomOptions.length > 0 ? uomOptions : sampleUomOptions;
   const [sku, setSku] = useState(() => initialItem?.sku ?? "");
   const [name, setName] = useState(() => initialItem?.name ?? "");
   const [description, setDescription] = useState(
     () => initialItem?.description ?? "",
   );
   const [categoryId, setCategoryId] = useState(
-    () => initialItem?.category_id ?? sampleCategoryOptions[0].id,
+    () => initialItem?.category_id ?? availableCategoryOptions[0]?.id ?? 0,
   );
   const [uomId, setUomId] = useState(
-    () => initialItem?.uom_id ?? sampleUomOptions[0].id,
+    () => initialItem?.uom_id ?? availableUomOptions[0]?.id ?? 0,
   );
   const [isActive, setIsActive] = useState(
     () => initialItem?.is_active ?? true,
@@ -77,10 +96,10 @@ export function StockFormDialog({
     }
 
     const selectedCategory =
-      sampleCategoryOptions.find((cat) => cat.id === categoryId) ??
-      sampleCategoryOptions[0];
+      availableCategoryOptions.find((cat) => cat.id === categoryId) ??
+      availableCategoryOptions[0];
     const selectedUom =
-      sampleUomOptions.find((u) => u.id === uomId) ?? sampleUomOptions[0];
+      availableUomOptions.find((u) => u.id === uomId) ?? availableUomOptions[0];
 
     setErrors({});
     onSubmit({
@@ -196,7 +215,7 @@ export function StockFormDialog({
                 onChange={(event) => setCategoryId(Number(event.target.value))}
                 value={categoryId}
               >
-                {sampleCategoryOptions.map((cat) => (
+                {availableCategoryOptions.map((cat) => (
                   <option key={cat.id} value={cat.id}>
                     {cat.name}
                   </option>
@@ -217,7 +236,7 @@ export function StockFormDialog({
                 onChange={(event) => setUomId(Number(event.target.value))}
                 value={uomId}
               >
-                {sampleUomOptions.map((u) => (
+                {availableUomOptions.map((u) => (
                   <option key={u.id} value={u.id}>
                     {u.code} ({u.name})
                   </option>

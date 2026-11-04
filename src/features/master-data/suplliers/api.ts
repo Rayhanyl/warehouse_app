@@ -1,4 +1,5 @@
-import type { Supplier } from "./types";
+import { apiClient } from "@/lib/api-client";
+import type { Supplier, SupplierListParams, SupplierPage } from "./types";
 
 export const initialSampleSuppliers: Supplier[] = [
   {
@@ -41,6 +42,25 @@ export const initialSampleSuppliers: Supplier[] = [
     updated_at: "2026-10-24T14:05:00Z",
   },
 ];
+
+export function toSupplierQueryParams(params: SupplierListParams): URLSearchParams {
+  const query = new URLSearchParams({
+    limit: String(params.limit),
+    offset: String(params.offset),
+    sort_by: params.sort_by,
+    sort_dir: params.sort_dir,
+  });
+  if (params.search.trim()) query.set("search", params.search.trim());
+  if (params.status !== "all") query.set("is_active", String(params.status === "active"));
+  return query;
+}
+
+export async function fetchSuppliers(params: SupplierListParams): Promise<SupplierPage> {
+  const { data } = await apiClient.get<SupplierPage>("/suppliers", {
+    params: toSupplierQueryParams(params),
+  });
+  return data;
+}
 
 function escapeCsvCell(value: string | number | null | undefined): string {
   const raw = value === null || value === undefined ? "" : String(value);

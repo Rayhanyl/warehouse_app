@@ -1,3 +1,5 @@
+import { apiClient } from "@/lib/api-client";
+import type { Paginated } from "@/types/api";
 import type { StorageLocationRecord, StorageLocationWarehouseOption } from "./types";
 
 export const sampleWarehouseOptions: StorageLocationWarehouseOption[] = [
@@ -80,6 +82,49 @@ export const initialSampleStorageLocations: StorageLocationRecord[] = [
     updated_at: "2026-02-18T16:00:00.000Z",
   },
 ];
+
+export interface StorageLocationListParams {
+  limit: number;
+  offset: number;
+  search: string;
+  warehouse_id: string | null;
+  status: "all" | "active" | "inactive";
+}
+
+export function toStorageLocationQueryParams(
+  params: StorageLocationListParams,
+): URLSearchParams {
+  const query = new URLSearchParams({
+    limit: String(params.limit),
+    offset: String(params.offset),
+  });
+  if (params.search.trim()) query.set("search", params.search.trim());
+  if (params.warehouse_id) query.set("warehouse_id", params.warehouse_id);
+  if (params.status !== "all") query.set("is_active", String(params.status === "active"));
+  return query;
+}
+
+export async function fetchStorageLocations(
+  params: StorageLocationListParams,
+): Promise<Paginated<StorageLocationRecord>> {
+  const { data } = await apiClient.get<Paginated<StorageLocationRecord>>("/locations", {
+    params: toStorageLocationQueryParams(params),
+  });
+  return data;
+}
+
+export async function fetchStorageLocationWarehouses(): Promise<StorageLocationWarehouseOption[]> {
+  const { data } = await apiClient.get<Paginated<{
+    id: number;
+    code: string;
+    name: string;
+  }>>("/warehouses", { params: { limit: 200, offset: 0, is_active: true } });
+  return data.items.map((warehouse) => ({
+    id: String(warehouse.id),
+    code: warehouse.code,
+    name: warehouse.name,
+  }));
+}
 
 function escapeCsvCell(value: string): string {
   const normalized = value.replace(/"/g, '""');

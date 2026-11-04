@@ -81,6 +81,9 @@ function resolveRouteContext(
   if (pathname === "/audit-logs") {
     return { title: "Audit log", groupName: "Administrasi" };
   }
+  if (pathname === "/purchase-orders") {
+    return { title: "Purchase order", groupName: "Pengadaan dan penerimaan" };
+  }
   return { title: "Dasbor", groupName: null };
 }
 

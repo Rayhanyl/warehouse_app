@@ -1,4 +1,4 @@
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import {
   CheckCircle2,
   Download,
@@ -15,7 +15,7 @@ import {
 import { toast } from "sonner";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { usePermission } from "@/hooks/usePermission";
-import { buildWarehousesCsv, initialSampleWarehouses } from "../api";
+import { buildWarehousesCsv, fetchWarehouses } from "../api";
 import { WarehouseDeleteDialog } from "../components/WarehouseDeleteDialog";
 import { WarehouseDetailDialog } from "../components/WarehouseDetailDialog";
 import { WarehouseFormDialog } from "../components/WarehouseFormDialog";
@@ -29,9 +29,7 @@ export function WarehousesPage() {
   const { can } = usePermission();
   const canManage = can("warehouse:manage") || can("master:manage");
 
-  const [records, setRecords] = useState<WarehouseRecord[]>(
-    initialSampleWarehouses,
-  );
+  const [records, setRecords] = useState<WarehouseRecord[]>([]);
   const [search, setSearch] = useState("");
   const [draftSearch, setDraftSearch] = useState("");
   const [statusFilter, setStatusFilter] =
@@ -54,6 +52,29 @@ export function WarehousesPage() {
   const [confirmTarget, setConfirmTarget] = useState<WarehouseRecord | null>(
     null,
   );
+
+  useEffect(() => {
+    let active = true;
+    void fetchWarehouses({
+      limit: 200,
+      offset: 0,
+      search: "",
+      status: "all",
+      sort_by: "id",
+      sort_dir: "asc",
+    })
+      .then((page) => {
+        if (active) setRecords(page.items);
+      })
+      .catch(() => {
+        if (active) {
+          setNotice("Daftar gudang belum dapat dimuat. Periksa koneksi lalu coba lagi.");
+        }
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const filteredWarehouses = useMemo(() => {
     const query = search.trim().toLocaleLowerCase();
@@ -170,9 +191,6 @@ export function WarehousesPage() {
       <PageHeader
         action={
           <>
-            <span className="inline-flex min-h-11 items-center rounded-full bg-amber-100 px-3.5 text-xs font-bold text-amber-700">
-              Contoh data
-            </span>
             <button
               className="inline-flex min-h-11 items-center gap-2 rounded-[var(--radius-md)] border border-line-500 bg-surface-0 px-4 text-sm font-semibold text-ink-950 transition hover:bg-canvas-50"
               onClick={handleDownloadCsv}
@@ -199,7 +217,7 @@ export function WarehousesPage() {
             )}
           </>
         }
-        description="Kelola fasilitas gudang beserta alamat dan kebijakan saldo stok negatif per gudang. Saat ini menampilkan contoh data pratinjau antarmuka."
+        description="Kelola fasilitas gudang beserta alamat dan kebijakan saldo stok negatif per gudang."
         title="Gudang"
       />
 

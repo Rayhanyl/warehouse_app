@@ -1,4 +1,6 @@
-import type { WarehouseRecord } from "./types";
+import { apiClient } from "@/lib/api-client";
+import type { Paginated } from "@/types/api";
+import type { WarehouseRecord, WarehouseStatusFilter } from "./types";
 
 export const initialSampleWarehouses: WarehouseRecord[] = [
   {
@@ -35,6 +37,36 @@ export const initialSampleWarehouses: WarehouseRecord[] = [
     updated_at: "2026-10-24T11:15:00Z",
   },
 ];
+
+export interface WarehouseListParams {
+  limit: number;
+  offset: number;
+  search: string;
+  status: WarehouseStatusFilter;
+  sort_by: "id" | "code" | "name" | "created_at";
+  sort_dir: "asc" | "desc";
+}
+
+export function toWarehouseQueryParams(params: WarehouseListParams): URLSearchParams {
+  const query = new URLSearchParams({
+    limit: String(params.limit),
+    offset: String(params.offset),
+    sort_by: params.sort_by,
+    sort_dir: params.sort_dir,
+  });
+  if (params.search.trim()) query.set("search", params.search.trim());
+  if (params.status !== "all") query.set("is_active", String(params.status === "active"));
+  return query;
+}
+
+export async function fetchWarehouses(
+  params: WarehouseListParams,
+): Promise<Paginated<WarehouseRecord>> {
+  const { data } = await apiClient.get<Paginated<WarehouseRecord>>("/warehouses", {
+    params: toWarehouseQueryParams(params),
+  });
+  return data;
+}
 
 function escapeCsvCell(value: string | number | null | undefined): string {
   const raw = value === null || value === undefined ? "" : String(value);

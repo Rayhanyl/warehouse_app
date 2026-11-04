@@ -10,6 +10,7 @@ import { StorageLocationsPage } from "@/features/master-data/storage-locations/p
 import { SuppliersPage } from "@/features/master-data/suplliers/pages/SuppliersPage";
 import { UomsPage } from "@/features/master-data/uoms/pages/UomsPage";
 import { WarehousesPage } from "@/features/master-data/warehouses/pages/WarehousesPage";
+import { PurchaseOrdersPage } from "@/features/purchase-orders/pages/PurchaseOrdersPage";
 import { AdminPlaceholderPage, DashboardPage } from "@/pages/DashboardPage";
 import { LandingPage } from "@/pages/LandingPage";
 
@@ -107,6 +108,10 @@ export const router = createBrowserRouter([
           {
             path: "/audit-logs",
             element: <AuditLogsPage />,
+          },
+          {
+            path: "/purchase-orders",
+            element: <PurchaseOrdersPage />,
           },
           {
             path: "/profile",
