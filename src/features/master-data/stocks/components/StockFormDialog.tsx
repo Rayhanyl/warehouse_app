@@ -1,7 +1,7 @@
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { Save, X } from "lucide-react";
-import { sampleCategoryOptions, sampleUomOptions } from "../api";
 import type { StockFormPayload, StockItem } from "../types";
+import { CODE_REGEX } from "../../validation";
 
 interface CategoryOption {
   id: number;
@@ -23,6 +23,7 @@ interface StockFormDialogProps {
   onSubmit: (payload: StockFormPayload) => void;
   categoryOptions?: CategoryOption[];
   uomOptions?: UomOption[];
+  existingItems?: StockItem[];
 }
 
 export function StockFormDialog({
@@ -31,12 +32,12 @@ export function StockFormDialog({
   initialItem,
   onClose,
   onSubmit,
-  categoryOptions = sampleCategoryOptions,
-  uomOptions = sampleUomOptions,
+  categoryOptions = [],
+  uomOptions = [],
+  existingItems = [],
 }: StockFormDialogProps) {
-  const availableCategoryOptions =
-    categoryOptions.length > 0 ? categoryOptions : sampleCategoryOptions;
-  const availableUomOptions = uomOptions.length > 0 ? uomOptions : sampleUomOptions;
+  const availableCategoryOptions = categoryOptions;
+  const availableUomOptions = uomOptions;
   const [sku, setSku] = useState(() => initialItem?.sku ?? "");
   const [name, setName] = useState(() => initialItem?.name ?? "");
   const [description, setDescription] = useState(
@@ -51,7 +52,13 @@ export function StockFormDialog({
   const [isActive, setIsActive] = useState(
     () => initialItem?.is_active ?? true,
   );
-  const [errors, setErrors] = useState<{ sku?: string; name?: string }>({});
+  const [errors, setErrors] = useState<{
+    sku?: string;
+    name?: string;
+    description?: string;
+    category?: string;
+    uom?: string;
+  }>({});
   const skuInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -81,25 +88,53 @@ export function StockFormDialog({
     event.preventDefault();
     const trimmedSku = sku.trim();
     const trimmedName = name.trim();
-    const nextErrors: { sku?: string; name?: string } = {};
+    const nextErrors: typeof errors = {};
 
     if (!trimmedSku) {
       nextErrors.sku = "Kode SKU wajib diisi (1 sampai 64 karakter).";
+    } else if (!CODE_REGEX.test(trimmedSku)) {
+      nextErrors.sku =
+        "SKU hanya boleh berisi huruf, angka, titik, garis bawah, garis miring, atau tanda hubung.";
+    } else if (
+      existingItems.some(
+        (item) =>
+          item.sku.toLowerCase() === trimmedSku.toLowerCase() &&
+          (mode === "create" || item.id !== initialItem?.id),
+      )
+    ) {
+      nextErrors.sku = "SKU sudah digunakan.";
     }
     if (!trimmedName) {
       nextErrors.name = "Nama barang wajib diisi (1 sampai 200 karakter).";
+    } else if (trimmedName.length > 200) {
+      nextErrors.name = "Nama barang maksimal terdiri dari 200 karakter.";
+    }
+    if (description.trim().length > 1000) {
+      nextErrors.description = "Deskripsi barang maksimal terdiri dari 1.000 karakter.";
+    }
+    if (!categoryId || !availableCategoryOptions.some((category) => category.id === categoryId)) {
+      nextErrors.category = "Pilih kategori aktif.";
+    }
+    if (!uomId || !availableUomOptions.some((uom) => uom.id === uomId)) {
+      nextErrors.uom = "Pilih satuan ukur aktif.";
     }
 
-    if (nextErrors.sku || nextErrors.name) {
+    if (
+      nextErrors.sku ||
+      nextErrors.name ||
+      nextErrors.description ||
+      nextErrors.category ||
+      nextErrors.uom
+    ) {
       setErrors(nextErrors);
       return;
     }
 
-    const selectedCategory =
-      availableCategoryOptions.find((cat) => cat.id === categoryId) ??
-      availableCategoryOptions[0];
-    const selectedUom =
-      availableUomOptions.find((u) => u.id === uomId) ?? availableUomOptions[0];
+    const selectedCategory = availableCategoryOptions.find((cat) => cat.id === categoryId);
+    const selectedUom = availableUomOptions.find((u) => u.id === uomId);
+    if (!selectedCategory || !selectedUom) {
+      return;
+    }
 
     setErrors({});
     onSubmit({
@@ -215,12 +250,15 @@ export function StockFormDialog({
                 onChange={(event) => setCategoryId(Number(event.target.value))}
                 value={categoryId}
               >
-                {availableCategoryOptions.map((cat) => (
+                {availableCategoryOptions.length === 0 ? (
+                  <option value="">Tidak ada kategori aktif</option>
+                ) : availableCategoryOptions.map((cat) => (
                   <option key={cat.id} value={cat.id}>
                     {cat.name}
                   </option>
                 ))}
               </select>
+              {errors.category && <p className="mt-1.5 text-xs font-medium text-red-700">{errors.category}</p>}
             </div>
 
             <div>
@@ -236,12 +274,15 @@ export function StockFormDialog({
                 onChange={(event) => setUomId(Number(event.target.value))}
                 value={uomId}
               >
-                {availableUomOptions.map((u) => (
+                {availableUomOptions.length === 0 ? (
+                  <option value="">Tidak ada satuan ukur aktif</option>
+                ) : availableUomOptions.map((u) => (
                   <option key={u.id} value={u.id}>
                     {u.code} ({u.name})
                   </option>
                 ))}
               </select>
+              {errors.uom && <p className="mt-1.5 text-xs font-medium text-red-700">{errors.uom}</p>}
             </div>
           </div>
 
@@ -255,11 +296,13 @@ export function StockFormDialog({
             <textarea
               className="mt-2 w-full rounded-[var(--radius-md)] border border-line-500 bg-surface-0 p-3.5 text-sm leading-6 text-ink-950 focus:border-teal-600 focus:outline-none focus:ring-2 focus:ring-teal-600/20"
               id="stock-desc-input"
+              maxLength={1000}
               onChange={(event) => setDescription(event.target.value)}
               placeholder="Jelaskan spesifikasi teknis barang..."
               rows={2}
               value={description}
             />
+            {errors.description && <p className="mt-1.5 text-xs font-medium text-red-700">{errors.description}</p>}
           </div>
 
           <div>

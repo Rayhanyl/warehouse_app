@@ -5,6 +5,7 @@ import type {
   StorageLocationRecord,
   StorageLocationWarehouseOption,
 } from "../types";
+import { CODE_REGEX } from "../../validation";
 
 interface StorageLocationFormDialogProps {
   open: boolean;
@@ -49,6 +50,9 @@ function StorageLocationFormInner({
 
     if (!trimmedCode) {
       nextErrors.code = "Kode lokasi wajib diisi.";
+    } else if (!CODE_REGEX.test(trimmedCode)) {
+      nextErrors.code =
+        "Kode hanya boleh berisi huruf, angka, titik, garis bawah, garis miring, atau tanda hubung.";
     } else if (trimmedCode.length > 50) {
       nextErrors.code = "Kode lokasi maksimal 50 karakter.";
     } else {

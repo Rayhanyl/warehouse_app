@@ -1,6 +1,7 @@
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { Save, X } from "lucide-react";
 import type { Supplier, SupplierFormPayload } from "../types";
+import { CODE_REGEX, EMAIL_REGEX, PHONE_REGEX, hasMinimumDigits } from "../../validation";
 
 interface SupplierFormDialogProps {
   isOpen: boolean;
@@ -8,6 +9,7 @@ interface SupplierFormDialogProps {
   initialSupplier: Supplier | null;
   onClose: () => void;
   onSubmit: (payload: SupplierFormPayload) => void;
+  existingSuppliers?: Supplier[];
 }
 
 export function SupplierFormDialog({
@@ -16,6 +18,7 @@ export function SupplierFormDialog({
   initialSupplier,
   onClose,
   onSubmit,
+  existingSuppliers = [],
 }: SupplierFormDialogProps) {
   const [code, setCode] = useState(() => initialSupplier?.code ?? "");
   const [name, setName] = useState(() => initialSupplier?.name ?? "");
@@ -32,6 +35,9 @@ export function SupplierFormDialog({
     code?: string;
     name?: string;
     email?: string;
+    contactPerson?: string;
+    phone?: string;
+    address?: string;
   }>({});
   const codeInputRef = useRef<HTMLInputElement>(null);
 
@@ -63,19 +69,53 @@ export function SupplierFormDialog({
     const trimmedCode = code.trim();
     const trimmedName = name.trim();
     const trimmedEmail = email.trim();
-    const nextErrors: { code?: string; name?: string; email?: string } = {};
+    const nextErrors: typeof errors = {};
 
     if (!trimmedCode) {
       nextErrors.code = "Kode pemasok wajib diisi (1 sampai 50 karakter).";
+    } else if (!CODE_REGEX.test(trimmedCode)) {
+      nextErrors.code =
+        "Kode hanya boleh berisi huruf, angka, titik, garis bawah, garis miring, atau tanda hubung.";
+    } else if (
+      existingSuppliers.some(
+        (supplier) =>
+          supplier.code.toLowerCase() === trimmedCode.toLowerCase() &&
+          (mode === "create" || supplier.id !== initialSupplier?.id),
+      )
+    ) {
+      nextErrors.code = "Kode pemasok sudah digunakan.";
     }
     if (!trimmedName) {
       nextErrors.name = "Nama pemasok wajib diisi (1 sampai 150 karakter).";
     }
-    if (trimmedEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
+    if (trimmedName.length > 150) {
+      nextErrors.name = "Nama pemasok maksimal terdiri dari 150 karakter.";
+    }
+    if (contactPerson.trim().length > 120) {
+      nextErrors.contactPerson = "Nama narahubung maksimal terdiri dari 120 karakter.";
+    }
+    const trimmedPhone = phone.trim();
+    if (
+      trimmedPhone &&
+      (!PHONE_REGEX.test(trimmedPhone) || !hasMinimumDigits(trimmedPhone, 6))
+    ) {
+      nextErrors.phone = "Nomor telepon harus berisi 6 sampai 30 karakter dan minimal 6 digit.";
+    }
+    if (trimmedEmail.length > 255 || (trimmedEmail && !EMAIL_REGEX.test(trimmedEmail))) {
       nextErrors.email = "Format alamat email belum valid.";
     }
+    if (address.trim().length > 1000) {
+      nextErrors.address = "Alamat maksimal terdiri dari 1.000 karakter.";
+    }
 
-    if (nextErrors.code || nextErrors.name || nextErrors.email) {
+    if (
+      nextErrors.code ||
+      nextErrors.name ||
+      nextErrors.contactPerson ||
+      nextErrors.phone ||
+      nextErrors.email ||
+      nextErrors.address
+    ) {
       setErrors(nextErrors);
       return;
     }
@@ -85,7 +125,7 @@ export function SupplierFormDialog({
       code: trimmedCode,
       name: trimmedName,
       contact_person: contactPerson.trim() || null,
-      phone: phone.trim() || null,
+      phone: trimmedPhone || null,
       email: trimmedEmail ? trimmedEmail.toLowerCase() : null,
       address: address.trim() || null,
       is_active: isActive,
@@ -197,6 +237,7 @@ export function SupplierFormDialog({
                 type="text"
                 value={contactPerson}
               />
+              {errors.contactPerson && <p className="mt-1.5 text-xs font-medium text-red-700">{errors.contactPerson}</p>}
             </div>
 
             <div>
@@ -215,6 +256,7 @@ export function SupplierFormDialog({
                 type="tel"
                 value={phone}
               />
+              {errors.phone && <p className="mt-1.5 text-xs font-medium text-red-700">{errors.phone}</p>}
             </div>
           </div>
 
@@ -274,11 +316,13 @@ export function SupplierFormDialog({
             <textarea
               className="mt-2 w-full rounded-[var(--radius-md)] border border-line-500 bg-surface-0 p-3.5 text-sm leading-6 text-ink-950 focus:border-teal-600 focus:outline-none focus:ring-2 focus:ring-teal-600/20"
               id="supplier-address-input"
+              maxLength={1000}
               onChange={(event) => setAddress(event.target.value)}
               placeholder="Contoh: Kawasan Industri Jababeka Blok C-12, Cikarang"
               rows={2}
               value={address}
             />
+            {errors.address && <p className="mt-1.5 text-xs font-medium text-red-700">{errors.address}</p>}
           </div>
 
           <div className="flex flex-wrap items-center justify-end gap-2 border-t border-line-200 pt-4">

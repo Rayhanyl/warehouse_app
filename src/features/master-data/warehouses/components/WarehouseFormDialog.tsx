@@ -1,6 +1,7 @@
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { Save, X } from "lucide-react";
 import type { WarehouseFormPayload, WarehouseRecord } from "../types";
+import { CODE_REGEX } from "../../validation";
 
 interface WarehouseFormDialogProps {
   isOpen: boolean;
@@ -8,6 +9,7 @@ interface WarehouseFormDialogProps {
   initialWarehouse: WarehouseRecord | null;
   onClose: () => void;
   onSubmit: (payload: WarehouseFormPayload) => void;
+  existingWarehouses?: WarehouseRecord[];
 }
 
 export function WarehouseFormDialog({
@@ -16,6 +18,7 @@ export function WarehouseFormDialog({
   initialWarehouse,
   onClose,
   onSubmit,
+  existingWarehouses = [],
 }: WarehouseFormDialogProps) {
   const [code, setCode] = useState(() => initialWarehouse?.code ?? "");
   const [name, setName] = useState(() => initialWarehouse?.name ?? "");
@@ -28,7 +31,11 @@ export function WarehouseFormDialog({
   const [isActive, setIsActive] = useState(
     () => initialWarehouse?.is_active ?? true,
   );
-  const [errors, setErrors] = useState<{ code?: string; name?: string }>({});
+  const [errors, setErrors] = useState<{
+    code?: string;
+    name?: string;
+    address?: string;
+  }>({});
   const codeInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -58,16 +65,32 @@ export function WarehouseFormDialog({
     event.preventDefault();
     const trimmedCode = code.trim();
     const trimmedName = name.trim();
-    const nextErrors: { code?: string; name?: string } = {};
+    const nextErrors: { code?: string; name?: string; address?: string } = {};
 
     if (!trimmedCode) {
       nextErrors.code = "Kode gudang wajib diisi (1 sampai 50 karakter).";
+    } else if (!CODE_REGEX.test(trimmedCode)) {
+      nextErrors.code =
+        "Kode hanya boleh berisi huruf, angka, titik, garis bawah, garis miring, atau tanda hubung.";
+    } else if (
+      existingWarehouses.some(
+        (warehouse) =>
+          warehouse.code.toLowerCase() === trimmedCode.toLowerCase() &&
+          (mode === "create" || warehouse.id !== initialWarehouse?.id),
+      )
+    ) {
+      nextErrors.code = "Kode gudang sudah digunakan.";
     }
     if (!trimmedName) {
       nextErrors.name = "Nama gudang wajib diisi (1 sampai 150 karakter).";
+    } else if (trimmedName.length > 150) {
+      nextErrors.name = "Nama gudang maksimal terdiri dari 150 karakter.";
+    }
+    if (address.trim().length > 1000) {
+      nextErrors.address = "Alamat maksimal terdiri dari 1.000 karakter.";
     }
 
-    if (nextErrors.code || nextErrors.name) {
+    if (nextErrors.code || nextErrors.name || nextErrors.address) {
       setErrors(nextErrors);
       return;
     }
@@ -178,11 +201,13 @@ export function WarehouseFormDialog({
             <textarea
               className="mt-2 w-full rounded-[var(--radius-md)] border border-line-500 bg-surface-0 p-3.5 text-sm leading-6 text-ink-950 focus:border-teal-600 focus:outline-none focus:ring-2 focus:ring-teal-600/20"
               id="warehouse-address-input"
+              maxLength={1000}
               onChange={(event) => setAddress(event.target.value)}
               placeholder="Contoh: Jl. Raya Cakung Cilincing KM 4, Jakarta Timur"
               rows={2}
               value={address}
             />
+            {errors.address && <p className="mt-1.5 text-xs font-medium text-red-700">{errors.address}</p>}
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">

@@ -491,6 +491,7 @@ export function StocksPage() {
           setFormState((current) => ({ ...current, isOpen: false }))
         }
         onSubmit={handleSaveItem}
+        existingItems={records}
         categoryOptions={categoryOptions}
         uomOptions={uomOptions}
       />

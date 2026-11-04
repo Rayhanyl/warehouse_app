@@ -447,6 +447,7 @@ export function SuppliersPage() {
           setFormState((current) => ({ ...current, isOpen: false }))
         }
         onSubmit={handleSaveSupplier}
+        existingSuppliers={records}
       />
 
       <SupplierDeleteDialog

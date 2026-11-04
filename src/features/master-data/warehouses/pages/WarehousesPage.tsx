@@ -458,6 +458,7 @@ export function WarehousesPage() {
           setFormState((current) => ({ ...current, isOpen: false }))
         }
         onSubmit={handleSaveWarehouse}
+        existingWarehouses={records}
       />
 
       <WarehouseDeleteDialog

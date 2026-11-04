@@ -1,6 +1,7 @@
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { AlertCircle, Save, X } from "lucide-react";
 import type { Uom, UomCreatePayload, UomUpdatePayload } from "../types";
+import { CODE_REGEX } from "../../validation";
 
 interface UomFormDialogProps {
   isOpen: boolean;
@@ -72,6 +73,9 @@ export function UomFormDialog({
 
     if (trimmedCode.length === 0) {
       nextErrors.code = "Kode satuan ukur wajib diisi (1 sampai 20 karakter).";
+    } else if (!CODE_REGEX.test(trimmedCode)) {
+      nextErrors.code =
+        "Kode hanya boleh berisi huruf, angka, titik, garis bawah, garis miring, atau tanda hubung.";
     } else if (trimmedCode.length > 20) {
       nextErrors.code = "Kode satuan ukur maksimal terdiri dari 20 karakter.";
     }
@@ -180,7 +184,7 @@ export function UomFormDialog({
               }`}
               disabled={isSubmitting}
               id="uom-code-input"
-              maxLength={30}
+              maxLength={20}
               onChange={(event) => {
                 setCode(event.target.value);
                 if (validationErrors.code) {
@@ -232,7 +236,7 @@ export function UomFormDialog({
               }`}
               disabled={isSubmitting}
               id="uom-name-input"
-              maxLength={80}
+              maxLength={60}
               onChange={(event) => {
                 setName(event.target.value);
                 if (validationErrors.name) {
@@ -342,4 +346,3 @@ export function UomFormDialog({
     </div>
   );
 }
-

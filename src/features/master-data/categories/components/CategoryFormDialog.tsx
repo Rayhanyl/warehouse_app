@@ -78,8 +78,8 @@ export function CategoryFormDialog({
       nextErrors.name = "Nama kategori maksimal terdiri dari 120 karakter.";
     }
 
-    if (trimmedDescription.length > 500) {
-      nextErrors.description = "Deskripsi kategori maksimal terdiri dari 500 karakter.";
+    if (trimmedDescription.length > 1000) {
+      nextErrors.description = "Deskripsi kategori maksimal terdiri dari 1.000 karakter.";
     }
 
     if (nextErrors.name || nextErrors.description) {
@@ -178,7 +178,7 @@ export function CategoryFormDialog({
               }`}
               disabled={isSubmitting}
               id="category-name-input"
-              maxLength={140}
+              maxLength={120}
               onChange={(event) => {
                 setName(event.target.value);
                 if (validationErrors.name) {
@@ -229,6 +229,7 @@ export function CategoryFormDialog({
               }`}
               disabled={isSubmitting}
               id="category-description-input"
+              maxLength={1000}
               onChange={(event) => {
                 setDescription(event.target.value);
                 if (validationErrors.description) {
@@ -309,4 +310,3 @@ export function CategoryFormDialog({
     </div>
   );
 }
-
