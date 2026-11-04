@@ -11,6 +11,7 @@ import { SuppliersPage } from "@/features/master-data/suplliers/pages/SuppliersP
 import { UomsPage } from "@/features/master-data/uoms/pages/UomsPage";
 import { WarehousesPage } from "@/features/master-data/warehouses/pages/WarehousesPage";
 import { PurchaseOrdersPage } from "@/features/purchase-orders/pages/PurchaseOrdersPage";
+import { GoodsReceiptsPage } from "@/features/goods-receipts/pages/GoodsReceiptsPage";
 import { AdminPlaceholderPage, DashboardPage } from "@/pages/DashboardPage";
 import { LandingPage } from "@/pages/LandingPage";
 
@@ -112,6 +113,10 @@ export const router = createBrowserRouter([
           {
             path: "/purchase-orders",
             element: <PurchaseOrdersPage />,
+          },
+          {
+            path: "/goods-receipts",
+            element: <GoodsReceiptsPage />,
           },
           {
             path: "/profile",
