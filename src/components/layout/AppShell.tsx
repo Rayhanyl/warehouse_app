@@ -87,6 +87,12 @@ function resolveRouteContext(
   if (pathname === "/goods-receipts") {
     return { title: "Penerimaan barang", groupName: "Pengadaan dan penerimaan" };
   }
+  if (pathname === "/stock-transfers") {
+    return { title: "Transfer stok", groupName: "Operasional gudang" };
+  }
+  if (pathname === "/stock-opnames") {
+    return { title: "Stock opname", groupName: "Operasional gudang" };
+  }
   return { title: "Dasbor", groupName: null };
 }
 

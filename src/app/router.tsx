@@ -12,6 +12,8 @@ import { UomsPage } from "@/features/master-data/uoms/pages/UomsPage";
 import { WarehousesPage } from "@/features/master-data/warehouses/pages/WarehousesPage";
 import { PurchaseOrdersPage } from "@/features/purchase-orders/pages/PurchaseOrdersPage";
 import { GoodsReceiptsPage } from "@/features/goods-receipts/pages/GoodsReceiptsPage";
+import { StockTransfersPage } from "@/features/stock-transfers/pages/StockTransfersPage";
+import { StockOpnamesPage } from "@/features/stock-opnames/pages/StockOpnamesPage";
 import { AdminPlaceholderPage, DashboardPage } from "@/pages/DashboardPage";
 import { LandingPage } from "@/pages/LandingPage";
 
@@ -117,6 +119,14 @@ export const router = createBrowserRouter([
           {
             path: "/goods-receipts",
             element: <GoodsReceiptsPage />,
+          },
+          {
+            path: "/stock-transfers",
+            element: <StockTransfersPage />,
+          },
+          {
+            path: "/stock-opnames",
+            element: <StockOpnamesPage />,
           },
           {
             path: "/profile",
