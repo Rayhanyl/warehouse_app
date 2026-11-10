@@ -9,8 +9,6 @@ import type { AuditLog, AuditLogFilters } from "../types";
 const initialFilters: AuditLogFilters = {
   action: "",
   entity_type: "",
-  entity_id: "",
-  user_id: "",
   date_from: "",
   date_to: "",
 };
@@ -152,29 +150,6 @@ export function AuditLogsPage() {
               }
               placeholder="Contoh: users"
               value={draftFilters.entity_type}
-            />
-          </label>
-          <label className="text-sm font-semibold text-ink-950">
-            ID entitas
-            <input
-              className="mt-2 h-11 w-full rounded-[var(--radius-md)] border border-line-500 bg-surface-0 px-3 text-sm font-normal text-ink-950 placeholder:text-slate-600 focus:border-teal-600 focus:outline-none focus:ring-2 focus:ring-teal-600/20"
-              onChange={(event) =>
-                setDraftFilters({ ...draftFilters, entity_id: event.target.value })
-              }
-              placeholder="Contoh: 123"
-              value={draftFilters.entity_id}
-            />
-          </label>
-          <label className="text-sm font-semibold text-ink-950">
-            ID pengguna
-            <input
-              className="mt-2 h-11 w-full rounded-[var(--radius-md)] border border-line-500 bg-surface-0 px-3 text-sm font-normal text-ink-950 placeholder:text-slate-600 focus:border-teal-600 focus:outline-none focus:ring-2 focus:ring-teal-600/20"
-              inputMode="numeric"
-              onChange={(event) =>
-                setDraftFilters({ ...draftFilters, user_id: event.target.value })
-              }
-              placeholder="Contoh: 1"
-              value={draftFilters.user_id}
             />
           </label>
           <label className="text-sm font-semibold text-ink-950">

@@ -1,4 +1,5 @@
 import type { Paginated } from "@/types/api";
+import type { WarehouseRecord } from "@/features/master-data/warehouses/types";
 
 export interface AdminUser {
   id: number;
@@ -47,5 +48,27 @@ export interface AdminMenu {
   updated_at: string;
 }
 
+export interface AdminMenuPayload {
+  code: string;
+  name: string;
+  path: string;
+  icon: string | null;
+  parent_id: number | null;
+  sort_order: number;
+  permission_id: number | null;
+  is_active: boolean;
+}
+
 export type AdminUserPage = Paginated<AdminUser>;
 export type AdminMenuPage = Paginated<AdminMenu>;
+
+export interface AdminUserWarehouse {
+  warehouse_id: number;
+  warehouse_code: string;
+  warehouse_name: string;
+  is_active: boolean;
+  created_by: number | null;
+  created_at: string;
+}
+
+export type AdminWarehouse = WarehouseRecord;

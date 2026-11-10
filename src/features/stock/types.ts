@@ -10,9 +10,13 @@ export interface StockBalance {
   item_id: number;
   item_sku: string;
   item_name: string;
+  category_id: number;
+  category_name: string;
+  uom_id: number;
   uom_code: string;
   qty_on_hand: DecimalString;
   qty_in_transit: DecimalString;
+  updated_at: string;
 }
 
 export interface WarehouseStockBalance {
@@ -22,6 +26,9 @@ export interface WarehouseStockBalance {
   item_id: number;
   item_sku: string;
   item_name: string;
+  category_id: number;
+  category_name: string;
+  uom_id: number;
   uom_code: string;
   qty_on_hand: DecimalString;
   qty_in_transit: DecimalString;
@@ -31,6 +38,9 @@ export interface StockSummary {
   item_id: number;
   item_sku: string;
   item_name: string;
+  category_id: number;
+  category_name: string;
+  uom_id: number;
   uom_code: string;
   qty_on_hand: DecimalString;
   qty_in_transit: DecimalString;
@@ -44,6 +54,8 @@ export interface StockMovement {
   uom_code: string;
   warehouse_code: string;
   warehouse_name: string;
+  warehouse_id: number;
+  location_id: number | null;
   location_code: string | null;
   location_name: string | null;
   movement_type: string;
@@ -52,6 +64,9 @@ export interface StockMovement {
   qty_after: DecimalString;
   reference_type: string | null;
   reference_id: number | null;
+  notes: string | null;
+  created_by: number;
+  created_by_username: string;
   created_at: string;
 }
 
@@ -62,8 +77,12 @@ export interface StockListParams {
   warehouse_id: string;
   location_id: string;
   item_id: string;
+  category_id: string;
   date_from: string;
   date_to: string;
+  movement_type: string;
+  reference_type: string;
+  reference_id: string;
 }
 
 export type StockBalancePage = Paginated<StockBalance>;

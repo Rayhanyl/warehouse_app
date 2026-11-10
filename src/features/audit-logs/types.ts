@@ -18,8 +18,6 @@ export type AuditLogPage = Paginated<AuditLog>;
 export interface AuditLogFilters {
   action: string;
   entity_type: string;
-  entity_id: string;
-  user_id: string;
   date_from: string;
   date_to: string;
 }

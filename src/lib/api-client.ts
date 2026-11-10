@@ -8,6 +8,7 @@ import {
 
 export interface RetryableRequestConfig extends InternalAxiosRequestConfig {
   _retry?: boolean;
+  _accessToken?: string | null;
 }
 
 export interface TokenRotationResult {
@@ -26,6 +27,7 @@ export const apiClient = axios.create({
 
 apiClient.interceptors.request.use((config) => {
   const token = useAuthStore.getState().accessToken;
+  (config as RetryableRequestConfig)._accessToken = token;
 
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
@@ -121,6 +123,16 @@ apiClient.interceptors.response.use(
     }
 
     originalRequest._retry = true;
+
+    const currentAccessToken = useAuthStore.getState().accessToken;
+    if (
+      currentAccessToken &&
+      originalRequest._accessToken &&
+      currentAccessToken !== originalRequest._accessToken
+    ) {
+      originalRequest.headers.set("Authorization", `Bearer ${currentAccessToken}`);
+      return apiClient(originalRequest);
+    }
 
     const refreshToken = localStorageRepository
       .getString(REFRESH_TOKEN_STORAGE_KEY)

@@ -29,3 +29,17 @@ export interface StockFormPayload {
   allow_decimal: boolean;
   is_active: boolean;
 }
+
+export interface StockImportError {
+  row: number;
+  field: string;
+  code: string;
+  message: string;
+}
+
+export interface StockImportResult {
+  total_rows: number;
+  imported_count: number;
+  failed_count: number;
+  errors: StockImportError[];
+}

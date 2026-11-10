@@ -1,7 +1,7 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api-client";
 import { extractApiErrorInfo } from "@/lib/errors";
-import type { StockTransfer, StockTransferCreatePayload, StockTransferPage, TransferReceiveLinePayload, TransferReference } from "./types";
+import type { StockTransfer, StockTransferCreatePayload, StockTransferPage, StockTransferUpdatePayload, TransferReceiveLinePayload, TransferReference } from "./types";
 
 export const transferKeys = {
   all: ["stock-transfers"] as const,
@@ -42,6 +42,32 @@ export async function createTransfer(payload: StockTransferCreatePayload) {
   return data;
 }
 
+function getCreatePayload(payload: StockTransferCreatePayload | StockTransferUpdatePayload): StockTransferCreatePayload {
+  if (
+    payload.source_warehouse_id === undefined ||
+    payload.source_location_id === undefined ||
+    payload.destination_warehouse_id === undefined ||
+    payload.destination_location_id === undefined ||
+    payload.lines === undefined
+  ) {
+    throw new Error("Data transfer baru belum lengkap.");
+  }
+
+  return {
+    source_warehouse_id: payload.source_warehouse_id,
+    source_location_id: payload.source_location_id,
+    destination_warehouse_id: payload.destination_warehouse_id,
+    destination_location_id: payload.destination_location_id,
+    notes: payload.notes,
+    lines: payload.lines,
+  };
+}
+
+export async function updateTransfer(id: number, payload: StockTransferUpdatePayload) {
+  const { data } = await apiClient.patch<StockTransfer>(`/stock-transfers/${id}`, payload);
+  return data;
+}
+
 export async function transferAction(id: number, action: "approve" | "ship" | "cancel" | "receive", lines?: TransferReceiveLinePayload[]) {
   const { data } = await apiClient.post<StockTransfer>(`/stock-transfers/${id}/${action}`, action === "receive" ? { lines } : undefined);
   return data;
@@ -55,11 +81,15 @@ export function useTransfer(id: number | null) {
   return useQuery({ queryKey: transferKeys.detail(id ?? 0), queryFn: () => fetchTransfer(id!), enabled: id !== null });
 }
 
-export function useTransferMutation(action: "create" | "approve" | "ship" | "cancel" | "receive") {
+export function useTransferMutation(action: "create" | "update" | "approve" | "ship" | "cancel" | "receive") {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, payload, lines }: { id?: number; payload?: StockTransferCreatePayload; lines?: TransferReceiveLinePayload[] }) => {
-      if (action === "create") return createTransfer(payload!);
+    mutationFn: ({ id, payload, lines }: { id?: number; payload?: StockTransferCreatePayload | StockTransferUpdatePayload; lines?: TransferReceiveLinePayload[] }) => {
+      if (action === "create") return createTransfer(getCreatePayload(payload!));
+      if (action === "update") {
+        if (!id) throw new Error("ID transfer tidak tersedia.");
+        return updateTransfer(id, payload!);
+      }
       if (!id) throw new Error("ID transfer tidak tersedia.");
       return transferAction(id, action, lines);
     },

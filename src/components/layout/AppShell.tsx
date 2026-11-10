@@ -90,6 +90,9 @@ function resolveRouteContext(
   if (pathname === "/admin/menus") {
     return { title: "Menu", groupName: "Administrasi dan keamanan" };
   }
+  if (pathname === "/purchase-orders/new" || pathname === "/purchasing/purchase-orders/new") {
+    return { title: "Buat purchase order", groupName: "Pengadaan dan penerimaan" };
+  }
   if (pathname === "/purchase-orders" || pathname === "/purchasing/purchase-orders") {
     return { title: "Purchase order", groupName: "Pengadaan dan penerimaan" };
   }

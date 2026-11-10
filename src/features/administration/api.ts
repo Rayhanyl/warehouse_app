@@ -1,6 +1,16 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api-client";
-import type { AdminMenuPage, AdminUser, AdminUserPage, Permission, Role } from "./types";
+import type {
+  AdminMenuPage,
+  AdminMenu,
+  AdminMenuPayload,
+  AdminUser,
+  AdminUserPage,
+  AdminUserWarehouse,
+  AdminWarehouse,
+  Permission,
+  Role,
+} from "./types";
 
 export const administrationKeys = {
   all: ["administration"] as const,
@@ -8,6 +18,8 @@ export const administrationKeys = {
   roles: () => [...administrationKeys.all, "roles"] as const,
   permissions: () => [...administrationKeys.all, "permissions"] as const,
   menus: (params: MenuParams) => [...administrationKeys.all, "menus", params] as const,
+  warehouses: () => [...administrationKeys.all, "warehouses"] as const,
+  userWarehouses: (id: number) => [...administrationKeys.all, "user-warehouses", id] as const,
 };
 
 export interface UserParams {
@@ -58,6 +70,50 @@ export function useAdminMenus(params: MenuParams, enabled = true) {
   });
 }
 
+export function useCreateAdminMenu() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: AdminMenuPayload) => apiClient.post<AdminMenu>("/menus", payload).then((response) => response.data),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: [...administrationKeys.all, "menus"] }),
+  });
+}
+
+export function useUpdateAdminMenu() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, payload }: { id: number; payload: Partial<AdminMenuPayload> & { clear_parent?: boolean; clear_permission?: boolean } }) =>
+      apiClient.patch<AdminMenu>(`/menus/${id}`, payload).then((response) => response.data),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: [...administrationKeys.all, "menus"] }),
+  });
+}
+
+export function useAdminWarehouses(enabled = true) {
+  return useQuery({
+    queryKey: administrationKeys.warehouses(),
+    queryFn: async () =>
+      (
+        await apiClient.get<{ items: AdminWarehouse[] }>("/warehouses", {
+          params: {
+            limit: 200,
+            offset: 0,
+            is_active: true,
+            sort_by: "name",
+            sort_dir: "asc",
+          },
+        })
+      ).data.items,
+    enabled,
+  });
+}
+
+export function useAdminUserWarehouses(userId: number | null, enabled = true) {
+  return useQuery({
+    queryKey: administrationKeys.userWarehouses(userId ?? 0),
+    queryFn: async () => (await apiClient.get<AdminUserWarehouse[]>(`/users/${userId}/warehouses`)).data,
+    enabled: enabled && userId !== null,
+  });
+}
+
 export function useCreateAdminUser() {
   const queryClient = useQueryClient();
   return useMutation({
@@ -80,6 +136,18 @@ export function useUpdateAdminUser() {
     mutationFn: ({ id, payload }: { id: number; payload: Partial<Pick<AdminUser, "email" | "full_name" | "role_id" | "is_active">> & { password?: string } }) =>
       apiClient.patch<AdminUser>(`/users/${id}`, payload).then((response) => response.data),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: [...administrationKeys.all, "users"] }),
+  });
+}
+
+export function useUpdateAdminUserWarehouses() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, warehouse_ids }: { id: number; warehouse_ids: number[] }) =>
+      apiClient.put<AdminUserWarehouse[]>(`/users/${id}/warehouses`, { warehouse_ids }).then((response) => response.data),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: [...administrationKeys.all, "users"] });
+      queryClient.invalidateQueries({ queryKey: administrationKeys.userWarehouses(variables.id) });
+    },
   });
 }
 

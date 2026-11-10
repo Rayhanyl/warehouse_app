@@ -10,6 +10,7 @@ import {
   PowerOff,
   RotateCcw,
   Search,
+  Upload,
   X,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -17,10 +18,15 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { usePermission } from "@/hooks/usePermission";
 import { fetchCategories } from "@/features/master-data/categories/api";
 import { fetchUoms } from "@/features/master-data/uoms/api";
-import { buildStockItemsCsv, fetchStockItems } from "../api";
+import {
+  buildStockItemsCsv,
+  downloadStockItemsImportTemplate,
+  fetchStockItems,
+} from "../api";
 import { StockDeleteDialog } from "../components/StockDeleteDialog";
 import { StockDetailDialog } from "../components/StockDetailDialog";
 import { StockFormDialog } from "../components/StockFormDialog";
+import { StockImportDialog } from "../components/StockImportDialog";
 import type {
   StockFormPayload,
   StockItem,
@@ -49,6 +55,7 @@ export function StocksPage() {
     item: null,
   });
   const [confirmTarget, setConfirmTarget] = useState<StockItem | null>(null);
+  const [isImportOpen, setIsImportOpen] = useState(false);
   const [categoryOptions, setCategoryOptions] = useState<
     { id: number; name: string }[]
   >([]);
@@ -231,6 +238,40 @@ export function StocksPage() {
     );
   }
 
+  async function handleDownloadImportTemplate() {
+    try {
+      const blob = await downloadStockItemsImportTemplate();
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = "template_import_barang.xlsx";
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch {
+      setNotice("Template import belum dapat diunduh. Periksa koneksi lalu coba lagi.");
+    }
+  }
+
+  async function refreshStockItems() {
+    try {
+      const page = await fetchStockItems({
+        limit: 200,
+        offset: 0,
+        search: "",
+        status: "all",
+        category_id: null,
+        uom_id: null,
+        sort_by: "id",
+        sort_dir: "asc",
+      });
+      setRecords(page.items);
+    } catch {
+      setNotice("Import selesai, tetapi daftar barang belum dapat diperbarui.");
+    }
+  }
+
   return (
     <>
       <PageHeader
@@ -244,17 +285,35 @@ export function StocksPage() {
               <Download aria-hidden="true" size={17} />
               Unduh CSV
             </button>
+            <button
+              className="inline-flex min-h-11 items-center gap-2 rounded-[var(--radius-md)] border border-line-500 bg-surface-0 px-4 text-sm font-semibold text-ink-950 transition hover:bg-canvas-50"
+              onClick={() => void handleDownloadImportTemplate()}
+              type="button"
+            >
+              <Download aria-hidden="true" size={17} />
+              Unduh template
+            </button>
             {canManage && (
-              <button
-                className="inline-flex min-h-11 items-center gap-2 rounded-[var(--radius-md)] bg-teal-600 px-4 text-sm font-semibold text-surface-0 transition hover:bg-teal-700"
-                onClick={() =>
-                  setFormState({ isOpen: true, mode: "create", item: null })
-                }
-                type="button"
-              >
-                <Plus aria-hidden="true" size={17} />
-                Tambah barang
-              </button>
+              <>
+                <button
+                  className="inline-flex min-h-11 items-center gap-2 rounded-[var(--radius-md)] border border-teal-600 bg-surface-0 px-4 text-sm font-semibold text-teal-700 transition hover:bg-teal-100"
+                  onClick={() => setIsImportOpen(true)}
+                  type="button"
+                >
+                  <Upload aria-hidden="true" size={17} />
+                  Import Excel
+                </button>
+                <button
+                  className="inline-flex min-h-11 items-center gap-2 rounded-[var(--radius-md)] bg-teal-600 px-4 text-sm font-semibold text-surface-0 transition hover:bg-teal-700"
+                  onClick={() =>
+                    setFormState({ isOpen: true, mode: "create", item: null })
+                  }
+                  type="button"
+                >
+                  <Plus aria-hidden="true" size={17} />
+                  Tambah barang
+                </button>
+              </>
             )}
           </>
         }
@@ -501,6 +560,14 @@ export function StocksPage() {
         onClose={() => setConfirmTarget(null)}
         onConfirm={handleConfirmToggle}
       />
+
+      {canManage && isImportOpen && (
+        <StockImportDialog
+          onClose={() => setIsImportOpen(false)}
+          onDownloadTemplate={() => void handleDownloadImportTemplate()}
+          onImported={refreshStockItems}
+        />
+      )}
     </>
   );
 }

@@ -25,8 +25,26 @@ function toParams(params: StockListParams) {
     warehouse_id: params.warehouse_id || undefined,
     location_id: params.location_id || undefined,
     item_id: params.item_id || undefined,
+    category_id: params.category_id || undefined,
     date_from: params.date_from || undefined,
     date_to: params.date_to || undefined,
+  };
+}
+
+function toLedgerParams(params: StockListParams) {
+  return {
+    limit: params.limit,
+    offset: params.offset,
+    warehouse_id: params.warehouse_id || undefined,
+    location_id: params.location_id || undefined,
+    item_id: params.item_id || undefined,
+    movement_type: params.movement_type || undefined,
+    reference_type: params.reference_type || undefined,
+    reference_id: params.reference_id || undefined,
+    date_from: params.date_from
+      ? `${params.date_from}T00:00:00Z`
+      : undefined,
+    date_to: params.date_to ? `${params.date_to}T23:59:59.999999Z` : undefined,
   };
 }
 
@@ -55,7 +73,7 @@ export async function fetchStockSummary(params: StockListParams): Promise<StockS
 
 export async function fetchStockMovements(params: StockListParams): Promise<StockMovementPage> {
   const { data } = await apiClient.get<StockMovementPage>("/stock/ledger", {
-    params: toParams(params),
+    params: toLedgerParams(params),
   });
   return data;
 }

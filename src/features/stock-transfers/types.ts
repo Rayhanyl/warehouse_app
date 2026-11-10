@@ -55,6 +55,12 @@ export interface StockTransferCreatePayload {
   lines: TransferLinePayload[];
 }
 
+export type StockTransferUpdatePayload = Partial<
+  Omit<StockTransferCreatePayload, "lines">
+> & {
+  lines?: TransferLinePayload[];
+};
+
 export interface TransferReceiveLinePayload {
   line_id: number;
   qty_received: string;

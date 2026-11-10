@@ -10,7 +10,7 @@ import { StorageLocationsPage } from "@/features/master-data/storage-locations/p
 import { SuppliersPage } from "@/features/master-data/suplliers/pages/SuppliersPage";
 import { UomsPage } from "@/features/master-data/uoms/pages/UomsPage";
 import { WarehousesPage } from "@/features/master-data/warehouses/pages/WarehousesPage";
-import { PurchaseOrdersPage } from "@/features/purchase-orders/pages/PurchaseOrdersPage";
+import { PurchaseOrderCreatePage, PurchaseOrdersPage } from "@/features/purchase-orders/pages/PurchaseOrdersPage";
 import { GoodsReceiptsPage } from "@/features/goods-receipts/pages/GoodsReceiptsPage";
 import { StockTransfersPage } from "@/features/stock-transfers/pages/StockTransfersPage";
 import { StockOpnamesPage } from "@/features/stock-opnames/pages/StockOpnamesPage";
@@ -135,8 +135,16 @@ export const router = createBrowserRouter([
             element: <AdministrationPage />,
           },
           {
+            path: "/purchase-orders/new",
+            element: <PurchaseOrderCreatePage />,
+          },
+          {
             path: "/purchase-orders",
             element: <PurchaseOrdersPage />,
+          },
+          {
+            path: "/purchasing/purchase-orders/new",
+            element: <PurchaseOrderCreatePage />,
           },
           {
             path: "/purchasing/purchase-orders",

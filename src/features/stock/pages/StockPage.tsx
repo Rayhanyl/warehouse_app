@@ -24,8 +24,12 @@ const initialParams: StockListParams = {
   warehouse_id: "",
   location_id: "",
   item_id: "",
+  category_id: "",
   date_from: "",
   date_to: "",
+  movement_type: "",
+  reference_type: "",
+  reference_id: "",
 };
 
 const dateFormatter = new Intl.DateTimeFormat("id-ID", {
@@ -98,26 +102,39 @@ export function StockPage() {
         className="mb-6 grid gap-3 rounded-[var(--radius-lg)] border border-line-200 bg-surface-0 p-4 shadow-[var(--shadow-1)] sm:grid-cols-2 lg:grid-cols-4"
         onSubmit={apply}
       >
-        <label className="sm:col-span-2">
-          <span className="mb-1.5 block text-xs font-semibold text-slate-700">Cari barang atau SKU</span>
-          <span className="flex h-11 items-center gap-2 rounded-[var(--radius-md)] border border-line-500 px-3">
-            <Search aria-hidden="true" className="text-slate-600" size={16} />
-            <input
-              aria-label="Cari barang atau SKU"
-              className="min-w-0 flex-1 bg-transparent text-sm outline-none"
-              onChange={(event) => setDraft({ ...draft, search: event.target.value })}
-              placeholder="Contoh: MCU atau kardus"
-              value={draft.search}
-            />
-          </span>
-        </label>
-        <Field label="ID gudang" value={draft.warehouse_id} onChange={(value) => setDraft({ ...draft, warehouse_id: value })} />
-        <Field label="ID lokasi" value={draft.location_id} onChange={(value) => setDraft({ ...draft, location_id: value })} />
-        <Field label="ID barang" value={draft.item_id} onChange={(value) => setDraft({ ...draft, item_id: value })} />
+        {!isLedgerView && (
+          <label className="sm:col-span-2">
+            <span className="mb-1.5 block text-xs font-semibold text-slate-700">Cari barang atau SKU</span>
+            <span className="flex h-11 items-center gap-2 rounded-[var(--radius-md)] border border-line-500 px-3">
+              <Search aria-hidden="true" className="text-slate-600" size={16} />
+              <input
+                aria-label="Cari barang atau SKU"
+                className="min-w-0 flex-1 bg-transparent text-sm outline-none"
+                onChange={(event) => setDraft({ ...draft, search: event.target.value })}
+                placeholder="Contoh: MCU atau kardus"
+                value={draft.search}
+              />
+            </span>
+          </label>
+        )}
         {isLedgerView && (
           <>
+            <Field label="Gudang ID" type="number" value={draft.warehouse_id} onChange={(value) => setDraft({ ...draft, warehouse_id: value })} />
+            <Field label="Lokasi ID" type="number" value={draft.location_id} onChange={(value) => setDraft({ ...draft, location_id: value })} />
+            <Field label="Barang ID" type="number" value={draft.item_id} onChange={(value) => setDraft({ ...draft, item_id: value })} />
+            <SelectField label="Jenis mutasi" value={draft.movement_type} onChange={(value) => setDraft({ ...draft, movement_type: value })} options={[["", "Semua jenis"], ["IN_PURCHASE", "Penerimaan pembelian"], ["OUT_TRANSFER", "Pengeluaran transfer"], ["IN_TRANSFER", "Penerimaan transfer"], ["ADJUSTMENT_PLUS", "Penyesuaian tambah"], ["ADJUSTMENT_MINUS", "Penyesuaian kurang"]]} />
+            <SelectField label="Jenis referensi" value={draft.reference_type} onChange={(value) => setDraft({ ...draft, reference_type: value })} options={[["", "Semua referensi"], ["GOODS_RECEIPT", "Goods receipt"], ["STOCK_TRANSFER", "Stock transfer"], ["STOCK_OPNAME", "Stock opname"]]} />
+            <Field label="Reference ID" type="number" value={draft.reference_id} onChange={(value) => setDraft({ ...draft, reference_id: value })} />
             <Field label="Mulai tanggal" type="date" value={draft.date_from} onChange={(value) => setDraft({ ...draft, date_from: value })} />
             <Field label="Sampai tanggal" type="date" value={draft.date_to} onChange={(value) => setDraft({ ...draft, date_to: value })} />
+          </>
+        )}
+        {!isLedgerView && (
+          <>
+            <Field label="Gudang ID" type="number" value={draft.warehouse_id} onChange={(value) => setDraft({ ...draft, warehouse_id: value })} />
+            {(!isWarehouseView && !isSummaryView) && <Field label="Lokasi ID" type="number" value={draft.location_id} onChange={(value) => setDraft({ ...draft, location_id: value })} />}
+            <Field label="Barang ID" type="number" value={draft.item_id} onChange={(value) => setDraft({ ...draft, item_id: value })} />
+            <Field label="Kategori ID" type="number" value={draft.category_id} onChange={(value) => setDraft({ ...draft, category_id: value })} />
           </>
         )}
         <div className="flex items-end gap-2">
@@ -179,6 +196,17 @@ function Field({ label, value, onChange, type = "number" }: { label: string; val
     <label>
       <span className="mb-1.5 block text-xs font-semibold text-slate-700">{label}</span>
       <input className="h-11 w-full rounded-[var(--radius-md)] border border-line-500 px-3 text-sm text-ink-950" min={type === "number" ? 1 : undefined} onChange={(event) => onChange(event.target.value)} type={type} value={value} />
+    </label>
+  );
+}
+
+function SelectField({ label, value, onChange, options }: { label: string; value: string; onChange: (value: string) => void; options: [string, string][] }) {
+  return (
+    <label>
+      <span className="mb-1.5 block text-xs font-semibold text-slate-700">{label}</span>
+      <select className="h-11 w-full rounded-[var(--radius-md)] border border-line-500 px-3 text-sm text-ink-950" onChange={(event) => onChange(event.target.value)} value={value}>
+        {options.map(([optionValue, optionLabel]) => <option key={optionValue} value={optionValue}>{optionLabel}</option>)}
+      </select>
     </label>
   );
 }

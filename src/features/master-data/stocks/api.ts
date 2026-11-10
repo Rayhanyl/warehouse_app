@@ -1,6 +1,6 @@
 import { apiClient } from "@/lib/api-client";
 import type { Paginated } from "@/types/api";
-import type { StockItem, StockStatusFilter } from "./types";
+import type { StockImportResult, StockItem, StockStatusFilter } from "./types";
 
 export const sampleCategoryOptions = [
   { id: 1, name: "Komponen Elektronik" },
@@ -95,6 +95,22 @@ export async function fetchStockItems(
 ): Promise<Paginated<StockItem>> {
   const { data } = await apiClient.get<Paginated<StockItem>>("/items", {
     params: toStockQueryParams(params),
+  });
+  return data;
+}
+
+export async function downloadStockItemsImportTemplate(): Promise<Blob> {
+  const { data } = await apiClient.get<Blob>("/items/import-template", {
+    responseType: "blob",
+  });
+  return data;
+}
+
+export async function importStockItems(file: File): Promise<StockImportResult> {
+  const formData = new FormData();
+  formData.append("file", file);
+  const { data } = await apiClient.post<StockImportResult>("/items/import", formData, {
+    headers: { "Content-Type": "multipart/form-data" },
   });
   return data;
 }
