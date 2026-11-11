@@ -2,7 +2,9 @@ import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import {
   AlertCircle,
   Camera,
+  Layers,
   MapPin,
+  Package,
   RefreshCw,
   ScanBarcode,
   Search,
@@ -13,6 +15,7 @@ import { apiClient } from "@/lib/api-client";
 import { formatDecimal, toDecimal } from "@/lib/decimal";
 import { useBarcodeScanner } from "@/hooks/useBarcodeScanner";
 import { BarcodeScannerModal } from "./BarcodeScannerModal";
+import { BarcodeVisual } from "./BarcodeVisual";
 import type { StockBalance } from "@/features/stock/types";
 import type { Paginated } from "@/types/api";
 
@@ -31,6 +34,14 @@ interface ItemSummary {
   uom_code?: string;
 }
 
+interface LocationSummary {
+  scope: "location" | "warehouse";
+  code: string;
+  name: string;
+  warehouse_code: string;
+  warehouse_name: string;
+}
+
 export function StockLookupModal({
   isOpen,
   onClose,
@@ -45,6 +56,7 @@ export function StockLookupModal({
 
   const [balances, setBalances] = useState<StockBalance[]>([]);
   const [itemInfo, setItemInfo] = useState<ItemSummary | null>(null);
+  const [locationInfo, setLocationInfo] = useState<LocationSummary | null>(null);
 
   const inputRef = useRef<HTMLInputElement | null>(null);
 
@@ -55,6 +67,7 @@ export function StockLookupModal({
       setSearchTerm("");
       setBalances([]);
       setItemInfo(null);
+      setLocationInfo(null);
       setHasSearched(false);
       setError(null);
       setIsCameraOpen(false);
@@ -113,7 +126,8 @@ export function StockLookupModal({
     setHasSearched(true);
 
     try {
-      // 1. Cari saldo lokasi berdasarkan barcode / SKU
+      const lower = trimmed.toLowerCase();
+      // 1. Cari saldo lokasi berdasarkan barcode barang / SKU / kode lokasi rak / kode gudang
       const { data: balanceData } = await apiClient.get<Paginated<StockBalance>>(
         "/stock/by-location",
         {
@@ -128,18 +142,62 @@ export function StockLookupModal({
       setBalances(items);
 
       if (items.length > 0) {
-        // Ambil info barang dari baris saldo pertama
         const first = items[0];
-        setItemInfo({
-          id: first.item_id,
-          sku: first.item_sku,
-          barcode: first.item_barcode || null,
-          name: first.item_name,
-          category_name: first.category_name,
-          uom_code: first.uom_code,
-        });
+        const exactLocationMatch = items.some(
+          (row) =>
+            row.location_code.toLowerCase() === lower ||
+            row.location_name.toLowerCase() === lower,
+        );
+        const exactWarehouseMatch =
+          !exactLocationMatch &&
+          items.some(
+            (row) =>
+              row.warehouse_code.toLowerCase() === lower ||
+              row.warehouse_name.toLowerCase() === lower,
+          );
+        const anyItemFieldMatch = items.some(
+          (row) =>
+            row.item_sku.toLowerCase().includes(lower) ||
+            Boolean(row.item_barcode && row.item_barcode.toLowerCase().includes(lower)) ||
+            row.item_name.toLowerCase().includes(lower),
+        );
+
+        if (exactLocationMatch || exactWarehouseMatch || !anyItemFieldMatch) {
+          setItemInfo(null);
+          if (exactWarehouseMatch) {
+            setLocationInfo({
+              scope: "warehouse",
+              code: first.warehouse_code,
+              name: first.warehouse_name,
+              warehouse_code: first.warehouse_code,
+              warehouse_name: first.warehouse_name,
+            });
+          } else {
+            setLocationInfo({
+              scope: "location",
+              code: first.location_code,
+              name: first.location_name,
+              warehouse_code: first.warehouse_code,
+              warehouse_name: first.warehouse_name,
+            });
+          }
+        } else {
+          setLocationInfo(null);
+          setItemInfo({
+            id: first.item_id,
+            sku: first.item_sku,
+            barcode: first.item_barcode || null,
+            name: first.item_name,
+            category_name: first.category_name,
+            uom_code: first.uom_code,
+          });
+        }
       } else {
-        // 2. Jika saldo kosong di seluruh rak, cek apakah barang terdaftar di master data
+        // 2. Jika saldo kosong, cek apakah merupakan Barang di master data atau Lokasi Rak kosong
+        setLocationInfo(null);
+        setItemInfo(null);
+
+        let foundMasterItem = false;
         try {
           const { data: itemData } = await apiClient.get<
             Paginated<{
@@ -157,13 +215,15 @@ export function StockLookupModal({
             },
           });
 
-          const matched = itemData?.items?.find(
-            (it) =>
-              it.sku.toLowerCase() === trimmed.toLowerCase() ||
-              (it.barcode && it.barcode.toLowerCase() === trimmed.toLowerCase()),
-          ) || itemData?.items?.[0];
+          const matched =
+            itemData?.items?.find(
+              (it) =>
+                it.sku.toLowerCase() === lower ||
+                (it.barcode && it.barcode.toLowerCase() === lower),
+            ) || itemData?.items?.[0];
 
           if (matched) {
+            foundMasterItem = true;
             setItemInfo({
               id: matched.id,
               sku: matched.sku,
@@ -172,11 +232,47 @@ export function StockLookupModal({
               category_name: matched.category_name,
               uom_code: matched.uom_code,
             });
-          } else {
-            setItemInfo(null);
           }
         } catch {
-          setItemInfo(null);
+          // Abaikan dan lanjutkan cek lokasi rak bila perlu
+        }
+
+        if (!foundMasterItem) {
+          try {
+            const { data: locationData } = await apiClient.get<
+              Paginated<{
+                id: number;
+                code: string;
+                name: string;
+                warehouse_code: string;
+                warehouse_name: string;
+              }>
+            >("/locations", {
+              params: {
+                search: trimmed,
+                limit: 5,
+              },
+            });
+
+            const matchedLoc =
+              locationData?.items?.find(
+                (loc) =>
+                  loc.code.toLowerCase() === lower ||
+                  loc.name.toLowerCase() === lower,
+              ) || locationData?.items?.[0];
+
+            if (matchedLoc) {
+              setLocationInfo({
+                scope: "location",
+                code: matchedLoc.code,
+                name: matchedLoc.name,
+                warehouse_code: matchedLoc.warehouse_code,
+                warehouse_name: matchedLoc.warehouse_name,
+              });
+            }
+          } catch {
+            // Biarkan kosong jika tidak ditemukan di items maupun locations
+          }
         }
       }
     } catch (err: unknown) {
@@ -200,21 +296,29 @@ export function StockLookupModal({
   }
 
   // Ringkasan kalkulasi saldo
-  const { totalOnHand, totalInTransit, distinctWarehousesCount } = useMemo(() => {
+  const {
+    totalOnHand,
+    totalInTransit,
+    distinctWarehousesCount,
+    distinctItemsCount,
+  } = useMemo(() => {
     let onHandSum = toDecimal("0");
     let inTransitSum = toDecimal("0");
     const warehouseSet = new Set<string>();
+    const itemSet = new Set<number>();
 
     for (const b of balances) {
       onHandSum = onHandSum.plus(toDecimal(b.qty_on_hand || "0"));
       inTransitSum = inTransitSum.plus(toDecimal(b.qty_in_transit || "0"));
       warehouseSet.add(b.warehouse_code);
+      itemSet.add(b.item_id);
     }
 
     return {
       totalOnHand: formatDecimal(onHandSum.toString()),
       totalInTransit: formatDecimal(inTransitSum.toString()),
       distinctWarehousesCount: warehouseSet.size,
+      distinctItemsCount: itemSet.size,
     };
   }, [balances]);
 
@@ -244,7 +348,7 @@ export function StockLookupModal({
                 Cek Stok & Posisi Rak Barang
               </h2>
               <p className="text-xs text-slate-600">
-                Pindai barcode fisik atau masukkan SKU untuk melihat detail barang dan posisi rak gudang secara langsung.
+                Pindai barcode barang, SKU, atau barcode lokasi rak/gudang untuk memeriksa posisi dan rincian isi stok secara langsung.
               </p>
             </div>
           </div>
@@ -272,14 +376,14 @@ export function StockLookupModal({
                 className="h-11 w-full rounded-[var(--radius-md)] border border-line-500 bg-surface-0 pl-10 pr-4 text-sm font-semibold text-ink-950 tabular-nums focus:border-teal-600 focus:outline-none focus:ring-2 focus:ring-teal-600/20"
                 id="stock-lookup-input"
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Pindai barcode atau ketik SKU / Barcode..."
+                placeholder="Pindai barcode barang, SKU, atau kode rak (mis. RAK-A1)..."
                 ref={inputRef}
                 type="text"
                 value={query}
               />
             </div>
             <button
-              className="inline-flex h-11 items-center gap-1.5 rounded-[var(--radius-md)] bg-teal-700 px-4 text-xs font-semibold text-white shadow-xs transition hover:bg-teal-800 disabled:opacity-60"
+              className="inline-flex h-11 items-center justify-center gap-1.5 rounded-[var(--radius-md)] bg-teal-700 px-4 text-xs font-semibold text-white shadow-xs transition hover:bg-teal-800 disabled:opacity-60"
               disabled={isLoading || !query.trim()}
               type="submit"
             >
@@ -292,7 +396,7 @@ export function StockLookupModal({
             </button>
             <button
               aria-label="Pindai barcode dengan kamera"
-              className="inline-flex h-11 items-center gap-1.5 rounded-[var(--radius-md)] border border-line-500 bg-surface-0 px-3.5 text-xs font-semibold text-ink-950 hover:bg-canvas-100"
+              className="inline-flex h-11 items-center justify-center gap-1.5 rounded-[var(--radius-md)] border border-line-500 bg-surface-0 px-3.5 text-xs font-semibold text-ink-950 hover:bg-canvas-100"
               onClick={() => setIsCameraOpen(true)}
               type="button"
             >
@@ -332,12 +436,12 @@ export function StockLookupModal({
                 Belum ada barcode yang dipindai
               </h3>
               <p className="mt-1 max-w-md text-xs leading-5 text-slate-600">
-                Arahkan scanner barcode fisik ke produk, gunakan kamera, atau ketik SKU/barcode pada kolom pencarian di atas untuk memeriksa posisi rak dan saldo stok.
+                Arahkan scanner barcode fisik ke produk atau label rak gudang, gunakan kamera, atau ketik SKU/barcode pada kolom pencarian di atas.
               </p>
             </div>
           )}
 
-          {!isLoading && hasSearched && !itemInfo && balances.length === 0 && (
+          {!isLoading && hasSearched && !itemInfo && !locationInfo && balances.length === 0 && (
             <div className="flex flex-col items-center justify-center rounded-xl border border-line-300 bg-canvas-50 py-12 text-center">
               <div className="grid size-12 place-items-center rounded-full bg-amber-100 text-amber-700">
                 <AlertCircle aria-hidden="true" size={26} />
@@ -346,11 +450,133 @@ export function StockLookupModal({
                 Barang tidak ditemukan
               </h3>
               <p className="mt-1 text-xs text-slate-600">
-                Tidak ada barang atau saldo stok yang cocok dengan kata kunci &quot;{searchTerm}&quot;.
+                Tidak ada barang, lokasi rak, atau saldo stok yang cocok dengan kata kunci &quot;{searchTerm}&quot;.
               </p>
             </div>
           )}
 
+          {/* MODE 1: Hasil Pemindaian Lokasi Rak / Gudang (Multi-SKU Inspection) */}
+          {!isLoading && hasSearched && locationInfo && (
+            <div className="space-y-6">
+              <div className="rounded-[var(--radius-lg)] border border-line-400 bg-surface-0 p-5 shadow-xs">
+                <div className="flex flex-wrap items-start justify-between gap-4">
+                  <div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="inline-flex items-center gap-1 rounded bg-blue-100 px-2.5 py-0.5 text-xs font-bold text-blue-800">
+                        <MapPin aria-hidden="true" size={13} />
+                        {locationInfo.scope === "warehouse" ? "GUDANG" : "LOKASI RAK"}: {locationInfo.code}
+                      </span>
+                      <span className="inline-flex items-center gap-1 rounded bg-slate-100 px-2.5 py-0.5 text-xs font-semibold text-slate-800">
+                        <Warehouse aria-hidden="true" size={13} />
+                        {locationInfo.warehouse_code} · {locationInfo.warehouse_name}
+                      </span>
+                    </div>
+                    <h3 className="mt-2 text-base font-bold text-ink-950 sm:text-lg">
+                      {locationInfo.name}
+                    </h3>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-3">
+                    <BarcodeVisual
+                      className="hidden border border-line-200 sm:inline-flex"
+                      height={32}
+                      showValue={false}
+                      value={locationInfo.code}
+                    />
+                    <div className="rounded-lg border border-blue-200 bg-blue-50/70 px-4 py-2 text-right">
+                      <p className="text-[11px] font-medium text-blue-800">Macam Barang (SKU)</p>
+                      <p className="text-lg font-bold text-blue-950 tabular-nums">
+                        {distinctItemsCount} <span className="text-xs font-normal text-blue-800">SKU</span>
+                      </p>
+                    </div>
+                    <div className="rounded-lg border border-teal-200 bg-teal-50/60 px-4 py-2 text-right">
+                      <p className="text-[11px] font-medium text-teal-700">Total Unit Fisik</p>
+                      <p className="text-lg font-bold text-teal-950 tabular-nums">
+                        {totalOnHand}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <div className="mb-2.5 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Layers aria-hidden="true" className="text-teal-700" size={18} />
+                    <h4 className="text-sm font-bold text-ink-950">
+                      Daftar Macam Barang di Lokasi Ini
+                    </h4>
+                  </div>
+                  <span className="text-xs font-medium text-slate-600">
+                    {distinctItemsCount} macam SKU ({balances.length} baris stok)
+                  </span>
+                </div>
+
+                {balances.length === 0 ? (
+                  <div className="rounded-[var(--radius-md)] border border-amber-200 bg-amber-50/60 p-4 text-xs text-amber-900">
+                    <p className="font-semibold">Lokasi rak saat ini kosong</p>
+                    <p className="mt-0.5 text-amber-800">
+                      Tidak ada barang yang sedang tersimpan di lokasi rak {locationInfo.code}.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="overflow-hidden rounded-[var(--radius-md)] border border-line-400">
+                    <table className="w-full text-left text-xs text-ink-950">
+                      <thead className="border-b border-line-400 bg-canvas-50 text-[11px] font-semibold text-slate-700">
+                        <tr>
+                          <th className="px-3.5 py-2.5">SKU / Barcode</th>
+                          <th className="px-3.5 py-2.5">Nama Barang</th>
+                          <th className="px-3.5 py-2.5">Kategori</th>
+                          <th className="px-3.5 py-2.5">Rak / Bin</th>
+                          <th className="px-3.5 py-2.5 text-right">Qty Fisik</th>
+                          <th className="px-3.5 py-2.5 text-right">In-Transit</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-line-300 bg-surface-0">
+                        {balances.map((row) => (
+                          <tr
+                            className="transition hover:bg-canvas-50/80"
+                            key={`${row.warehouse_id}-${row.location_id}-${row.item_id}`}
+                          >
+                            <td className="px-3.5 py-2.5 font-semibold tabular-nums">
+                              <div className="flex items-center gap-1.5 text-teal-800">
+                                <Package aria-hidden="true" size={13} />
+                                <span>{row.item_sku}</span>
+                              </div>
+                              {row.item_barcode && (
+                                <div className="mt-0.5 font-mono text-[10px] font-normal text-slate-500">
+                                  BC: {row.item_barcode}
+                                </div>
+                              )}
+                            </td>
+                            <td className="px-3.5 py-2.5 font-semibold text-ink-950">
+                              {row.item_name}
+                            </td>
+                            <td className="px-3.5 py-2.5 text-slate-600">
+                              {row.category_name}
+                            </td>
+                            <td className="px-3.5 py-2.5">
+                              <span className="inline-block rounded bg-slate-100 px-2 py-0.5 font-mono font-bold text-slate-800">
+                                {row.location_code}
+                              </span>
+                            </td>
+                            <td className="px-3.5 py-2.5 text-right font-bold tabular-nums text-ink-950">
+                              {formatDecimal(row.qty_on_hand)} {row.uom_code}
+                            </td>
+                            <td className="px-3.5 py-2.5 text-right tabular-nums text-slate-600">
+                              {formatDecimal(row.qty_in_transit)} {row.uom_code}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* MODE 2: Hasil Pemindaian Barang (Single Item Stock & Rack Distribution) */}
           {!isLoading && hasSearched && itemInfo && (
             <div className="space-y-6">
               {/* Item Card */}
@@ -383,7 +609,13 @@ export function StockLookupModal({
                   </div>
 
                   {/* Summary Metric Badges */}
-                  <div className="flex items-center gap-3">
+                  <div className="flex flex-wrap items-center gap-3">
+                    <BarcodeVisual
+                      className="hidden border border-line-200 sm:inline-flex"
+                      height={32}
+                      showValue={false}
+                      value={itemInfo.barcode || itemInfo.sku}
+                    />
                     <div className="rounded-lg border border-teal-200 bg-teal-50/60 px-4 py-2 text-right">
                       <p className="text-[11px] font-medium text-teal-700">Total Saldo Fisik</p>
                       <p className="text-lg font-bold text-teal-950 tabular-nums">
@@ -493,7 +725,7 @@ export function StockLookupModal({
             Tekan <kbd className="rounded border border-line-300 bg-surface-0 px-1 py-0.5 font-mono text-[10px]">Esc</kbd> untuk menutup jendela pencarian.
           </p>
           <button
-            className="rounded-[var(--radius-md)] border border-line-500 bg-surface-0 px-4 py-2 text-xs font-semibold text-ink-950 hover:bg-canvas-100"
+            className="inline-flex items-center justify-center rounded-[var(--radius-md)] border border-line-500 bg-surface-0 px-4 py-2 text-xs font-semibold text-ink-950 hover:bg-canvas-100"
             onClick={onClose}
             type="button"
           >
@@ -508,7 +740,7 @@ export function StockLookupModal({
           isOpen={isCameraOpen}
           onClose={() => setIsCameraOpen(false)}
           onDetected={handleCameraDetected}
-          title="Pindai Barcode Fisik Barang"
+          title="Pindai Barcode Barang atau Rak"
         />
       )}
     </div>

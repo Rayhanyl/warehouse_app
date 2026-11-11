@@ -269,6 +269,7 @@ export function StorageLocationsPage() {
 
   return (
     <div className="space-y-6">
+      <div className="no-print space-y-6">
       <PageHeader
         title="Lokasi Penyimpanan"
         description="Kelola daftar zona karantina, lorong rak, dan bin penyimpanan di setiap gudang."
@@ -536,6 +537,7 @@ export function StorageLocationsPage() {
           </span>
         </div>
       </section>
+      </div>
 
       <StorageLocationDetailDialog
         location={detailTarget}

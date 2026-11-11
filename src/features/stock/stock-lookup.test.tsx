@@ -241,5 +241,84 @@ describe("AC-34 & MST-F09: Barcode Generation & Stock Location Quick Lookup", ()
         expect(screen.getByText("Barang tidak ditemukan")).toBeInTheDocument();
       });
     });
+
+    it("AC-36: menampilkan Kartu Identitas Rak dan daftar multi-SKU saat kode lokasi rak dipindai", async () => {
+      const mockRackBalances = [
+        {
+          warehouse_id: 1,
+          warehouse_code: "WH-JKT-01",
+          warehouse_name: "Gudang Pusat Jakarta",
+          location_id: 101,
+          location_code: "JKT-RAK-A1",
+          location_name: "Rak Utama A1",
+          item_id: 10,
+          item_sku: "ELK-MCU-001",
+          item_barcode: "8991001000019",
+          item_name: "Microcontroller ESP32-S3",
+          category_id: 1,
+          category_name: "Komponen Elektronik",
+          uom_id: 1,
+          uom_code: "PCS",
+          qty_on_hand: "40.0000",
+          qty_in_transit: "0.0000",
+          updated_at: "2026-11-11T10:00:00Z",
+        },
+        {
+          warehouse_id: 1,
+          warehouse_code: "WH-JKT-01",
+          warehouse_name: "Gudang Pusat Jakarta",
+          location_id: 101,
+          location_code: "JKT-RAK-A1",
+          location_name: "Rak Utama A1",
+          item_id: 11,
+          item_sku: "ELK-SNS-002",
+          item_barcode: "8991001000026",
+          item_name: "Sensor Suhu Industri",
+          category_id: 1,
+          category_name: "Komponen Elektronik",
+          uom_id: 1,
+          uom_code: "PCS",
+          qty_on_hand: "25.0000",
+          qty_in_transit: "5.0000",
+          updated_at: "2026-11-11T10:00:00Z",
+        },
+      ];
+
+      vi.spyOn(apiClient, "get").mockImplementation(async (url: string) => {
+        if (url === "/stock/by-location") {
+          return {
+            data: {
+              items: mockRackBalances,
+              total: 2,
+              limit: 100,
+              offset: 0,
+            },
+          } as any;
+        }
+        return { data: { items: [], total: 0, limit: 10, offset: 0 } } as any;
+      });
+
+      const { container } = render(
+        <MemoryRouter>
+          <StockLookupModal isOpen={true} onClose={vi.fn()} />
+        </MemoryRouter>,
+      );
+
+      const input = screen.getByLabelText(/Cari barcode atau SKU/i);
+      fireEvent.change(input, { target: { value: "JKT-RAK-A1" } });
+      fireEvent.click(screen.getByRole("button", { name: /^Cari$/i }));
+
+      await waitFor(() => {
+        expect(
+          screen.getByText("Daftar Macam Barang di Lokasi Ini"),
+        ).toBeInTheDocument();
+      });
+
+      expect(screen.getByText("Rak Utama A1")).toBeInTheDocument();
+      expect(screen.getByText(/2 macam SKU/i)).toBeInTheDocument();
+      expect(screen.getByText("Microcontroller ESP32-S3")).toBeInTheDocument();
+      expect(screen.getByText("Sensor Suhu Industri")).toBeInTheDocument();
+      expect(container.textContent).not.toMatch(/[—–]/);
+    });
   });
 });

@@ -1,14 +1,17 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import {
   Calendar,
   CheckCircle2,
   Edit3,
   MapPin,
   PowerOff,
+  Printer,
   RotateCcw,
   ShieldAlert,
   X,
 } from "lucide-react";
+import { toast } from "sonner";
+import { BarcodeStickerSheet, BarcodeVisual } from "@/components/ui/BarcodeVisual";
 import type { WarehouseRecord } from "../types";
 
 interface WarehouseDetailDialogProps {
@@ -33,6 +36,12 @@ export function WarehouseDetailDialog({
   onEdit,
   onToggleStatus,
 }: WarehouseDetailDialogProps) {
+  const [showStickerPreview, setShowStickerPreview] = useState(false);
+
+  useEffect(() => {
+    setShowStickerPreview(false);
+  }, [warehouse?.id]);
+
   useEffect(() => {
     if (!warehouse) {
       return;
@@ -50,19 +59,25 @@ export function WarehouseDetailDialog({
     return null;
   }
 
+  function handlePrintWarehouseSticker() {
+    toast.dismiss();
+    setShowStickerPreview(true);
+    window.print();
+  }
+
   return (
     <div
-      className="fixed inset-0 z-50 grid place-items-center bg-ink-950/55 p-4"
+      className="print-dialog-backdrop fixed inset-0 z-50 grid place-items-center bg-ink-950/55 p-4"
       onMouseDown={onClose}
     >
       <div
         aria-labelledby="warehouse-detail-title"
         aria-modal="true"
-        className="w-full max-w-lg rounded-[var(--radius-lg)] border border-line-200 bg-surface-0 p-5 shadow-[var(--shadow-2)] sm:p-6"
+        className="print-dialog-panel w-full max-w-lg rounded-[var(--radius-lg)] border border-line-200 bg-surface-0 p-5 shadow-[var(--shadow-2)] sm:p-6"
         onMouseDown={(event) => event.stopPropagation()}
         role="dialog"
       >
-        <div className="flex items-start justify-between gap-3 border-b border-line-200 pb-4">
+        <div className="no-print flex items-start justify-between gap-3 border-b border-line-200 pb-4">
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
               <span className="rounded-full bg-canvas-50 px-2.5 py-0.5 text-xs font-semibold text-slate-700 tabular-nums">
@@ -99,7 +114,23 @@ export function WarehouseDetailDialog({
           </button>
         </div>
 
-        <dl className="mt-5 space-y-4 text-sm">
+        <dl className="no-print mt-5 space-y-4 text-sm">
+          <div className="flex flex-col items-center justify-between gap-3 rounded-[var(--radius-md)] border border-line-200 bg-canvas-50/70 p-3.5 sm:flex-row">
+            <div>
+              <dt className="text-xs font-semibold text-ink-950">
+                Barcode Identitas Gudang
+              </dt>
+              <dd className="mt-0.5 text-xs text-slate-600">
+                Pindai untuk menampilkan seluruh ringkasan stok di gudang ini
+              </dd>
+            </div>
+            <BarcodeVisual
+              className="border border-line-200"
+              height={38}
+              value={warehouse.code}
+            />
+          </div>
+
           <div className="flex items-start gap-3">
             <MapPin
               aria-hidden="true"
@@ -140,7 +171,24 @@ export function WarehouseDetailDialog({
           </div>
         </dl>
 
-        <div className="mt-6 flex flex-wrap items-center justify-end gap-2 border-t border-line-200 pt-4">
+        <BarcodeStickerSheet
+          badgeText="LABEL GUDANG WMS"
+          code={warehouse.code}
+          metaLabel={warehouse.allow_negative_stock ? "Stok Negatif: Aktif" : "Stok Negatif: Ketat"}
+          secondaryCode={warehouse.code}
+          title={warehouse.name}
+          visibleOnScreen={showStickerPreview}
+        />
+
+        <div className="no-print mt-6 flex flex-wrap items-center justify-end gap-2 border-t border-line-200 pt-4">
+          <button
+            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-[var(--radius-md)] border border-line-500 bg-surface-0 px-3.5 text-sm font-semibold text-ink-950 transition hover:bg-canvas-50"
+            onClick={handlePrintWarehouseSticker}
+            type="button"
+          >
+            <Printer aria-hidden="true" size={16} />
+            Cetak Label Gudang
+          </button>
           {canManage && (
             <>
               <button

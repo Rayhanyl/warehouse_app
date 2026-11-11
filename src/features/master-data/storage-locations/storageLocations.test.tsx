@@ -52,6 +52,13 @@ describe("StorageLocationsPage (Contoh data pratinjau Lokasi Penyimpanan)", () =
     expect(
       screen.getByRole("dialog", { name: "Area Karantina Penerimaan" }),
     ).toBeInTheDocument();
+    expect(screen.getByText("Barcode Lokasi Rak")).toBeInTheDocument();
+
+    const printSpy = vi.spyOn(window, "print").mockImplementation(() => {});
+    fireEvent.click(screen.getByRole("button", { name: /Cetak Label Rak/i }));
+    expect(printSpy).toHaveBeenCalledTimes(1);
+    printSpy.mockRestore();
+
     fireEvent.click(
       screen.getByRole("button", {
         name: "Tutup dialog detail lokasi penyimpanan",

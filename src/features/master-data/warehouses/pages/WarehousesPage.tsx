@@ -188,6 +188,7 @@ export function WarehousesPage() {
 
   return (
     <>
+      <div className="no-print">
       <PageHeader
         action={
           <>
@@ -438,6 +439,7 @@ export function WarehousesPage() {
           </div>
         </section>
       )}
+      </div>
 
       <WarehouseDetailDialog
         canManage={canManage}

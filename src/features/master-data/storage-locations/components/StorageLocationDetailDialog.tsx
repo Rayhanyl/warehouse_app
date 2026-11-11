@@ -1,5 +1,7 @@
-import { useEffect } from "react";
-import { X } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Printer, X } from "lucide-react";
+import { toast } from "sonner";
+import { BarcodeStickerSheet, BarcodeVisual } from "@/components/ui/BarcodeVisual";
 import type { StorageLocationRecord } from "../types";
 
 interface StorageLocationDetailDialogProps {
@@ -26,6 +28,12 @@ export function StorageLocationDetailDialog({
   onClose,
   onEdit,
 }: StorageLocationDetailDialogProps) {
+  const [showStickerPreview, setShowStickerPreview] = useState(false);
+
+  useEffect(() => {
+    setShowStickerPreview(false);
+  }, [location?.id]);
+
   useEffect(() => {
     if (!location) return;
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -41,15 +49,21 @@ export function StorageLocationDetailDialog({
     return null;
   }
 
+  function handlePrintRackSticker() {
+    toast.dismiss();
+    setShowStickerPreview(true);
+    window.print();
+  }
+
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 p-4"
+      className="print-dialog-backdrop fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 p-4"
       role="dialog"
       aria-modal="true"
       aria-labelledby="storage-location-detail-title"
     >
-      <div className="w-full max-w-lg rounded-lg border border-slate-200 bg-white shadow-xl">
-        <div className="flex items-start justify-between gap-3 border-b border-slate-200 px-6 py-4">
+      <div className="print-dialog-panel w-full max-w-lg rounded-lg border border-slate-200 bg-white shadow-xl">
+        <div className="no-print flex items-start justify-between gap-3 border-b border-slate-200 px-6 py-4">
           <div>
             <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">
               Detail lokasi penyimpanan
@@ -71,7 +85,20 @@ export function StorageLocationDetailDialog({
           </button>
         </div>
 
-        <dl className="divide-y divide-slate-200 px-6 py-2 text-sm">
+        <dl className="no-print divide-y divide-slate-200 px-6 py-2 text-sm">
+          <div className="flex flex-col items-center justify-between gap-3 py-3 sm:flex-row">
+            <div>
+              <dt className="font-semibold text-slate-900">Barcode Lokasi Rak</dt>
+              <dd className="mt-0.5 text-xs text-slate-600">
+                Pindai untuk menampilkan seluruh macam barang (SKU) di rak ini
+              </dd>
+            </div>
+            <BarcodeVisual
+              className="border border-slate-200"
+              height={38}
+              value={location.code}
+            />
+          </div>
           <div className="grid grid-cols-1 gap-1 py-3 sm:grid-cols-3 sm:gap-4">
             <dt className="font-medium text-slate-600">Kode lokasi</dt>
             <dd className="font-mono font-semibold text-slate-900 sm:col-span-2">
@@ -122,7 +149,26 @@ export function StorageLocationDetailDialog({
           </div>
         </dl>
 
-        <div className="flex flex-wrap items-center justify-end gap-2 border-t border-slate-200 bg-slate-50 px-6 py-4">
+        <div className="px-6">
+          <BarcodeStickerSheet
+            badgeText="LABEL LOKASI RAK"
+            code={location.code}
+            metaLabel={`GUDANG: ${location.warehouse_code}`}
+            secondaryCode={location.warehouse_name}
+            title={`${location.code} · ${location.name}`}
+            visibleOnScreen={showStickerPreview}
+          />
+        </div>
+
+        <div className="no-print flex flex-wrap items-center justify-end gap-2 border-t border-slate-200 bg-slate-50 px-6 py-4">
+          <button
+            type="button"
+            onClick={handlePrintRackSticker}
+            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-700"
+          >
+            <Printer className="h-4 w-4" aria-hidden="true" />
+            Cetak Label Rak
+          </button>
           <button
             type="button"
             onClick={onClose}
