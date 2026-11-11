@@ -10,6 +10,7 @@ export interface GoodsReceiptLine {
   po_line_id: number;
   item_id: number;
   item_sku: string;
+  item_barcode?: string | null;
   item_name: string;
   uom_id: number;
   uom_code: string;

@@ -7,6 +7,7 @@ export interface StockTransferLine {
   transfer_id: number;
   item_id: number;
   item_sku: string;
+  item_barcode?: string | null;
   item_name: string;
   uom_code: string;
   allow_decimal: boolean;
@@ -14,7 +15,7 @@ export interface StockTransferLine {
   qty_received: string | null;
   qty_variance: string | null;
   variance_reason: string | null;
-  notes: string | null;
+  notes?: string | null;
 }
 
 export interface StockTransfer {
@@ -25,16 +26,22 @@ export interface StockTransfer {
   source_warehouse_name: string;
   source_location_id: number;
   source_location_code: string;
-  source_location_name: string;
+  source_location_name?: string;
   destination_warehouse_id: number;
   destination_warehouse_code: string;
   destination_warehouse_name: string;
   destination_location_id: number;
   destination_location_code: string;
-  destination_location_name: string;
+  destination_location_name?: string;
   status: StockTransferStatus;
   notes: string | null;
   line_count: number;
+  approved_by?: number | null;
+  approved_at?: string | null;
+  shipped_by?: number | null;
+  shipped_at?: string | null;
+  received_by?: number | null;
+  received_at?: string | null;
   created_at: string;
   updated_at: string;
   lines?: StockTransferLine[];
