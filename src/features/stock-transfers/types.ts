@@ -78,6 +78,8 @@ export type StockTransferPage = Paginated<StockTransfer>;
 export interface TransferReference {
   id: number;
   code: string;
+  sku?: string;
+  barcode?: string | null;
   name: string;
   warehouse_id?: number;
   is_active: boolean;

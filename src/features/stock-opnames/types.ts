@@ -9,6 +9,7 @@ export interface StockOpnameLine {
   location_name: string;
   item_id: number;
   item_sku: string;
+  item_barcode?: string | null;
   item_name: string;
   uom_code: string;
   allow_decimal: boolean;
@@ -64,6 +65,7 @@ export interface OpnameReference {
 export interface OpnameItemReference {
   id: number;
   sku: string;
+  barcode?: string | null;
   name: string;
   allow_decimal: boolean;
   is_active: boolean;

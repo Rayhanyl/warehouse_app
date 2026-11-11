@@ -9,6 +9,7 @@ export interface StockBalance {
   location_name: string;
   item_id: number;
   item_sku: string;
+  item_barcode?: string | null;
   item_name: string;
   category_id: number;
   category_name: string;
@@ -25,6 +26,7 @@ export interface WarehouseStockBalance {
   warehouse_name: string;
   item_id: number;
   item_sku: string;
+  item_barcode?: string | null;
   item_name: string;
   category_id: number;
   category_name: string;
@@ -37,6 +39,7 @@ export interface WarehouseStockBalance {
 export interface StockSummary {
   item_id: number;
   item_sku: string;
+  item_barcode?: string | null;
   item_name: string;
   category_id: number;
   category_name: string;

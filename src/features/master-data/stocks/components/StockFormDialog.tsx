@@ -1,5 +1,6 @@
 import { FormEvent, useEffect, useRef, useState } from "react";
-import { Save, X } from "lucide-react";
+import { Camera, Save, X } from "lucide-react";
+import { BarcodeScannerModal } from "@/components/ui/BarcodeScannerModal";
 import type { StockFormPayload, StockItem } from "../types";
 import { CODE_REGEX } from "../../validation";
 
@@ -39,6 +40,8 @@ export function StockFormDialog({
   const availableCategoryOptions = categoryOptions;
   const availableUomOptions = uomOptions;
   const [sku, setSku] = useState(() => initialItem?.sku ?? "");
+  const [barcode, setBarcode] = useState(() => initialItem?.barcode ?? "");
+  const [scannerOpen, setScannerOpen] = useState(false);
   const [name, setName] = useState(() => initialItem?.name ?? "");
   const [description, setDescription] = useState(
     () => initialItem?.description ?? "",
@@ -54,6 +57,7 @@ export function StockFormDialog({
   );
   const [errors, setErrors] = useState<{
     sku?: string;
+    barcode?: string;
     name?: string;
     description?: string;
     category?: string;
@@ -87,6 +91,7 @@ export function StockFormDialog({
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const trimmedSku = sku.trim();
+    const trimmedBarcode = barcode.trim();
     const trimmedName = name.trim();
     const nextErrors: typeof errors = {};
 
@@ -103,6 +108,21 @@ export function StockFormDialog({
       )
     ) {
       nextErrors.sku = "SKU sudah digunakan.";
+    }
+    if (trimmedBarcode) {
+      if (trimmedBarcode.length > 64 || !CODE_REGEX.test(trimmedBarcode)) {
+        nextErrors.barcode =
+          "Barcode hanya boleh berisi huruf, angka, titik, garis bawah, garis miring, atau tanda hubung (maks. 64 karakter).";
+      } else if (
+        existingItems.some(
+          (item) =>
+            item.barcode &&
+            item.barcode.toLowerCase() === trimmedBarcode.toLowerCase() &&
+            (mode === "create" || item.id !== initialItem?.id),
+        )
+      ) {
+        nextErrors.barcode = "Barcode sudah digunakan pada barang lain.";
+      }
     }
     if (!trimmedName) {
       nextErrors.name = "Nama barang wajib diisi (1 sampai 200 karakter).";
@@ -121,6 +141,7 @@ export function StockFormDialog({
 
     if (
       nextErrors.sku ||
+      nextErrors.barcode ||
       nextErrors.name ||
       nextErrors.description ||
       nextErrors.category ||
@@ -139,6 +160,7 @@ export function StockFormDialog({
     setErrors({});
     onSubmit({
       sku: trimmedSku,
+      barcode: trimmedBarcode || null,
       name: trimmedName,
       description: description.trim() || null,
       category_id: selectedCategory.id,
@@ -234,6 +256,41 @@ export function StockFormDialog({
                 </p>
               )}
             </div>
+          </div>
+
+          <div>
+            <label
+              className="text-sm font-semibold text-ink-950"
+              htmlFor="stock-barcode-input"
+            >
+              Barcode (EAN / UPC / Code-128)
+            </label>
+            <div className="mt-2 flex gap-2">
+              <input
+                aria-invalid={Boolean(errors.barcode)}
+                className="h-12 flex-1 rounded-[var(--radius-md)] border border-line-500 bg-surface-0 px-3.5 text-sm font-semibold text-ink-950 tabular-nums focus:border-teal-600 focus:outline-none focus:ring-2 focus:ring-teal-600/20"
+                id="stock-barcode-input"
+                maxLength={64}
+                onChange={(event) => setBarcode(event.target.value)}
+                placeholder="Opsional · Contoh: 8991001000011"
+                type="text"
+                value={barcode}
+              />
+              <button
+                aria-label="Pindai barcode dengan kamera atau scanner"
+                className="inline-flex min-h-12 items-center gap-1.5 rounded-[var(--radius-md)] border border-line-500 bg-surface-0 px-3.5 text-xs font-semibold text-ink-950 hover:bg-canvas-50"
+                onClick={() => setScannerOpen(true)}
+                type="button"
+              >
+                <Camera aria-hidden="true" size={16} />
+                Pindai
+              </button>
+            </div>
+            {errors.barcode && (
+              <p className="mt-1.5 text-xs font-medium text-red-700">
+                {errors.barcode}
+              </p>
+            )}
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
@@ -342,6 +399,12 @@ export function StockFormDialog({
             </button>
           </div>
         </form>
+        <BarcodeScannerModal
+          isOpen={scannerOpen}
+          onClose={() => setScannerOpen(false)}
+          onDetected={(code) => setBarcode(code)}
+          title="Pindai Barcode Barang"
+        />
       </div>
     </div>
   );

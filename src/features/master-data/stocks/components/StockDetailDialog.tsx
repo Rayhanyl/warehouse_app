@@ -72,6 +72,11 @@ export function StockDetailDialog({
               <span className="rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-bold text-blue-700 tabular-nums">
                 {item.sku}
               </span>
+              {item.barcode && (
+                <span className="rounded-full bg-canvas-50 px-2.5 py-0.5 text-xs font-semibold text-ink-950 tabular-nums">
+                  Barcode: {item.barcode}
+                </span>
+              )}
               <span
                 className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold ${
                   item.is_active

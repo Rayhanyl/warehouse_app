@@ -142,6 +142,7 @@ export function StocksPage() {
       }
       return (
         item.sku.toLocaleLowerCase().includes(query) ||
+        Boolean(item.barcode && item.barcode.toLocaleLowerCase().includes(query)) ||
         item.name.toLocaleLowerCase().includes(query) ||
         item.category_name.toLocaleLowerCase().includes(query)
       );
@@ -436,6 +437,11 @@ export function StocksPage() {
                       <span className="inline-flex rounded-[var(--radius-sm)] bg-blue-100 px-2.5 py-1 text-xs font-bold text-blue-700 tabular-nums">
                         {item.sku}
                       </span>
+                      {item.barcode && (
+                        <p className="mt-1 text-xs font-medium text-slate-600 tabular-nums">
+                          BC: {item.barcode}
+                        </p>
+                      )}
                     </td>
                     <td className="px-4 py-4">
                       <p className="font-semibold text-ink-950">{item.name}</p>

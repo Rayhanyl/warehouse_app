@@ -13,6 +13,7 @@ export interface PurchaseOrderLine {
   po_id: number;
   item_id: number;
   item_sku: string;
+  item_barcode?: string | null;
   item_name: string;
   uom_id: number;
   uom_code: string;

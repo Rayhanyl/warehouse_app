@@ -109,7 +109,16 @@ export function useTransferReferences() {
         apiClient.get<{ items: TransferReference[] }>("/locations", { params: { limit: 200, offset: 0, is_active: true } }),
         apiClient.get<{ items: TransferReference[] }>("/items", { params: { limit: 200, offset: 0, is_active: true } }),
       ]);
-      return { warehouses: warehouses.data.items, locations: locations.data.items, items: items.data.items };
+      return {
+        warehouses: warehouses.data.items,
+        locations: locations.data.items,
+        items: items.data.items.map((item) => ({
+          ...item,
+          code: item.code || item.sku || "",
+          sku: item.sku || item.code || "",
+          barcode: item.barcode ?? null,
+        })),
+      };
     },
   });
 }

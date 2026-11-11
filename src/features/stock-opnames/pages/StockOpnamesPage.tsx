@@ -3,6 +3,7 @@ import Decimal from "decimal.js";
 import { ChevronLeft, ChevronRight, Edit3, Eye, Plus, RotateCcw, Search, X } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { BarcodeScanBar } from "@/components/ui/BarcodeScannerModal";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { usePermission } from "@/hooks/usePermission";
 import { mapOpnameError, useOpname, useOpnameMutation, useOpnameReferences, useOpnames } from "../api";
@@ -199,6 +200,68 @@ function OpnameDetail({ opname, isLoading, isError, can, onRetry, onEdit, onClos
     return quantity.lte("99999999999999.9999") && (allowDecimal || quantity.isInteger());
   }
 
+  function handleScanOpnameItem(scannedCode: string) {
+    if (!opname) return;
+    const normalized = scannedCode.trim().toLowerCase();
+    const matchedLine = (opname.lines ?? []).find(
+      (line) =>
+        line.item_barcode?.toLowerCase() === normalized ||
+        line.item_sku.toLowerCase() === normalized,
+    );
+    if (matchedLine) {
+      const currentRaw = counts[matchedLine.id]?.qty ?? matchedLine.qty_physical ?? "0";
+      const nextQty = new Decimal(currentRaw || "0").plus(1);
+      const formatted = matchedLine.allow_decimal && !nextQty.isInteger() ? nextQty.toFixed(4) : nextQty.toFixed(0);
+      setCounts((currentCounts) => ({
+        ...currentCounts,
+        [matchedLine.id]: {
+          qty: formatted,
+          notes: currentCounts[matchedLine.id]?.notes ?? matchedLine.notes ?? "",
+        },
+      }));
+      toast.success(`${matchedLine.item_sku} · ${matchedLine.item_name} (+1 -> ${formatted})`);
+      return;
+    }
+
+    const matchedRef = (refs.data?.items ?? []).find(
+      (item) =>
+        item.barcode?.toLowerCase() === normalized ||
+        item.sku.toLowerCase() === normalized,
+    );
+    if (matchedRef) {
+      const defaultLocationId = opname.location_id
+        ? String(opname.location_id)
+        : locations[0]
+          ? String(locations[0].id)
+          : "";
+      setFound((currentFound) => {
+        const existingIdx = currentFound.findIndex(
+          (entry) => entry.item_id === String(matchedRef.id),
+        );
+        if (existingIdx >= 0) {
+          return currentFound.map((entry, idx) =>
+            idx === existingIdx
+              ? { ...entry, qty: String(Number(entry.qty || 0) + 1) }
+              : entry,
+          );
+        }
+        return [
+          ...currentFound,
+          {
+            location_id: defaultLocationId,
+            item_id: String(matchedRef.id),
+            qty: "1",
+            notes: "",
+          },
+        ];
+      });
+      toast.success(`Barang temuan: ${matchedRef.sku} · ${matchedRef.name} (+1)`);
+      return;
+    }
+
+    toast.error(`Barang dengan barcode / SKU "${scannedCode}" tidak ditemukan.`);
+  }
+
   async function saveCounts() {
     if (!opname) return;
     const lines: StockOpnameCountLinePayload[] = [];
@@ -251,6 +314,7 @@ function OpnameDetail({ opname, isLoading, isError, can, onRetry, onEdit, onClos
       {opname.notes && <p className="mt-4 text-sm text-slate-700">Catatan sesi: {opname.notes}</p>}{opname.rejection_reason && <p className="mt-4 rounded-[var(--radius-md)] border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900"><strong>Alasan penolakan:</strong> {opname.rejection_reason}</p>}
       {opname.status === "IN_PROGRESS" && can("opname:count") && <section aria-labelledby="opname-count-title" className="mt-5 rounded-[var(--radius-md)] border border-line-200 bg-canvas-50/60 p-4 sm:p-5">
         <div className="flex flex-wrap items-start justify-between gap-3"><div><h3 className="font-semibold text-ink-950" id="opname-count-title">Laporan hitung fisik</h3><p className="mt-1 max-w-2xl text-sm leading-6 text-slate-700">Masukkan jumlah yang ditemukan pada setiap lokasi. Simpan hasil hitung sebelum mengajukan laporan.</p></div><button className="inline-flex min-h-11 items-center justify-center gap-2 rounded-[var(--radius-md)] border border-line-500 bg-surface-0 px-4 text-sm font-semibold text-ink-950 hover:bg-canvas-50 focus:outline-none focus:ring-2 focus:ring-teal-600" onClick={() => setFound((current) => [...current, { location_id: opname.location_id ? String(opname.location_id) : "", item_id: "", qty: "", notes: "" }])} type="button"><Plus aria-hidden="true" size={16} />Tambah barang temuan</button></div>
+        <div className="mt-4"><BarcodeScanBar label="Scan Barcode / SKU Hitung Fisik (+1)" onScan={handleScanOpnameItem} placeholder="Scan atau ketik Barcode / SKU barang untuk menambah hasil fisik (+1)..." /></div>
         <div aria-live="polite" className="mt-4 grid gap-3 sm:grid-cols-3"><Summary label="Jumlah terisi" value={`${reportedCount} dari ${reportLineCount}`} /><Summary label="Baris dengan selisih" value={String(varianceCount)} /><Summary label="Perubahan belum disimpan" value={hasPendingCount ? "Ada" : "Tidak ada"} /></div>
         <div className="mt-4"><div aria-valuemax={Math.max(reportLineCount, 1)} aria-valuemin={0} aria-valuenow={reportedCount} aria-label="Progres pengisian laporan" className="h-2 overflow-hidden rounded-full bg-line-200" role="progressbar"><div className="h-full rounded-full bg-teal-600 transition-[width] duration-150" style={{ width: `${reportLineCount === 0 ? 0 : (reportedCount / reportLineCount) * 100}%` }} /></div><p className="mt-2 text-sm text-slate-700">{reportLineCount === 0 ? "Snapshot tidak menemukan saldo stok. Tambahkan barang temuan untuk melanjutkan." : uncounted > 0 ? `${uncounted} baris masih perlu diisi.` : hasPendingCount ? "Semua jumlah sudah diisi. Simpan perubahan sebelum mengajukan." : "Semua jumlah sudah tersimpan dan siap diajukan."}</p></div>
       </section>}

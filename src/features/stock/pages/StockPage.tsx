@@ -215,7 +215,7 @@ function BalanceTable({ items, showTransit }: { items: StockBalance[]; showTrans
   return (
     <TableFrame caption="Daftar saldo stok" empty={items.length === 0}>
       <thead><tr><Th>Barang</Th><Th>Gudang</Th><Th>Lokasi</Th><Th align="right">Saldo</Th><Th align="right">Tersedia</Th>{showTransit && <Th align="right">Dalam perjalanan</Th>}</tr></thead>
-      <tbody className="divide-y divide-line-200">{items.map((item) => <tr key={`${item.warehouse_id}-${item.location_id}-${item.item_id}`}><td className="px-4 py-4"><p className="font-semibold text-ink-950">{item.item_name}</p><p className="text-xs text-slate-600">{item.item_sku} · {item.uom_code}</p></td><td className="px-4 py-4">{item.warehouse_code} · {item.warehouse_name}</td><td className="px-4 py-4">{item.location_code} · {item.location_name}</td><td className="px-4 py-4 text-right tabular-nums">{formatQuantity(item.qty_on_hand)}</td>{showTransit && <td className="px-4 py-4 text-right tabular-nums">{formatQuantity(item.qty_in_transit)}</td>}</tr>)}</tbody>
+      <tbody className="divide-y divide-line-200">{items.map((item) => <tr key={`${item.warehouse_id}-${item.location_id}-${item.item_id}`}><td className="px-4 py-4"><p className="font-semibold text-ink-950">{item.item_name}</p><p className="text-xs text-slate-600">{item.item_sku} · {item.uom_code}{item.item_barcode ? ` · BC: ${item.item_barcode}` : ""}</p></td><td className="px-4 py-4">{item.warehouse_code} · {item.warehouse_name}</td><td className="px-4 py-4">{item.location_code} · {item.location_name}</td><td className="px-4 py-4 text-right tabular-nums">{formatQuantity(item.qty_on_hand)}</td>{showTransit && <td className="px-4 py-4 text-right tabular-nums">{formatQuantity(item.qty_in_transit)}</td>}</tr>)}</tbody>
     </TableFrame>
   );
 }
@@ -224,13 +224,13 @@ function WarehouseBalanceTable({ items }: { items: WarehouseStockBalance[] }) {
   return (
     <TableFrame caption="Saldo stok per gudang" empty={items.length === 0}>
       <thead><tr><Th>Barang</Th><Th>Gudang</Th><Th align="right">Saldo</Th><Th align="right">Dalam perjalanan</Th></tr></thead>
-      <tbody className="divide-y divide-line-200">{items.map((item) => <tr key={`${item.warehouse_id}-${item.item_id}`}><td className="px-4 py-4"><p className="font-semibold text-ink-950">{item.item_name}</p><p className="text-xs text-slate-600">{item.item_sku} · {item.uom_code}</p></td><td className="px-4 py-4">{item.warehouse_code} · {item.warehouse_name}</td><td className="px-4 py-4 text-right tabular-nums">{formatQuantity(item.qty_on_hand)}</td><td className="px-4 py-4 text-right tabular-nums">{formatQuantity(item.qty_in_transit)}</td></tr>)}</tbody>
+      <tbody className="divide-y divide-line-200">{items.map((item) => <tr key={`${item.warehouse_id}-${item.item_id}`}><td className="px-4 py-4"><p className="font-semibold text-ink-950">{item.item_name}</p><p className="text-xs text-slate-600">{item.item_sku} · {item.uom_code}{item.item_barcode ? ` · BC: ${item.item_barcode}` : ""}</p></td><td className="px-4 py-4">{item.warehouse_code} · {item.warehouse_name}</td><td className="px-4 py-4 text-right tabular-nums">{formatQuantity(item.qty_on_hand)}</td><td className="px-4 py-4 text-right tabular-nums">{formatQuantity(item.qty_in_transit)}</td></tr>)}</tbody>
     </TableFrame>
   );
 }
 
 function SummaryTable({ items }: { items: StockSummary[] }) {
-  return <TableFrame caption="Ringkasan stok" empty={items.length === 0}><thead><tr><Th>Barang</Th><Th align="right">Saldo</Th><Th align="right">Dalam perjalanan</Th></tr></thead><tbody className="divide-y divide-line-200">{items.map((item) => <tr key={item.item_id}><td className="px-4 py-4"><p className="font-semibold text-ink-950">{item.item_name}</p><p className="text-xs text-slate-600">{item.item_sku} · {item.uom_code}</p></td><td className="px-4 py-4 text-right tabular-nums">{formatQuantity(item.qty_on_hand)}</td><td className="px-4 py-4 text-right tabular-nums">{formatQuantity(item.qty_in_transit)}</td></tr>)}</tbody></TableFrame>;
+  return <TableFrame caption="Ringkasan stok" empty={items.length === 0}><thead><tr><Th>Barang</Th><Th align="right">Saldo</Th><Th align="right">Dalam perjalanan</Th></tr></thead><tbody className="divide-y divide-line-200">{items.map((item) => <tr key={item.item_id}><td className="px-4 py-4"><p className="font-semibold text-ink-950">{item.item_name}</p><p className="text-xs text-slate-600">{item.item_sku} · {item.uom_code}{item.item_barcode ? ` · BC: ${item.item_barcode}` : ""}</p></td><td className="px-4 py-4 text-right tabular-nums">{formatQuantity(item.qty_on_hand)}</td><td className="px-4 py-4 text-right tabular-nums">{formatQuantity(item.qty_in_transit)}</td></tr>)}</tbody></TableFrame>;
 }
 
 function LedgerTable({ items }: { items: StockMovement[] }) {

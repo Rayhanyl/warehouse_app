@@ -1,6 +1,7 @@
 export interface StockItem {
   id: number;
   sku: string;
+  barcode?: string | null;
   name: string;
   description: string | null;
   category_id: number;
@@ -19,6 +20,7 @@ export type StockStatusFilter = "all" | "active" | "inactive";
 
 export interface StockFormPayload {
   sku: string;
+  barcode?: string | null;
   name: string;
   description: string | null;
   category_id: number;

@@ -18,6 +18,7 @@ export const initialSampleStockItems: StockItem[] = [
   {
     id: 1,
     sku: "ELK-MCU-001",
+    barcode: "8991001000011",
     name: "Microcontroller ESP32-S3",
     description: "Dual-core Wi-Fi & BLE MCU untuk modul IoT industri",
     category_id: 1,
@@ -34,6 +35,7 @@ export const initialSampleStockItems: StockItem[] = [
   {
     id: 2,
     sku: "KMS-CRD-010",
+    barcode: "8991001000028",
     name: "Kardus Double Wall 60x40x40",
     description: "Kardus pengiriman luar kota tahan tumpukan berat",
     category_id: 2,
@@ -50,6 +52,7 @@ export const initialSampleStockItems: StockItem[] = [
   {
     id: 3,
     sku: "MKN-SLD-005",
+    barcode: null,
     name: "Timah Solder Bebas Timbal 0.8mm",
     description: "Gulungan timah solder presisi untuk perakitan PCB",
     category_id: 3,
@@ -127,6 +130,7 @@ export function buildStockItemsCsv(items: StockItem[]): string {
   const headers = [
     "ID",
     "SKU",
+    "Barcode",
     "Nama Barang",
     "Kategori",
     "Satuan Dasar",
@@ -137,6 +141,7 @@ export function buildStockItemsCsv(items: StockItem[]): string {
   const rows = items.map((item) => [
     escapeCsvCell(item.id),
     escapeCsvCell(item.sku),
+    escapeCsvCell(item.barcode ?? ""),
     escapeCsvCell(item.name),
     escapeCsvCell(item.category_name),
     escapeCsvCell(`${item.uom_code} (${item.uom_name})`),

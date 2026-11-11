@@ -33,13 +33,15 @@ tersedia pada backend.
 Struktur aplikasi disiapkan untuk area berikut:
 
 - autentikasi, session, role, permission, dan penugasan gudang;
-- master data kategori, UOM, supplier, dan item;
+- master data kategori, UOM, supplier, dan item (lengkap dengan kode SKU & Barcode unik);
 - gudang serta lokasi penyimpanan;
 - saldo stok per gudang/lokasi, stok in-transit, dan stock ledger;
 - purchase order;
-- goods receipt atau penerimaan barang;
-- stock transfer antar-gudang;
-- stock opname;
+- goods receipt atau penerimaan barang (termasuk scan barcode penerimaan & cetak fisik GRN / Bukti Penerimaan Barang);
+- stock transfer antar-gudang / cabang (termasuk scan barcode penyiapan & cetak fisik Surat Jalan Transfer Stok);
+- stock opname (termasuk scan barcode hitung fisik barang snapshot maupun temuan);
+- cetak dokumen fisik berstandar A4 (`@media print`) untuk kebutuhan operasional retail, toko cabang, dan B2B;
+- integrasi pemindai Barcode / QR (kamera Web `BarcodeDetector` & USB/Bluetooth HID Barcode Gun);
 - audit log.
 
 ## Tech stack
