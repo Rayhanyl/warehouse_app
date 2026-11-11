@@ -140,7 +140,7 @@ export function StockPage() {
           </>
         )}
         <div className="flex items-end gap-2">
-          <button className="min-h-11 rounded-[var(--radius-md)] bg-ink-950 px-4 text-sm font-semibold text-surface-0 hover:bg-ink-800" type="submit">
+          <button className="inline-flex min-h-11 items-center justify-center rounded-[var(--radius-md)] bg-ink-950 px-4 text-sm font-semibold text-surface-0 hover:bg-ink-800" type="submit">
             Terapkan
           </button>
           <button aria-label="Atur ulang filter" className="grid min-h-11 min-w-11 place-items-center rounded-[var(--radius-md)] border border-line-500 text-ink-950 hover:bg-canvas-50" onClick={reset} type="button">
@@ -261,5 +261,5 @@ function Th({ children, align = "left" }: { children: React.ReactNode; align?: "
 }
 
 function State({ text, error = false, onRetry }: { text: string; error?: boolean; onRetry?: () => void }) {
-  return <div className={`rounded-[var(--radius-lg)] border ${error ? "border-red-200 bg-red-50" : "border-dashed border-line-500 bg-surface-0"} p-8 text-center`}><p className="font-semibold text-ink-950">{text}</p>{!error && <p className="mt-1 text-sm text-slate-700">Data akan muncul setelah transaksi stok tercatat.</p>}{error && onRetry && <button className="mt-4 min-h-11 rounded-[var(--radius-md)] bg-red-700 px-4 font-semibold text-surface-0" onClick={onRetry} type="button">Coba lagi</button>}</div>;
+  return <div className={`rounded-[var(--radius-lg)] border ${error ? "border-red-200 bg-red-50" : "border-dashed border-line-500 bg-surface-0"} p-8 text-center`}><p className="font-semibold text-ink-950">{text}</p>{!error && <p className="mt-1 text-sm text-slate-700">Data akan muncul setelah transaksi stok tercatat.</p>}{error && onRetry && <button className="mt-4 inline-flex min-h-11 items-center justify-center rounded-[var(--radius-md)] bg-red-700 px-4 font-semibold text-surface-0 hover:bg-red-800" onClick={onRetry} type="button">Coba lagi</button>}</div>;
 }

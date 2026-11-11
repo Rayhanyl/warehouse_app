@@ -231,7 +231,7 @@ export function BarcodeScannerModal({
           </label>
           <div className="flex justify-end gap-2 pt-1">
             <button
-              className="min-h-10 rounded-[var(--radius-md)] border border-line-500 px-3.5 text-xs font-semibold text-ink-950 hover:bg-canvas-50"
+              className="inline-flex min-h-10 items-center justify-center rounded-[var(--radius-md)] border border-line-500 px-3.5 text-xs font-semibold text-ink-950 hover:bg-canvas-50"
               onClick={onClose}
               type="button"
             >
