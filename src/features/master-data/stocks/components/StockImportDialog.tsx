@@ -80,7 +80,7 @@ export function StockImportDialog({ onClose, onDownloadTemplate, onImported }: S
             <span className="grid size-10 shrink-0 place-items-center rounded-[var(--radius-md)] bg-teal-100 text-teal-700"><FileSpreadsheet aria-hidden="true" size={20} /></span>
             <div>
               <h3 className="text-sm font-bold text-ink-950">Mulai dari template</h3>
-              <p className="mt-1 text-xs leading-5 text-slate-700">Gunakan nama kolom yang disediakan. SKU disimpan sebagai teks agar nol di depan tetap terjaga.</p>
+              <p className="mt-1 text-xs leading-5 text-slate-700">Gunakan nama kolom yang disediakan. SKU dan Barcode (opsional) disimpan sebagai teks agar nol di depan tetap terjaga.</p>
             </div>
           </div>
           <button className="inline-flex min-h-11 items-center justify-center gap-2 rounded-[var(--radius-md)] border border-line-500 bg-surface-0 px-4 text-sm font-semibold text-ink-950 hover:bg-canvas-50" onClick={onDownloadTemplate} type="button">

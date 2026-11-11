@@ -1,3 +1,4 @@
+import { BarcodeVisual } from "@/components/ui/BarcodeVisual";
 import type { GoodsReceipt } from "../types";
 
 function formatPrintDate(value: string) {
@@ -39,13 +40,19 @@ export function GoodsReceiptPrintSheet({
             BUKTI PENERIMAAN BARANG (GOODS RECEIPT NOTE)
           </h3>
         </div>
-        <div className="text-right text-sm">
+        <div className="flex flex-col items-end gap-1.5 text-right text-sm">
           <p className="font-bold text-ink-950 tabular-nums">
             No. GRN: {receipt.gr_number}
           </p>
           <p className="text-xs font-semibold text-slate-700">
             Status: DIPOSTING (POSTED)
           </p>
+          <BarcodeVisual
+            className="border border-ink-950/30 px-1.5 py-1"
+            height={28}
+            showValue={false}
+            value={receipt.gr_number}
+          />
         </div>
       </div>
 

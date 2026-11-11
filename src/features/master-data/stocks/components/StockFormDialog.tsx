@@ -1,6 +1,7 @@
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { Camera, Save, Sparkles, X } from "lucide-react";
 import { BarcodeScannerModal } from "@/components/ui/BarcodeScannerModal";
+import { BarcodeVisual } from "@/components/ui/BarcodeVisual";
 import type { StockFormPayload, StockItem } from "../types";
 import { CODE_REGEX } from "../../validation";
 import { generateInternalBarcode } from "../utils/barcode";
@@ -307,6 +308,23 @@ export function StockFormDialog({
               <p className="mt-1.5 text-xs font-medium text-red-700">
                 {errors.barcode}
               </p>
+            )}
+            {(barcode.trim() || sku.trim()) && (
+              <div className="mt-2.5 flex items-center justify-between gap-3 rounded-[var(--radius-md)] border border-line-200 bg-canvas-50/70 px-3 py-2">
+                <div className="text-xs text-slate-600">
+                  <p className="font-semibold text-ink-950">Pratinjau Visual Barcode</p>
+                  <p className="mt-0.5">
+                    {barcode.trim()
+                      ? "Menggunakan kode Barcode barang"
+                      : "Fallback menggunakan kode SKU"}
+                  </p>
+                </div>
+                <BarcodeVisual
+                  className="border border-line-200"
+                  height={34}
+                  value={barcode.trim() || sku.trim()}
+                />
+              </div>
             )}
           </div>
 

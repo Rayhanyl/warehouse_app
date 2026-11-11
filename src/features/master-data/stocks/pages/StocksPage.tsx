@@ -275,6 +275,7 @@ export function StocksPage() {
 
   return (
     <>
+      <div className="no-print">
       <PageHeader
         action={
           <>
@@ -538,6 +539,7 @@ export function StocksPage() {
           </div>
         </section>
       )}
+      </div>
 
       <StockDetailDialog
         canManage={canManage}

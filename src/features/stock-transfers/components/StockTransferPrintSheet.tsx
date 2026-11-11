@@ -1,3 +1,4 @@
+import { BarcodeVisual } from "@/components/ui/BarcodeVisual";
 import type { StockTransfer, StockTransferStatus } from "../types";
 
 const printStatusLabels: Record<StockTransferStatus, string> = {
@@ -41,13 +42,19 @@ export function StockTransferPrintSheet({
             SURAT JALAN TRANSFER STOK
           </h3>
         </div>
-        <div className="text-right text-sm">
+        <div className="flex flex-col items-end gap-1.5 text-right text-sm">
           <p className="font-bold text-ink-950 tabular-nums">
             No. Surat Jalan: {transfer.transfer_number}
           </p>
           <p className="text-xs font-semibold text-slate-700">
             Status: {printStatusLabels[transfer.status]}
           </p>
+          <BarcodeVisual
+            className="border border-ink-950/30 px-1.5 py-1"
+            height={28}
+            showValue={false}
+            value={transfer.transfer_number}
+          />
         </div>
       </div>
 

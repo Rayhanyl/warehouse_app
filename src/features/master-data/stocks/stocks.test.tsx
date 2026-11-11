@@ -46,6 +46,16 @@ describe("StocksPage (Contoh data pratinjau Barang SKU)", () => {
     expect(
       screen.getByRole("dialog", { name: "Microcontroller ESP32-S3" }),
     ).toBeInTheDocument();
+    expect(screen.getByText("Visual Barcode Pemindaian")).toBeInTheDocument();
+
+    const printSpy = vi.spyOn(window, "print").mockImplementation(() => {});
+    fireEvent.click(screen.getByRole("button", { name: /Cetak Label Barcode/i }));
+    expect(printSpy).toHaveBeenCalledTimes(1);
+    expect(
+      screen.getByRole("region", { name: /Label stiker barcode/i }),
+    ).toBeInTheDocument();
+    printSpy.mockRestore();
+
     fireEvent.click(
       screen.getByRole("button", { name: "Tutup detail barang" }),
     );
