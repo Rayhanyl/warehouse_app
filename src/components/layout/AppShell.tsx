@@ -4,6 +4,7 @@ import {
   Command,
   LogOut,
   Menu as MenuIcon,
+  ScanBarcode,
   Search,
   UserCircle,
   Warehouse,
@@ -15,6 +16,7 @@ import { useAuthStore } from "@/features/auth/store";
 import { useMyMenu } from "@/features/navigation/api";
 import type { MenuItem } from "@/features/navigation/types";
 import { extractApiErrorInfo } from "@/lib/errors";
+import { StockLookupModal } from "@/components/ui/StockLookupModal";
 import { PageHeader } from "./PageHeader";
 import { Sidebar } from "./Sidebar";
 
@@ -142,6 +144,7 @@ export function AppShell() {
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isPaletteOpen, setIsPaletteOpen] = useState(false);
+  const [isStockLookupOpen, setIsStockLookupOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [activeIndex, setActiveIndex] = useState(0);
   const [selectedWarehouseId, setSelectedWarehouseId] = useState<number | null>(
@@ -396,6 +399,15 @@ export function AppShell() {
               </span>
             )}
             <button
+              aria-label="Pindai barcode untuk cek stok dan posisi rak gudang"
+              className="flex min-h-11 items-center gap-1.5 rounded-[var(--radius-md)] border border-teal-600/30 bg-teal-50/70 px-3 text-xs font-semibold text-teal-800 transition hover:bg-teal-100 hover:text-teal-950"
+              onClick={() => setIsStockLookupOpen(true)}
+              type="button"
+            >
+              <ScanBarcode aria-hidden="true" size={16} />
+              <span className="hidden md:inline">Cek Stok / Rak</span>
+            </button>
+            <button
               aria-label="Cari menu"
               className="flex min-h-11 items-center gap-2 rounded-[var(--radius-md)] border border-line-200 bg-canvas-50/70 px-3 text-sm font-medium text-slate-700 transition hover:bg-canvas-50 hover:text-ink-950"
               onClick={() => {
@@ -590,6 +602,10 @@ export function AppShell() {
           </div>
         </div>
       )}
+      <StockLookupModal
+        isOpen={isStockLookupOpen}
+        onClose={() => setIsStockLookupOpen(false)}
+      />
     </div>
   );
 }

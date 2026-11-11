@@ -1,7 +1,8 @@
 import { FormEvent, useState } from "react";
-import { RotateCcw, Search } from "lucide-react";
+import { RotateCcw, ScanBarcode, Search } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { StockLookupModal } from "@/components/ui/StockLookupModal";
 import { formatDecimal } from "@/lib/decimal";
 import {
   useStockBalances,
@@ -50,6 +51,7 @@ export function StockPage() {
   const { pathname } = useLocation();
   const [params, setParams] = useState(initialParams);
   const [draft, setDraft] = useState(initialParams);
+  const [lookupOpen, setLookupOpen] = useState(false);
   const isWarehouseView =
     pathname === "/stock/by-warehouse" || pathname === "/stock/warehouse";
   const isSummaryView = pathname === "/stock/summary";
@@ -144,6 +146,15 @@ export function StockPage() {
           <button aria-label="Atur ulang filter" className="grid min-h-11 min-w-11 place-items-center rounded-[var(--radius-md)] border border-line-500 text-ink-950 hover:bg-canvas-50" onClick={reset} type="button">
             <RotateCcw aria-hidden="true" size={16} />
           </button>
+          <button
+            aria-label="Pindai barcode untuk cek stok dan posisi rak"
+            className="flex min-h-11 items-center gap-1.5 rounded-[var(--radius-md)] border border-teal-600/40 bg-teal-50 px-3 text-xs font-semibold text-teal-800 transition hover:bg-teal-100 hover:text-teal-950"
+            onClick={() => setLookupOpen(true)}
+            type="button"
+          >
+            <ScanBarcode aria-hidden="true" size={16} />
+            <span className="hidden sm:inline">Cek Rak</span>
+          </button>
         </div>
       </form>
       {query.isLoading ? (
@@ -164,6 +175,10 @@ export function StockPage() {
           Menampilkan {query.data.items.length} baris dari {query.data.total} data.
         </p>
       )}
+      <StockLookupModal
+        isOpen={lookupOpen}
+        onClose={() => setLookupOpen(false)}
+      />
     </>
   );
 }

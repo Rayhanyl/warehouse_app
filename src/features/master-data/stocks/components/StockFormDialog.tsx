@@ -1,8 +1,9 @@
 import { FormEvent, useEffect, useRef, useState } from "react";
-import { Camera, Save, X } from "lucide-react";
+import { Camera, Save, Sparkles, X } from "lucide-react";
 import { BarcodeScannerModal } from "@/components/ui/BarcodeScannerModal";
 import type { StockFormPayload, StockItem } from "../types";
 import { CODE_REGEX } from "../../validation";
+import { generateInternalBarcode } from "../utils/barcode";
 
 interface CategoryOption {
   id: number;
@@ -86,6 +87,13 @@ export function StockFormDialog({
 
   if (!isOpen) {
     return null;
+  }
+
+  function handleGenerateBarcode() {
+    const existingBarcodes = existingItems.map((item) => item.barcode);
+    const newBarcode = generateInternalBarcode(existingBarcodes);
+    setBarcode(newBarcode);
+    setErrors((prev) => ({ ...prev, barcode: undefined }));
   }
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -284,6 +292,15 @@ export function StockFormDialog({
               >
                 <Camera aria-hidden="true" size={16} />
                 Pindai
+              </button>
+              <button
+                aria-label="Generate barcode internal otomatis"
+                className="inline-flex min-h-12 items-center gap-1.5 rounded-[var(--radius-md)] border border-teal-600/40 bg-teal-50/60 px-3 text-xs font-semibold text-teal-800 transition hover:bg-teal-100 hover:text-teal-950"
+                onClick={handleGenerateBarcode}
+                type="button"
+              >
+                <Sparkles aria-hidden="true" size={15} />
+                Generate
               </button>
             </div>
             {errors.barcode && (
