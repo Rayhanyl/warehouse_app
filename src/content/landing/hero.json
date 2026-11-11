@@ -17,7 +17,7 @@
   },
   "eyebrow": "Sistem manajemen gudang",
   "title": "Satu kendali untuk setiap pergerakan stok.",
-  "description": "Pantau saldo per lokasi, proses penerimaan dan transfer, lalu telusuri setiap perubahan melalui alur kerja yang sesuai permission.",
+  "description": "Pantau saldo per lokasi rak, pindai barcode barang maupun rak, cetak label stiker termal serta Surat Jalan resmi, dan telusuri setiap mutasi stok sesuai permission.",
   "primaryCta": { "label": "Lihat alur kerja", "href": "#workflow" },
   "secondaryCta": { "label": "Masuk ke ruang kerja", "href": "/login" },
   "visualLabel": "Jejak dokumen operasional",

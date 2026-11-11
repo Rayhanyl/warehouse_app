@@ -1,7 +1,7 @@
 {
   "eyebrow": "Masalah operasional sehari-hari",
-  "title": "Tiga kendala stok di gudang dan cara sistem menutup celahnya.",
-  "description": "Jejakstok mengikat perubahan saldo pada status dokumen, pembekuan lokasi saat hitung fisik, dan catatan mutasi yang tidak dapat diubah.",
+  "title": "Empat kendala operasional di gudang dan cara sistem menutup celahnya.",
+  "description": "Jejakstok mengikat perubahan saldo pada status dokumen, verifikasi barcode barang dan rak, pembekuan lokasi saat hitung fisik, serta catatan mutasi yang tidak dapat diubah.",
   "columnProblemLabel": "Kondisi di lapangan",
   "columnSolutionLabel": "Mekanisme pengendalian di Jejakstok",
   "items": [
@@ -9,19 +9,25 @@
       "number": "01",
       "moduleTag": "Stock Opnames",
       "problem": "Stok di sistem tidak sama dengan stok di rak.",
-      "answer": "Stock opname membekukan lokasi penyimpanan, menyimpan snapshot saldo awal, lalu menerapkan selisih hanya setelah disetujui manajer."
+      "answer": "Stock opname membekukan lokasi penyimpanan, menyimpan snapshot saldo awal, mempercepat hitung fisik lewat scan barcode, lalu menerapkan selisih hanya setelah disetujui manajer."
     },
     {
       "number": "02",
-      "moduleTag": "Stock Transfers",
-      "problem": "Barang dalam perjalanan tidak jelas posisinya.",
-      "answer": "Transfer dua tahap mengurangi stok gudang asal dan menandai stok dalam perjalanan (SHIPPED) sampai gudang tujuan memposting penerimaan (RECEIVED)."
+      "moduleTag": "Stock Transfers & Surat Jalan",
+      "problem": "Barang dalam perjalanan tidak jelas posisinya dan tanpa bukti serah terima standar.",
+      "answer": "Transfer dua tahap mengurangi stok gudang asal dan menandai stok dalam perjalanan (SHIPPED) hingga diterima tujuan (RECEIVED), dilengkapi cetak Surat Jalan resmi ber-barcode."
     },
     {
       "number": "03",
+      "moduleTag": "Barcode Barang & Inspeksi Rak",
+      "problem": "Salah ambil barang di lorong rak, salah ketik SKU manual, atau produk curah belum berlabel.",
+      "answer": "Tersedia generator barcode internal (EAN-13 dan Code-128), cetak stiker termal 50x30 mm untuk barang maupun rak, serta pemindai universal untuk cek sebaran lokasi barang atau seluruh isi rak multi-SKU."
+    },
+    {
+      "number": "04",
       "moduleTag": "Stock Ledger & Audit Logs",
       "problem": "Sulit menelusuri siapa mengubah apa.",
-      "answer": "Stock ledger dan audit log mencatat aktor, waktu, dokumen referensi, serta detail perubahan secara append-only."
+      "answer": "Stock ledger dan audit log mencatat aktor, waktu, lokasi rak, dokumen referensi, serta detail perubahan secara append-only."
     }
   ]
 }

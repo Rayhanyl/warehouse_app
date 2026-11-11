@@ -4,7 +4,9 @@ import {
   Check,
   ChevronRight,
   Menu,
+  Printer,
   Route,
+  ScanBarcode,
   ShieldCheck,
   X,
 } from "lucide-react";
@@ -16,6 +18,8 @@ const proofIcons = {
   boxes: Boxes,
   route: Route,
   "shield-check": ShieldCheck,
+  "scan-barcode": ScanBarcode,
+  printer: Printer,
 } as const;
 
 const statusToneClasses = {
@@ -165,7 +169,7 @@ export function LandingPage() {
                   ·
                 </span>
                 <span className="text-xs font-medium text-[#e2e6e4]">
-                  PO · GR · Transfer · Opname
+                  PO · GR · Transfer · Opname · Barcode
                 </span>
               </div>
 
@@ -288,7 +292,7 @@ export function LandingPage() {
           className="relative z-10 -mt-8 px-4 sm:-mt-12 sm:px-6 lg:px-8"
           aria-label="Bukti kendali operasional"
         >
-          <div className="mx-auto grid max-w-[1200px] gap-0 overflow-hidden rounded-[var(--radius-lg)] border border-line-200 bg-surface-0 shadow-[var(--shadow-2)] sm:grid-cols-3">
+          <div className="mx-auto grid max-w-[1200px] gap-0 overflow-hidden rounded-[var(--radius-lg)] border border-line-200 bg-surface-0 shadow-[var(--shadow-2)] sm:grid-cols-2 lg:grid-cols-4">
             {proofPoints.map((point, index) => {
               const Icon = proofIcons[point.icon];
               return (
@@ -296,7 +300,7 @@ export function LandingPage() {
                   key={point.label}
                   className={`flex min-w-0 flex-col justify-between p-5 sm:p-7 ${
                     index > 0
-                      ? "border-t border-line-200 sm:border-t-0 sm:border-l"
+                      ? "border-t border-line-200 sm:border-l lg:border-t-0"
                       : ""
                   }`}
                 >

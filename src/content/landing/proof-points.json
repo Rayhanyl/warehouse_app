@@ -1,17 +1,22 @@
 [
   {
-    "label": "Stok hingga tingkat lokasi",
-    "description": "Saldo dapat ditelusuri hingga lokasi penyimpanan di setiap gudang.",
+    "label": "Stok & inspeksi rak multi-SKU",
+    "description": "Telusuri saldo hingga lokasi rak atau pindai barcode rak untuk melihat seluruh daftar barang di dalamnya.",
     "icon": "boxes"
   },
   {
-    "label": "Alur kerja terkendali",
-    "description": "Posting penerimaan dan transfer mengikuti status dokumen serta permission pengguna.",
+    "label": "Pemindai & cetak label barcode",
+    "description": "Pindai via kamera atau scanner gun, buat barcode internal EAN-13/Code-128, dan cetak stiker 50x30 mm.",
+    "icon": "scan-barcode"
+  },
+  {
+    "label": "Alur kerja & cetak dokumen fisik",
+    "description": "Proses PO, GR, Transfer, dan Opname sesuai izin peran lengkap dengan cetak Bukti Penerimaan (GRN) dan Surat Jalan.",
     "icon": "route"
   },
   {
-    "label": "Aktivitas terlacak",
-    "description": "Perubahan dapat dilihat kembali pada stock ledger dan audit log oleh pengguna yang berwenang.",
+    "label": "Aktivitas terlacak append-only",
+    "description": "Setiap mutasi stok dan perubahan data terekam permanen pada stock ledger serta audit log.",
     "icon": "shield-check"
   }
 ]

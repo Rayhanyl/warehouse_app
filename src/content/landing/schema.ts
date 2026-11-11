@@ -49,7 +49,7 @@ export const landingContentSchema = z.object({
     z.object({
       label: z.string().min(1),
       description: z.string().min(1),
-      icon: z.enum(["boxes", "route", "shield-check"]),
+      icon: z.enum(["boxes", "route", "shield-check", "scan-barcode", "printer"]),
     }),
   ).min(1),
   workflow: z.object({

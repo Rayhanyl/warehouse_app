@@ -269,6 +269,16 @@ describe("LandingPage", () => {
     expect(container.textContent).not.toMatch(/[—–]/);
 
     expect(
+      screen.getByText("Stok & inspeksi rak multi-SKU"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("Pemindai & cetak label barcode"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("Barcode Barang & Inspeksi Rak"),
+    ).toBeInTheDocument();
+
+    expect(
       screen.getByText("PO-2026-0042 → GR-2026-0019"),
     ).toBeInTheDocument();
     const stepButton = screen.getByRole("button", { name: /03.*Pindahkan/i });
