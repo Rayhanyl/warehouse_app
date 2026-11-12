@@ -64,7 +64,7 @@ export function StorageLocationDetailDialog({
       aria-modal="true"
       aria-labelledby="storage-location-detail-title"
     >
-      <div className="print-dialog-panel max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-xl">
+      <div className="print-dialog-panel max-h-[90vh] w-full max-w-4xl overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-xl">
         <div className="no-print flex items-start justify-between gap-3 border-b border-slate-200 px-4 py-4 sm:px-6">
           <div>
             <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">

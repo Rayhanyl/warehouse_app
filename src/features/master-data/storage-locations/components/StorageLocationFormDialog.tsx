@@ -271,7 +271,7 @@ export function StorageLocationFormDialog({
       aria-modal="true"
       aria-labelledby="storage-location-form-title"
     >
-      <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-xl">
+      <div className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-xl">
         <div className="flex items-start justify-between gap-3 border-b border-slate-200 px-4 py-4 sm:px-6">
           <div>
             <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">

@@ -167,7 +167,7 @@ export function BarcodeScannerModal({
       <div
         aria-labelledby="barcode-scanner-modal-title"
         aria-modal="true"
-        className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-[var(--radius-lg)] border border-line-200 bg-surface-0 p-4 shadow-[var(--shadow-2)] sm:p-5"
+        className="max-h-[90vh] w-full max-w-xl overflow-y-auto rounded-[var(--radius-lg)] border border-line-200 bg-surface-0 p-5 shadow-[var(--shadow-2)] sm:p-6"
         onMouseDown={(event) => event.stopPropagation()}
         role="dialog"
       >

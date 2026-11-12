@@ -333,7 +333,7 @@ export function StockLookupModal({
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs"
       role="dialog"
     >
-      <div className="flex max-h-[90vh] w-full max-w-4xl flex-col rounded-[var(--radius-lg)] border border-line-500 bg-surface-0 shadow-2xl">
+      <div className="flex max-h-[92vh] w-full max-w-5xl flex-col rounded-[var(--radius-lg)] border border-line-500 bg-surface-0 shadow-2xl">
         {/* Modal Header */}
         <div className="flex items-start justify-between gap-3 border-b border-line-500 px-4 py-3.5 sm:items-center sm:px-6 sm:py-4">
           <div className="flex min-w-0 items-start gap-3 sm:items-center">
