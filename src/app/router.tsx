@@ -111,7 +111,15 @@ export const router = createBrowserRouter([
             element: <StorageLocationsPage />,
           },
           {
+            path: "/admin/audit-logs",
+            element: <AuditLogsPage />,
+          },
+          {
             path: "/audit-logs",
+            element: <AuditLogsPage />,
+          },
+          {
+            path: "/audit",
             element: <AuditLogsPage />,
           },
           {
