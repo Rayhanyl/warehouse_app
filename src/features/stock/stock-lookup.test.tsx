@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { apiClient } from "@/lib/api-client";
+import { BarcodeStickerSheet, QrCodeVisual } from "@/components/ui/BarcodeVisual";
 import { StockLookupModal } from "@/components/ui/StockLookupModal";
 import { StockFormDialog } from "@/features/master-data/stocks/components/StockFormDialog";
 import {
@@ -315,10 +316,52 @@ describe("AC-34 & MST-F09: Barcode Generation & Stock Location Quick Lookup", ()
       });
 
       expect(screen.getByText("Rak Utama A1")).toBeInTheDocument();
+      expect(screen.getByLabelText("Visual QR code JKT-RAK-A1")).toBeInTheDocument();
       expect(screen.getByText(/2 macam SKU/i)).toBeInTheDocument();
       expect(screen.getByText("Microcontroller ESP32-S3")).toBeInTheDocument();
       expect(screen.getByText("Sensor Suhu Industri")).toBeInTheDocument();
       expect(container.textContent).not.toMatch(/[—–]/);
+    });
+
+    it("AC-37: merender QrCodeVisual SVG dan BarcodeStickerSheet dalam format QR Code maupun Barcode 1D", () => {
+      const { container, rerender } = render(
+        <div>
+          <QrCodeVisual subtitle="LOKASI RAK" value="JKT-RAK-A1" />
+          <BarcodeStickerSheet
+            badgeText="LABEL LOKASI RAK"
+            code="JKT-RAK-A1"
+            format="qr"
+            metaLabel="GUDANG: WH-JKT-01"
+            secondaryCode="Gudang Pusat Jakarta"
+            title="JKT-RAK-A1 · Rak Utama A1"
+            visibleOnScreen={true}
+          />
+        </div>,
+      );
+
+      expect(screen.getAllByLabelText("Visual QR code JKT-RAK-A1")).toHaveLength(2);
+      expect(
+        screen.getByLabelText("Label stiker QR code JKT-RAK-A1"),
+      ).toBeInTheDocument();
+      expect(container.querySelectorAll("svg path").length).toBeGreaterThanOrEqual(2);
+      expect(container.textContent).not.toMatch(/[—–]/);
+
+      rerender(
+        <BarcodeStickerSheet
+          badgeText="LABEL LOKASI RAK"
+          code="JKT-RAK-A1"
+          format="barcode"
+          metaLabel="GUDANG: WH-JKT-01"
+          secondaryCode="Gudang Pusat Jakarta"
+          title="JKT-RAK-A1 · Rak Utama A1"
+          visibleOnScreen={true}
+        />,
+      );
+
+      expect(
+        screen.getByLabelText("Label stiker barcode JKT-RAK-A1"),
+      ).toBeInTheDocument();
+      expect(screen.getByLabelText("Visual barcode JKT-RAK-A1")).toBeInTheDocument();
     });
   });
 });

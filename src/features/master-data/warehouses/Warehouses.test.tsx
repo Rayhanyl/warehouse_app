@@ -33,6 +33,18 @@ describe("WarehousesPage (Contoh data pratinjau Gudang)", () => {
     expect(
       screen.getByRole("dialog", { name: "Gudang Utama Jakarta" }),
     ).toBeInTheDocument();
+    expect(screen.getByText("QR Code 2D")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Barcode (1D)" }));
+    expect(screen.getByText("1D Code-128")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "QR Code (2D)" }));
+    expect(screen.getByText("QR Code 2D")).toBeInTheDocument();
+
+    const printSpy = vi.spyOn(window, "print").mockImplementation(() => {});
+    fireEvent.click(screen.getByRole("button", { name: /Cetak Label Gudang/i }));
+    expect(printSpy).toHaveBeenCalledTimes(1);
+    printSpy.mockRestore();
+
     fireEvent.click(
       screen.getByRole("button", { name: "Tutup detail gudang" }),
     );

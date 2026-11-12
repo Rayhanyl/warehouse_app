@@ -53,6 +53,13 @@ describe("StorageLocationsPage (Contoh data pratinjau Lokasi Penyimpanan)", () =
       screen.getByRole("dialog", { name: "Area Karantina Penerimaan" }),
     ).toBeInTheDocument();
     expect(screen.getByText("Barcode Lokasi Rak")).toBeInTheDocument();
+    expect(screen.getByText("QR Code 2D")).toBeInTheDocument();
+
+    // Toggle format ke Barcode 1D lalu kembali ke QR Code
+    fireEvent.click(screen.getByRole("button", { name: "Barcode (1D)" }));
+    expect(screen.getByText("1D Code-128")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "QR Code (2D)" }));
+    expect(screen.getByText("QR Code 2D")).toBeInTheDocument();
 
     const printSpy = vi.spyOn(window, "print").mockImplementation(() => {});
     fireEvent.click(screen.getByRole("button", { name: /Cetak Label Rak/i }));

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Printer, X } from "lucide-react";
 import { toast } from "sonner";
-import { BarcodeStickerSheet, BarcodeVisual } from "@/components/ui/BarcodeVisual";
+import { BarcodeStickerSheet, BarcodeVisual, QrCodeVisual } from "@/components/ui/BarcodeVisual";
 import type { StorageLocationRecord } from "../types";
 
 interface StorageLocationDetailDialogProps {
@@ -29,9 +29,11 @@ export function StorageLocationDetailDialog({
   onEdit,
 }: StorageLocationDetailDialogProps) {
   const [showStickerPreview, setShowStickerPreview] = useState(false);
+  const [codeFormat, setCodeFormat] = useState<"qr" | "barcode">("qr");
 
   useEffect(() => {
     setShowStickerPreview(false);
+    setCodeFormat("qr");
   }, [location?.id]);
 
   useEffect(() => {
@@ -88,16 +90,53 @@ export function StorageLocationDetailDialog({
         <dl className="no-print divide-y divide-slate-200 px-6 py-2 text-sm">
           <div className="flex flex-col items-center justify-between gap-3 py-3 sm:flex-row">
             <div>
-              <dt className="font-semibold text-slate-900">Barcode Lokasi Rak</dt>
+              <div className="flex items-center gap-2">
+                <dt className="font-semibold text-slate-900">Barcode Lokasi Rak</dt>
+                <span className="rounded bg-teal-100 px-1.5 py-0.5 text-[10px] font-bold text-teal-800">
+                  {codeFormat === "qr" ? "QR Code 2D" : "1D Code-128"}
+                </span>
+              </div>
               <dd className="mt-0.5 text-xs text-slate-600">
                 Pindai untuk menampilkan seluruh macam barang (SKU) di rak ini
               </dd>
+              <div className="mt-2 flex items-center gap-1 rounded-md border border-slate-200 bg-slate-50 p-0.5 text-xs">
+                <button
+                  type="button"
+                  onClick={() => setCodeFormat("qr")}
+                  className={`rounded px-2 py-0.5 font-semibold transition ${
+                    codeFormat === "qr"
+                      ? "bg-emerald-800 text-white shadow-sm"
+                      : "text-slate-600 hover:text-slate-900"
+                  }`}
+                >
+                  QR Code (2D)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCodeFormat("barcode")}
+                  className={`rounded px-2 py-0.5 font-semibold transition ${
+                    codeFormat === "barcode"
+                      ? "bg-emerald-800 text-white shadow-sm"
+                      : "text-slate-600 hover:text-slate-900"
+                  }`}
+                >
+                  Barcode (1D)
+                </button>
+              </div>
             </div>
-            <BarcodeVisual
-              className="border border-slate-200"
-              height={38}
-              value={location.code}
-            />
+            {codeFormat === "qr" ? (
+              <QrCodeVisual
+                className="border border-slate-200"
+                size={76}
+                value={location.code}
+              />
+            ) : (
+              <BarcodeVisual
+                className="border border-slate-200"
+                height={38}
+                value={location.code}
+              />
+            )}
           </div>
           <div className="grid grid-cols-1 gap-1 py-3 sm:grid-cols-3 sm:gap-4">
             <dt className="font-medium text-slate-600">Kode lokasi</dt>
@@ -153,6 +192,7 @@ export function StorageLocationDetailDialog({
           <BarcodeStickerSheet
             badgeText="LABEL LOKASI RAK"
             code={location.code}
+            format={codeFormat}
             metaLabel={`GUDANG: ${location.warehouse_code}`}
             secondaryCode={location.warehouse_name}
             title={`${location.code} · ${location.name}`}

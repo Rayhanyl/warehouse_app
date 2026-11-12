@@ -11,7 +11,7 @@ import {
   X,
 } from "lucide-react";
 import { toast } from "sonner";
-import { BarcodeStickerSheet, BarcodeVisual } from "@/components/ui/BarcodeVisual";
+import { BarcodeStickerSheet, BarcodeVisual, QrCodeVisual } from "@/components/ui/BarcodeVisual";
 import type { WarehouseRecord } from "../types";
 
 interface WarehouseDetailDialogProps {
@@ -37,9 +37,11 @@ export function WarehouseDetailDialog({
   onToggleStatus,
 }: WarehouseDetailDialogProps) {
   const [showStickerPreview, setShowStickerPreview] = useState(false);
+  const [codeFormat, setCodeFormat] = useState<"qr" | "barcode">("qr");
 
   useEffect(() => {
     setShowStickerPreview(false);
+    setCodeFormat("qr");
   }, [warehouse?.id]);
 
   useEffect(() => {
@@ -117,18 +119,55 @@ export function WarehouseDetailDialog({
         <dl className="no-print mt-5 space-y-4 text-sm">
           <div className="flex flex-col items-center justify-between gap-3 rounded-[var(--radius-md)] border border-line-200 bg-canvas-50/70 p-3.5 sm:flex-row">
             <div>
-              <dt className="text-xs font-semibold text-ink-950">
-                Barcode Identitas Gudang
-              </dt>
+              <div className="flex items-center gap-2">
+                <dt className="text-xs font-semibold text-ink-950">
+                  Barcode & QR Identitas Gudang
+                </dt>
+                <span className="rounded bg-teal-100 px-1.5 py-0.5 text-[10px] font-bold text-teal-800">
+                  {codeFormat === "qr" ? "QR Code 2D" : "1D Code-128"}
+                </span>
+              </div>
               <dd className="mt-0.5 text-xs text-slate-600">
                 Pindai untuk menampilkan seluruh ringkasan stok di gudang ini
               </dd>
+              <div className="mt-2 flex items-center gap-1 rounded-[var(--radius-sm)] border border-line-300 bg-surface-0 p-0.5 text-xs">
+                <button
+                  type="button"
+                  onClick={() => setCodeFormat("qr")}
+                  className={`rounded px-2.5 py-0.5 font-semibold transition ${
+                    codeFormat === "qr"
+                      ? "bg-teal-600 text-surface-0 shadow-sm"
+                      : "text-slate-600 hover:text-ink-950"
+                  }`}
+                >
+                  QR Code (2D)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCodeFormat("barcode")}
+                  className={`rounded px-2.5 py-0.5 font-semibold transition ${
+                    codeFormat === "barcode"
+                      ? "bg-teal-600 text-surface-0 shadow-sm"
+                      : "text-slate-600 hover:text-ink-950"
+                  }`}
+                >
+                  Barcode (1D)
+                </button>
+              </div>
             </div>
-            <BarcodeVisual
-              className="border border-line-200"
-              height={38}
-              value={warehouse.code}
-            />
+            {codeFormat === "qr" ? (
+              <QrCodeVisual
+                className="border border-line-200"
+                size={76}
+                value={warehouse.code}
+              />
+            ) : (
+              <BarcodeVisual
+                className="border border-line-200"
+                height={38}
+                value={warehouse.code}
+              />
+            )}
           </div>
 
           <div className="flex items-start gap-3">
@@ -174,6 +213,7 @@ export function WarehouseDetailDialog({
         <BarcodeStickerSheet
           badgeText="LABEL GUDANG WMS"
           code={warehouse.code}
+          format={codeFormat}
           metaLabel={warehouse.allow_negative_stock ? "Stok Negatif: Aktif" : "Stok Negatif: Ketat"}
           secondaryCode={warehouse.code}
           title={warehouse.name}

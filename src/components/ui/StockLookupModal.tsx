@@ -15,7 +15,7 @@ import { apiClient } from "@/lib/api-client";
 import { formatDecimal, toDecimal } from "@/lib/decimal";
 import { useBarcodeScanner } from "@/hooks/useBarcodeScanner";
 import { BarcodeScannerModal } from "./BarcodeScannerModal";
-import { BarcodeVisual } from "./BarcodeVisual";
+import { BarcodeVisual, QrCodeVisual } from "./BarcodeVisual";
 import type { StockBalance } from "@/features/stock/types";
 import type { Paginated } from "@/types/api";
 
@@ -477,10 +477,10 @@ export function StockLookupModal({
                   </div>
 
                   <div className="flex flex-wrap items-center gap-3">
-                    <BarcodeVisual
+                    <QrCodeVisual
                       className="hidden border border-line-200 sm:inline-flex"
-                      height={32}
                       showValue={false}
+                      size={44}
                       value={locationInfo.code}
                     />
                     <div className="rounded-lg border border-blue-200 bg-blue-50/70 px-4 py-2 text-right">

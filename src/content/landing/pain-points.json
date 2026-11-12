@@ -21,7 +21,7 @@
       "number": "03",
       "moduleTag": "Barcode Barang & Inspeksi Rak",
       "problem": "Salah ambil barang di lorong rak, salah ketik SKU manual, atau produk curah belum berlabel.",
-      "answer": "Tersedia generator barcode internal (EAN-13 dan Code-128), cetak stiker termal 50x30 mm untuk barang maupun rak, serta pemindai universal untuk cek sebaran lokasi barang atau seluruh isi rak multi-SKU."
+      "answer": "Tersedia generator barcode internal (EAN-13 dan Code-128), cetak stiker termal 50x30 mm untuk barang maupun QR code rak, serta pemindai universal untuk cek sebaran lokasi barang atau seluruh isi rak multi-SKU."
     },
     {
       "number": "04",

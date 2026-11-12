@@ -1,7 +1,7 @@
 [
   {
     "label": "Stok & inspeksi rak multi-SKU",
-    "description": "Telusuri saldo hingga lokasi rak atau pindai barcode rak untuk melihat seluruh daftar barang di dalamnya.",
+    "description": "Telusuri saldo hingga lokasi rak atau pindai barcode/QR rak untuk melihat seluruh daftar barang di dalamnya.",
     "icon": "boxes"
   },
   {

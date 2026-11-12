@@ -1,3 +1,4 @@
+import QRCode from "qrcode";
 import { isValidEan13 } from "@/features/master-data/stocks/utils/barcode";
 
 const EAN13_PARITY = [
@@ -195,6 +196,77 @@ export function BarcodeVisual({
   );
 }
 
+export interface QrCodeVisualProps {
+  value: string;
+  size?: number;
+  showValue?: boolean;
+  subtitle?: string;
+  className?: string;
+  errorCorrectionLevel?: "L" | "M" | "Q" | "H";
+}
+
+export function QrCodeVisual({
+  value,
+  size = 80,
+  showValue = true,
+  subtitle,
+  className = "",
+  errorCorrectionLevel = "M",
+}: QrCodeVisualProps) {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  let viewBoxSize = 25;
+  let path = "";
+  try {
+    const qr = QRCode.create(trimmed, { errorCorrectionLevel });
+    const moduleCount = qr.modules.size;
+    const margin = 2;
+    viewBoxSize = moduleCount + margin * 2;
+
+    for (let r = 0; r < moduleCount; r += 1) {
+      for (let c = 0; c < moduleCount; c += 1) {
+        if (qr.modules.get(r, c)) {
+          path += `M${c + margin},${r + margin}h1v1h-1z `;
+        }
+      }
+    }
+  } catch {
+    return null;
+  }
+
+  return (
+    <div
+      aria-label={`Visual QR code ${trimmed}`}
+      className={`inline-flex flex-col items-center rounded-[var(--radius-sm)] bg-white p-1.5 text-ink-950 ${className}`}
+    >
+      <svg
+        aria-hidden="true"
+        className="shrink-0"
+        height={size}
+        role="img"
+        viewBox={`0 0 ${viewBoxSize} ${viewBoxSize}`}
+        width={size}
+      >
+        <rect fill="#ffffff" height={viewBoxSize} width={viewBoxSize} x={0} y={0} />
+        <path d={path.trim()} fill="#090d16" shapeRendering="crispEdges" />
+      </svg>
+      {showValue && (
+        <span className="mt-1 font-mono text-xs font-bold tracking-wider text-ink-950 tabular-nums">
+          {trimmed}
+        </span>
+      )}
+      {subtitle && (
+        <span className="text-[10px] font-medium text-slate-600">
+          {subtitle}
+        </span>
+      )}
+    </div>
+  );
+}
+
 export interface BarcodeStickerSheetProps {
   title: string;
   code: string;
@@ -202,6 +274,7 @@ export interface BarcodeStickerSheetProps {
   metaLabel?: string | null;
   badgeText?: string;
   visibleOnScreen?: boolean;
+  format?: "barcode" | "qr";
 }
 
 export function BarcodeStickerSheet({
@@ -211,10 +284,11 @@ export function BarcodeStickerSheet({
   metaLabel,
   badgeText = "LABEL BARANG WMS",
   visibleOnScreen = false,
+  format = "barcode",
 }: BarcodeStickerSheetProps) {
   return (
     <section
-      aria-label={`Label stiker barcode ${code}`}
+      aria-label={`Label stiker ${format === "qr" ? "QR code" : "barcode"} ${code}`}
       className={`printable-document-sheet ${
         visibleOnScreen ? "mt-4 block" : "hidden"
       } rounded-[var(--radius-md)] border-2 border-dashed border-ink-950/60 bg-white p-4 text-center text-ink-950 print:mt-0 print:block print:max-w-[58mm] print:border print:border-ink-950 print:p-2`}
@@ -227,7 +301,11 @@ export function BarcodeStickerSheet({
         {title}
       </p>
       <div className="mt-1.5 flex justify-center">
-        <BarcodeVisual className="w-full py-1" height={42} value={code} />
+        {format === "qr" ? (
+          <QrCodeVisual className="py-1" size={76} value={code} />
+        ) : (
+          <BarcodeVisual className="w-full py-1" height={42} value={code} />
+        )}
       </div>
       <div className="mt-1 flex flex-wrap items-center justify-between gap-2 border-t border-ink-950/30 pt-1 text-[10px] font-semibold text-slate-700 tabular-nums">
         <span>{secondaryCode ? `SKU: ${secondaryCode}` : `KODE: ${code}`}</span>
