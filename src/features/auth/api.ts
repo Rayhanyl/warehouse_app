@@ -336,6 +336,18 @@ export async function rotateAccessToken(): Promise<string | null> {
   }
 
   inFlightTokenRotation = (async () => {
+    const initialRefreshToken = getRefreshToken() ?? "cookie-session";
+    const tokenBeforeLock = useAuthStore.getState().accessToken;
+    const acquiredLock = acquireCrossTabRefreshLock(initialRefreshToken);
+
+    if (!acquiredLock) {
+      await waitForOtherTabRefresh(initialRefreshToken);
+      const latestAccessToken = useAuthStore.getState().accessToken;
+      if (latestAccessToken && latestAccessToken !== tokenBeforeLock) {
+        return latestAccessToken;
+      }
+    }
+
     try {
       // Peramban secara otomatis menyertakan HttpOnly cookie berkat withCredentials: true.
       // Jika tersedia token di storage (lingkungan tes / migrasi), kirimkan sebagai payload opsional.
@@ -363,6 +375,8 @@ export async function rotateAccessToken(): Promise<string | null> {
         broadcastAuthMessage({ type: "AUTH_LOGOUT" });
       }
       throw error;
+    } finally {
+      releaseCrossTabRefreshLock();
     }
   })().finally(() => {
     inFlightTokenRotation = null;

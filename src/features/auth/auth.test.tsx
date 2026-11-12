@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { AxiosError, AxiosHeaders } from "axios";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -87,6 +87,7 @@ describe("Stabilitas autentikasi dan pemulihan sesi", () => {
   });
 
   afterEach(() => {
+    cleanup();
     vi.restoreAllMocks();
     window.localStorage.clear();
     queryClient.clear();
@@ -170,6 +171,15 @@ describe("Stabilitas autentikasi dan pemulihan sesi", () => {
   });
 
   it("mengarahkan ke halaman login secara deterministik apabila refresh token tidak tersedia", async () => {
+    vi.spyOn(apiClient, "post").mockRejectedValueOnce(
+      makeAxiosError({
+        status: 401,
+        code: "AUTH_TOKEN_MISSING",
+        message: "Refresh token tidak ditemukan di cookie.",
+        url: "/auth/refresh",
+      }),
+    );
+
     render(
       <MemoryRouter initialEntries={["/audit-logs"]}>
         <Routes>
