@@ -76,7 +76,7 @@ export function StockDetailDialog({
       <div
         aria-labelledby="stock-detail-title"
         aria-modal="true"
-        className="print-dialog-panel w-full max-w-lg rounded-[var(--radius-lg)] border border-line-200 bg-surface-0 p-5 shadow-[var(--shadow-2)] sm:p-6"
+        className="print-dialog-panel max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-[var(--radius-lg)] border border-line-200 bg-surface-0 p-5 shadow-[var(--shadow-2)] sm:p-6"
         onMouseDown={(event) => event.stopPropagation()}
         role="dialog"
       >
@@ -123,7 +123,7 @@ export function StockDetailDialog({
         </div>
 
         <dl className="no-print mt-5 space-y-4 text-sm">
-          <div className="flex flex-col items-center justify-between gap-3 rounded-[var(--radius-md)] border border-line-200 bg-canvas-50/70 p-3.5 sm:flex-row">
+          <div className="flex flex-col items-start justify-between gap-3 rounded-[var(--radius-md)] border border-line-200 bg-canvas-50/70 p-3.5 sm:flex-row sm:items-center">
             <div>
               <dt className="text-xs font-semibold text-ink-950">
                 Visual Barcode Pemindaian
@@ -134,11 +134,13 @@ export function StockDetailDialog({
                   : "Menggunakan kode SKU sebagai barcode"}
               </dd>
             </div>
-            <BarcodeVisual
-              className="border border-line-200"
-              height={40}
-              value={scanCode}
-            />
+            <div className="max-w-full overflow-x-auto">
+              <BarcodeVisual
+                className="border border-line-200"
+                height={40}
+                value={scanCode}
+              />
+            </div>
           </div>
 
           <div className="flex items-start gap-3">

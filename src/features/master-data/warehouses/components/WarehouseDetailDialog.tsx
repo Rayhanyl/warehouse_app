@@ -75,7 +75,7 @@ export function WarehouseDetailDialog({
       <div
         aria-labelledby="warehouse-detail-title"
         aria-modal="true"
-        className="print-dialog-panel w-full max-w-lg rounded-[var(--radius-lg)] border border-line-200 bg-surface-0 p-5 shadow-[var(--shadow-2)] sm:p-6"
+        className="print-dialog-panel max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-[var(--radius-lg)] border border-line-200 bg-surface-0 p-5 shadow-[var(--shadow-2)] sm:p-6"
         onMouseDown={(event) => event.stopPropagation()}
         role="dialog"
       >
@@ -117,9 +117,9 @@ export function WarehouseDetailDialog({
         </div>
 
         <dl className="no-print mt-5 space-y-4 text-sm">
-          <div className="flex flex-col items-center justify-between gap-3 rounded-[var(--radius-md)] border border-line-200 bg-canvas-50/70 p-3.5 sm:flex-row">
+          <div className="flex flex-col items-start justify-between gap-3 rounded-[var(--radius-md)] border border-line-200 bg-canvas-50/70 p-3.5 sm:flex-row sm:items-center">
             <div>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <dt className="text-xs font-semibold text-ink-950">
                   Barcode & QR Identitas Gudang
                 </dt>
@@ -130,7 +130,7 @@ export function WarehouseDetailDialog({
               <dd className="mt-0.5 text-xs text-slate-600">
                 Pindai untuk menampilkan seluruh ringkasan stok di gudang ini
               </dd>
-              <div className="mt-2 flex items-center gap-1 rounded-[var(--radius-sm)] border border-line-300 bg-surface-0 p-0.5 text-xs">
+              <div className="mt-2 inline-flex items-center gap-1 rounded-[var(--radius-sm)] border border-line-300 bg-surface-0 p-0.5 text-xs">
                 <button
                   type="button"
                   onClick={() => setCodeFormat("qr")}
@@ -155,19 +155,21 @@ export function WarehouseDetailDialog({
                 </button>
               </div>
             </div>
-            {codeFormat === "qr" ? (
-              <QrCodeVisual
-                className="border border-line-200"
-                size={76}
-                value={warehouse.code}
-              />
-            ) : (
-              <BarcodeVisual
-                className="border border-line-200"
-                height={38}
-                value={warehouse.code}
-              />
-            )}
+            <div className="max-w-full overflow-x-auto">
+              {codeFormat === "qr" ? (
+                <QrCodeVisual
+                  className="border border-line-200"
+                  size={76}
+                  value={warehouse.code}
+                />
+              ) : (
+                <BarcodeVisual
+                  className="border border-line-200"
+                  height={38}
+                  value={warehouse.code}
+                />
+              )}
+            </div>
           </div>
 
           <div className="flex items-start gap-3">

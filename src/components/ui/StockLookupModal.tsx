@@ -335,14 +335,14 @@ export function StockLookupModal({
     >
       <div className="flex max-h-[90vh] w-full max-w-4xl flex-col rounded-[var(--radius-lg)] border border-line-500 bg-surface-0 shadow-2xl">
         {/* Modal Header */}
-        <div className="flex items-center justify-between border-b border-line-500 px-6 py-4">
-          <div className="flex items-center gap-3">
-            <div className="grid size-10 place-items-center rounded-lg bg-teal-50 text-teal-700">
+        <div className="flex items-start justify-between gap-3 border-b border-line-500 px-4 py-3.5 sm:items-center sm:px-6 sm:py-4">
+          <div className="flex min-w-0 items-start gap-3 sm:items-center">
+            <div className="grid size-10 shrink-0 place-items-center rounded-lg bg-teal-50 text-teal-700">
               <ScanBarcode aria-hidden="true" size={22} />
             </div>
-            <div>
+            <div className="min-w-0">
               <h2
-                className="text-lg font-bold text-ink-950"
+                className="text-base font-bold text-ink-950 sm:text-lg"
                 id="stock-lookup-title"
               >
                 Cek Stok & Posisi Rak Barang
@@ -354,7 +354,7 @@ export function StockLookupModal({
           </div>
           <button
             aria-label="Tutup pencarian stok"
-            className="grid size-9 place-items-center rounded-[var(--radius-md)] text-slate-600 transition hover:bg-canvas-100 hover:text-ink-950"
+            className="grid size-9 shrink-0 place-items-center rounded-[var(--radius-md)] text-slate-600 transition hover:bg-canvas-100 hover:text-ink-950"
             onClick={onClose}
             type="button"
           >
@@ -363,9 +363,9 @@ export function StockLookupModal({
         </div>
 
         {/* Search & Scan Toolbar */}
-        <div className="border-b border-line-300 bg-canvas-50/50 px-6 py-3.5">
+        <div className="border-b border-line-300 bg-canvas-50/50 px-4 py-3.5 sm:px-6">
           <form className="flex flex-wrap items-center gap-2 sm:flex-nowrap" onSubmit={handleSubmit}>
-            <div className="relative flex-1">
+            <div className="relative min-w-[180px] flex-1">
               <Search
                 aria-hidden="true"
                 className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500"
@@ -407,7 +407,7 @@ export function StockLookupModal({
         </div>
 
         {/* Modal Body / Results */}
-        <div className="flex-1 overflow-y-auto p-6">
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6">
           {error && (
             <div className="mb-4 flex items-center gap-2.5 rounded-[var(--radius-md)] border border-red-300 bg-red-50 p-3 text-xs font-medium text-red-800">
               <AlertCircle aria-hidden="true" size={16} />
@@ -500,7 +500,7 @@ export function StockLookupModal({
               </div>
 
               <div>
-                <div className="mb-2.5 flex items-center justify-between">
+                <div className="mb-2.5 flex flex-wrap items-center justify-between gap-2">
                   <div className="flex items-center gap-2">
                     <Layers aria-hidden="true" className="text-teal-700" size={18} />
                     <h4 className="text-sm font-bold text-ink-950">
@@ -520,8 +520,8 @@ export function StockLookupModal({
                     </p>
                   </div>
                 ) : (
-                  <div className="overflow-hidden rounded-[var(--radius-md)] border border-line-400">
-                    <table className="w-full text-left text-xs text-ink-950">
+                  <div className="overflow-x-auto rounded-[var(--radius-md)] border border-line-400">
+                    <table className="w-full min-w-[600px] text-left text-xs text-ink-950">
                       <thead className="border-b border-line-400 bg-canvas-50 text-[11px] font-semibold text-slate-700">
                         <tr>
                           <th className="px-3.5 py-2.5">SKU / Barcode</th>
@@ -634,7 +634,7 @@ export function StockLookupModal({
 
               {/* Rack Location Table */}
               <div>
-                <div className="mb-2.5 flex items-center justify-between">
+                <div className="mb-2.5 flex flex-wrap items-center justify-between gap-2">
                   <div className="flex items-center gap-2">
                     <MapPin aria-hidden="true" className="text-teal-700" size={18} />
                     <h4 className="text-sm font-bold text-ink-950">
@@ -654,8 +654,8 @@ export function StockLookupModal({
                     </p>
                   </div>
                 ) : (
-                  <div className="overflow-hidden rounded-[var(--radius-md)] border border-line-400">
-                    <table className="w-full text-left text-xs text-ink-950">
+                  <div className="overflow-x-auto rounded-[var(--radius-md)] border border-line-400">
+                    <table className="w-full min-w-[600px] text-left text-xs text-ink-950">
                       <thead className="border-b border-line-400 bg-canvas-50 text-[11px] font-semibold text-slate-700">
                         <tr>
                           <th className="px-3.5 py-2.5">Gudang</th>
@@ -720,12 +720,12 @@ export function StockLookupModal({
         </div>
 
         {/* Modal Footer */}
-        <div className="flex items-center justify-between border-t border-line-500 bg-canvas-50/50 px-6 py-3">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-t border-line-500 bg-canvas-50/50 px-4 py-3 sm:px-6">
           <p className="text-[11px] text-slate-600">
             Tekan <kbd className="rounded border border-line-300 bg-surface-0 px-1 py-0.5 font-mono text-[10px]">Esc</kbd> untuk menutup jendela pencarian.
           </p>
           <button
-            className="inline-flex items-center justify-center rounded-[var(--radius-md)] border border-line-500 bg-surface-0 px-4 py-2 text-xs font-semibold text-ink-950 hover:bg-canvas-100"
+            className="inline-flex min-h-10 items-center justify-center rounded-[var(--radius-md)] border border-line-500 bg-surface-0 px-4 py-2 text-xs font-semibold text-ink-950 hover:bg-canvas-100"
             onClick={onClose}
             type="button"
           >

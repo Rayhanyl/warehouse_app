@@ -107,7 +107,7 @@ export function CategoryFormDialog({
       <div
         aria-labelledby="category-form-title"
         aria-modal="true"
-        className="w-full max-w-lg rounded-[var(--radius-lg)] border border-line-200 bg-surface-0 p-5 shadow-[var(--shadow-2)] sm:p-6"
+        className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-[var(--radius-lg)] border border-line-200 bg-surface-0 p-5 shadow-[var(--shadow-2)] sm:p-6"
         onMouseDown={(event) => event.stopPropagation()}
         role="dialog"
       >

@@ -167,7 +167,7 @@ export function BarcodeScannerModal({
       <div
         aria-labelledby="barcode-scanner-modal-title"
         aria-modal="true"
-        className="w-full max-w-md rounded-[var(--radius-lg)] border border-line-200 bg-surface-0 p-5 shadow-[var(--shadow-2)]"
+        className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-[var(--radius-lg)] border border-line-200 bg-surface-0 p-4 shadow-[var(--shadow-2)] sm:p-5"
         onMouseDown={(event) => event.stopPropagation()}
         role="dialog"
       >
@@ -304,7 +304,7 @@ export function BarcodeScanBar({
         </span>
       </div>
       <div className="mt-2 flex flex-wrap gap-2">
-        <div className="relative min-w-[220px] flex-1">
+        <div className="relative min-w-[180px] flex-1">
           <ScanLine
             aria-hidden="true"
             className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-teal-700"

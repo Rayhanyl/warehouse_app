@@ -64,8 +64,8 @@ export function StorageLocationDetailDialog({
       aria-modal="true"
       aria-labelledby="storage-location-detail-title"
     >
-      <div className="print-dialog-panel w-full max-w-lg rounded-lg border border-slate-200 bg-white shadow-xl">
-        <div className="no-print flex items-start justify-between gap-3 border-b border-slate-200 px-6 py-4">
+      <div className="print-dialog-panel max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-xl">
+        <div className="no-print flex items-start justify-between gap-3 border-b border-slate-200 px-4 py-4 sm:px-6">
           <div>
             <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">
               Detail lokasi penyimpanan
@@ -81,16 +81,16 @@ export function StorageLocationDetailDialog({
             type="button"
             onClick={onClose}
             aria-label="Tutup dialog detail lokasi penyimpanan"
-            className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-md border border-slate-200 text-slate-600 hover:bg-slate-100 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-700"
+            className="inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-md border border-slate-200 text-slate-600 hover:bg-slate-100 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-700"
           >
             <X className="h-4 w-4" aria-hidden="true" />
           </button>
         </div>
 
-        <dl className="no-print divide-y divide-slate-200 px-6 py-2 text-sm">
-          <div className="flex flex-col items-center justify-between gap-3 py-3 sm:flex-row">
+        <dl className="no-print divide-y divide-slate-200 px-4 py-2 text-sm sm:px-6">
+          <div className="flex flex-col items-start justify-between gap-3 py-3 sm:flex-row sm:items-center">
             <div>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <dt className="font-semibold text-slate-900">Barcode Lokasi Rak</dt>
                 <span className="rounded bg-teal-100 px-1.5 py-0.5 text-[10px] font-bold text-teal-800">
                   {codeFormat === "qr" ? "QR Code 2D" : "1D Code-128"}
@@ -99,7 +99,7 @@ export function StorageLocationDetailDialog({
               <dd className="mt-0.5 text-xs text-slate-600">
                 Pindai untuk menampilkan seluruh macam barang (SKU) di rak ini
               </dd>
-              <div className="mt-2 flex items-center gap-1 rounded-md border border-slate-200 bg-slate-50 p-0.5 text-xs">
+              <div className="mt-2 inline-flex items-center gap-1 rounded-md border border-slate-200 bg-slate-50 p-0.5 text-xs">
                 <button
                   type="button"
                   onClick={() => setCodeFormat("qr")}
@@ -124,19 +124,21 @@ export function StorageLocationDetailDialog({
                 </button>
               </div>
             </div>
-            {codeFormat === "qr" ? (
-              <QrCodeVisual
-                className="border border-slate-200"
-                size={76}
-                value={location.code}
-              />
-            ) : (
-              <BarcodeVisual
-                className="border border-slate-200"
-                height={38}
-                value={location.code}
-              />
-            )}
+            <div className="max-w-full overflow-x-auto">
+              {codeFormat === "qr" ? (
+                <QrCodeVisual
+                  className="border border-slate-200"
+                  size={76}
+                  value={location.code}
+                />
+              ) : (
+                <BarcodeVisual
+                  className="border border-slate-200"
+                  height={38}
+                  value={location.code}
+                />
+              )}
+            </div>
           </div>
           <div className="grid grid-cols-1 gap-1 py-3 sm:grid-cols-3 sm:gap-4">
             <dt className="font-medium text-slate-600">Kode lokasi</dt>
@@ -188,7 +190,7 @@ export function StorageLocationDetailDialog({
           </div>
         </dl>
 
-        <div className="px-6">
+        <div className="px-4 sm:px-6">
           <BarcodeStickerSheet
             badgeText="LABEL LOKASI RAK"
             code={location.code}
@@ -200,7 +202,7 @@ export function StorageLocationDetailDialog({
           />
         </div>
 
-        <div className="no-print flex flex-wrap items-center justify-end gap-2 border-t border-slate-200 bg-slate-50 px-6 py-4">
+        <div className="no-print flex flex-wrap items-center justify-end gap-2 border-t border-slate-200 bg-slate-50 px-4 py-4 sm:px-6">
           <button
             type="button"
             onClick={handlePrintRackSticker}

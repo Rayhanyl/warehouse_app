@@ -274,10 +274,10 @@ export function StockFormDialog({
             >
               Barcode (EAN / UPC / Code-128)
             </label>
-            <div className="mt-2 flex gap-2">
+            <div className="mt-2 flex flex-wrap gap-2">
               <input
                 aria-invalid={Boolean(errors.barcode)}
-                className="h-12 flex-1 rounded-[var(--radius-md)] border border-line-500 bg-surface-0 px-3.5 text-sm font-semibold text-ink-950 tabular-nums focus:border-teal-600 focus:outline-none focus:ring-2 focus:ring-teal-600/20"
+                className="h-12 min-w-[180px] flex-1 rounded-[var(--radius-md)] border border-line-500 bg-surface-0 px-3.5 text-sm font-semibold text-ink-950 tabular-nums focus:border-teal-600 focus:outline-none focus:ring-2 focus:ring-teal-600/20"
                 id="stock-barcode-input"
                 maxLength={64}
                 onChange={(event) => setBarcode(event.target.value)}
@@ -310,7 +310,7 @@ export function StockFormDialog({
               </p>
             )}
             {(barcode.trim() || sku.trim()) && (
-              <div className="mt-2.5 flex items-center justify-between gap-3 rounded-[var(--radius-md)] border border-line-200 bg-canvas-50/70 px-3 py-2">
+              <div className="mt-2.5 flex flex-col items-start justify-between gap-3 rounded-[var(--radius-md)] border border-line-200 bg-canvas-50/70 px-3 py-2 sm:flex-row sm:items-center">
                 <div className="text-xs text-slate-600">
                   <p className="font-semibold text-ink-950">Pratinjau Visual Barcode</p>
                   <p className="mt-0.5">
@@ -319,11 +319,13 @@ export function StockFormDialog({
                       : "Fallback menggunakan kode SKU"}
                   </p>
                 </div>
-                <BarcodeVisual
-                  className="border border-line-200"
-                  height={34}
-                  value={barcode.trim() || sku.trim()}
-                />
+                <div className="max-w-full overflow-x-auto">
+                  <BarcodeVisual
+                    className="border border-line-200"
+                    height={34}
+                    value={barcode.trim() || sku.trim()}
+                  />
+                </div>
               </div>
             )}
           </div>

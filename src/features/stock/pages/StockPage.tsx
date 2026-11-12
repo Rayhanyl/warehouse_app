@@ -139,7 +139,7 @@ export function StockPage() {
             <Field label="Kategori ID" type="number" value={draft.category_id} onChange={(value) => setDraft({ ...draft, category_id: value })} />
           </>
         )}
-        <div className="flex items-end gap-2">
+        <div className="flex flex-wrap items-end gap-2">
           <button className="inline-flex min-h-11 items-center justify-center rounded-[var(--radius-md)] bg-ink-950 px-4 text-sm font-semibold text-surface-0 hover:bg-ink-800" type="submit">
             Terapkan
           </button>
@@ -148,12 +148,12 @@ export function StockPage() {
           </button>
           <button
             aria-label="Pindai barcode untuk cek stok dan posisi rak"
-            className="flex min-h-11 items-center gap-1.5 rounded-[var(--radius-md)] border border-teal-600/40 bg-teal-50 px-3 text-xs font-semibold text-teal-800 transition hover:bg-teal-100 hover:text-teal-950"
+            className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-[var(--radius-md)] border border-teal-600/40 bg-teal-50 px-3 text-xs font-semibold text-teal-800 transition hover:bg-teal-100 hover:text-teal-950"
             onClick={() => setLookupOpen(true)}
             type="button"
           >
             <ScanBarcode aria-hidden="true" size={16} />
-            <span className="hidden sm:inline">Cek Rak</span>
+            <span>Cek Rak</span>
           </button>
         </div>
       </form>

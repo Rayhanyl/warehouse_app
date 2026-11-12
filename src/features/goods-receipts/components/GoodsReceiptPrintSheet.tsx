@@ -29,34 +29,36 @@ export function GoodsReceiptPrintSheet({
       aria-label={`Dokumen cetak Bukti Penerimaan Barang ${receipt.gr_number}`}
       className={`printable-document-sheet ${
         visibleOnScreen ? "mt-5 block" : "hidden"
-      } rounded-[var(--radius-md)] border border-ink-950/30 bg-surface-0 p-6 text-ink-950 print:mt-0 print:block print:border-0 print:p-0`}
+      } rounded-[var(--radius-md)] border border-ink-950/30 bg-surface-0 p-4 text-ink-950 sm:p-6 print:mt-0 print:block print:border-0 print:p-0`}
     >
       <div className="flex flex-wrap items-start justify-between gap-4 border-b-2 border-ink-950 pb-4">
         <div>
           <p className="text-xs font-bold tracking-widest text-slate-700 uppercase">
             JEJAKSTOK WAREHOUSE MANAGEMENT SYSTEM
           </p>
-          <h3 className="mt-1 text-xl font-bold tracking-tight text-ink-950 uppercase">
+          <h3 className="mt-1 text-lg font-bold tracking-tight text-ink-950 uppercase sm:text-xl">
             BUKTI PENERIMAAN BARANG (GOODS RECEIPT NOTE)
           </h3>
         </div>
-        <div className="flex flex-col items-end gap-1.5 text-right text-sm">
+        <div className="flex max-w-full flex-col items-start gap-1.5 text-left text-sm sm:items-end sm:text-right print:items-end print:text-right">
           <p className="font-bold text-ink-950 tabular-nums">
             No. GRN: {receipt.gr_number}
           </p>
           <p className="text-xs font-semibold text-slate-700">
             Status: DIPOSTING (POSTED)
           </p>
-          <BarcodeVisual
-            className="border border-ink-950/30 px-1.5 py-1"
-            height={28}
-            showValue={false}
-            value={receipt.gr_number}
-          />
+          <div className="max-w-full overflow-x-auto">
+            <BarcodeVisual
+              className="border border-ink-950/30 px-1.5 py-1"
+              height={28}
+              showValue={false}
+              value={receipt.gr_number}
+            />
+          </div>
         </div>
       </div>
 
-      <dl className="mt-4 grid grid-cols-2 gap-x-6 gap-y-2 border-b border-line-500 pb-4 text-xs sm:grid-cols-3">
+      <dl className="mt-4 grid grid-cols-1 gap-x-6 gap-y-2.5 border-b border-line-500 pb-4 text-xs sm:grid-cols-2 md:grid-cols-3 print:grid-cols-3">
         <div>
           <dt className="font-semibold text-slate-600">No. Purchase Order</dt>
           <dd className="mt-0.5 font-bold text-ink-950 tabular-nums">
@@ -94,7 +96,7 @@ export function GoodsReceiptPrintSheet({
       </dl>
 
       <div className="mt-4 overflow-x-auto">
-        <table className="w-full border-collapse border border-ink-950 text-left text-xs">
+        <table className="w-full min-w-[560px] border-collapse border border-ink-950 text-left text-xs print:min-w-0">
           <thead>
             <tr className="border-b border-ink-950 bg-canvas-50 font-bold text-ink-950">
               <th className="border-r border-ink-950 px-2.5 py-2 text-center">No</th>
@@ -145,7 +147,7 @@ export function GoodsReceiptPrintSheet({
         Total baris barang diterima: <strong>{lines.length}</strong> baris
       </p>
 
-      <div className="print-signature-grid mt-8 grid grid-cols-3 gap-6 pt-2 text-center text-xs">
+      <div className="print-signature-grid mt-8 grid grid-cols-1 gap-4 pt-2 text-center text-xs sm:grid-cols-3 sm:gap-6 print:grid-cols-3">
         <div className="rounded border border-ink-950/50 p-3">
           <p className="font-bold text-ink-950">Diserahkan Oleh</p>
           <p className="text-[11px] text-slate-600">
