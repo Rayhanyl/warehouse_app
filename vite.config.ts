@@ -10,4 +10,14 @@ export default defineConfig({
       "@": fileURLToPath(new URL("./src", import.meta.url)),
     },
   },
+  server: {
+    port: 5173,
+    proxy: {
+      "/api": {
+        target: "https://api-jkstok.my.id",
+        changeOrigin: true,
+        secure: true,
+      },
+    },
+  },
 });
