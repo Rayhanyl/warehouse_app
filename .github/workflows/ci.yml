@@ -1,0 +1,32 @@
+name: Frontend CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [development]
+
+jobs:
+  test-and-build:
+    name: Frontend Test & Build (vitest & tsc)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Kode
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: "npm"
+          cache-dependency-path: package-lock.json
+
+      - name: Install Dependensi
+        run: npm ci
+
+      - name: Jalankan Vitest Suite (Unit & Integration Tests)
+        run: npx vitest run
+
+      - name: Uji Typecheck & Build Produksi
+        run: npm run build
