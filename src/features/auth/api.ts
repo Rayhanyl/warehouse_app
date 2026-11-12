@@ -336,40 +336,19 @@ export async function rotateAccessToken(): Promise<string | null> {
   }
 
   inFlightTokenRotation = (async () => {
-    const initialRefreshToken = getRefreshToken();
-    if (!initialRefreshToken) {
-      return null;
-    }
-
-    const tokenBeforeLock = useAuthStore.getState().accessToken;
-    const acquiredLock = acquireCrossTabRefreshLock(initialRefreshToken);
-
-    if (!acquiredLock) {
-      await waitForOtherTabRefresh(initialRefreshToken);
-      const latestAccessToken = useAuthStore.getState().accessToken;
-      if (latestAccessToken && latestAccessToken !== tokenBeforeLock) {
-        return latestAccessToken;
-      }
-      const latestRefreshToken = getRefreshToken();
-      if (!latestRefreshToken) {
-        return null;
-      }
-    }
-
-    const refreshTokenToSend = getRefreshToken();
-    if (!refreshTokenToSend) {
-      releaseCrossTabRefreshLock();
-      return null;
-    }
-
     try {
+      // Peramban secara otomatis menyertakan HttpOnly cookie berkat withCredentials: true.
+      // Jika tersedia token di storage (lingkungan tes / migrasi), kirimkan sebagai payload opsional.
+      const fallbackToken = getRefreshToken();
+      const payload = fallbackToken ? { refresh_token: fallbackToken } : undefined;
+
       const { data } = await apiClient.post<TokenRotationResult>(
         "/auth/refresh",
-        {
-          refresh_token: refreshTokenToSend,
-        },
+        payload,
       );
-      saveRefreshToken(data.refresh_token);
+      if (data.refresh_token) {
+        saveRefreshToken(data.refresh_token);
+      }
       useAuthStore.getState().setAccessToken(data.access_token);
       broadcastAuthMessage({
         type: "AUTH_TOKEN_ROTATED",
@@ -384,8 +363,6 @@ export async function rotateAccessToken(): Promise<string | null> {
         broadcastAuthMessage({ type: "AUTH_LOGOUT" });
       }
       throw error;
-    } finally {
-      releaseCrossTabRefreshLock();
     }
   })().finally(() => {
     inFlightTokenRotation = null;
@@ -406,7 +383,9 @@ export async function login(credentials: LoginCredentials): Promise<AuthUser> {
     "/auth/login",
     normalizedCredentials,
   );
-  saveRefreshToken(data.refresh_token);
+  if (data.refresh_token) {
+    saveRefreshToken(data.refresh_token);
+  }
   useAuthStore.getState().setAccessToken(data.access_token);
 
   try {
@@ -468,12 +447,6 @@ export async function refreshSession(): Promise<AuthUser | null> {
 }
 
 async function refreshSessionInternal(): Promise<AuthUser | null> {
-  const refreshToken = getRefreshToken();
-  if (!refreshToken) {
-    useAuthStore.getState().logout();
-    return null;
-  }
-
   useAuthStore.getState().setChecking();
 
   try {
@@ -497,6 +470,7 @@ async function refreshSessionInternal(): Promise<AuthUser | null> {
       useAuthStore.getState().logout();
       queryClient.clear();
       broadcastAuthMessage({ type: "AUTH_LOGOUT" });
+      return null;
     } else if (isForbiddenSessionError(error)) {
       useAuthStore
         .getState()
@@ -513,12 +487,11 @@ async function refreshSessionInternal(): Promise<AuthUser | null> {
 }
 
 export async function logout(): Promise<void> {
-  const refreshToken = getRefreshToken();
+  const fallbackToken = getRefreshToken();
+  const payload = fallbackToken ? { refresh_token: fallbackToken } : undefined;
 
   try {
-    if (refreshToken) {
-      await apiClient.post("/auth/logout", { refresh_token: refreshToken });
-    }
+    await apiClient.post("/auth/logout", payload);
   } catch {
     // Ignore logout transport errors so local session cleanup always completes.
   } finally {

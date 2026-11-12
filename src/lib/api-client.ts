@@ -1,10 +1,6 @@
 import axios, { type InternalAxiosRequestConfig } from "axios";
 import { useAuthStore } from "@/features/auth/store";
 import { queryClient } from "@/lib/query-client";
-import {
-  localStorageRepository,
-  REFRESH_TOKEN_STORAGE_KEY,
-} from "@/lib/storage";
 
 export interface RetryableRequestConfig extends InternalAxiosRequestConfig {
   _retry?: boolean;
@@ -23,6 +19,7 @@ export const apiClient = axios.create({
   baseURL: `${import.meta.env.VITE_API_BASE_URL ?? "http://127.0.0.1:8000"}/api/v1`,
   timeout: 10000,
   headers: { "Content-Type": "application/json" },
+  withCredentials: true,
 });
 
 apiClient.interceptors.request.use((config) => {
@@ -47,27 +44,11 @@ export function registerTokenRefreshExecutor(executor: TokenRefreshExecutor | nu
 let fallbackRefreshPromise: Promise<string | null> | null = null;
 
 async function defaultRotateAccessToken(): Promise<string | null> {
-  const rawToken = localStorageRepository.getString(REFRESH_TOKEN_STORAGE_KEY);
-  const refreshToken = rawToken?.trim() ?? "";
-  if (!refreshToken) {
-    if (rawToken !== null) {
-      localStorageRepository.remove(REFRESH_TOKEN_STORAGE_KEY);
-    }
-    return null;
-  }
-
   if (!fallbackRefreshPromise) {
     fallbackRefreshPromise = apiClient
-      .post<TokenRotationResult>("/auth/refresh", {
-        refresh_token: refreshToken,
-      })
+      .post<TokenRotationResult>("/auth/refresh")
       .then((response) => {
         const nextAccessToken = response.data.access_token;
-        const nextRefreshToken = response.data.refresh_token;
-        localStorageRepository.setString(
-          REFRESH_TOKEN_STORAGE_KEY,
-          nextRefreshToken,
-        );
         useAuthStore.getState().setAccessToken(nextAccessToken);
         return nextAccessToken;
       })
@@ -76,7 +57,6 @@ async function defaultRotateAccessToken(): Promise<string | null> {
           ? refreshError.response?.status
           : undefined;
         if (status === 401 || status === 422) {
-          localStorageRepository.remove(REFRESH_TOKEN_STORAGE_KEY);
           useAuthStore.getState().logout();
           queryClient.clear();
         } else {
@@ -134,22 +114,15 @@ apiClient.interceptors.response.use(
       return apiClient(originalRequest);
     }
 
-    const refreshToken = localStorageRepository
-      .getString(REFRESH_TOKEN_STORAGE_KEY)
-      ?.trim();
-    if (!refreshToken) {
-      localStorageRepository.remove(REFRESH_TOKEN_STORAGE_KEY);
-      useAuthStore.getState().logout();
-      queryClient.clear();
-      return Promise.reject(error);
-    }
-
     const executeRefresh = customTokenRefreshExecutor ?? defaultRotateAccessToken;
-    const token = await executeRefresh();
-
-    if (token) {
-      originalRequest.headers.Authorization = `Bearer ${token}`;
-      return apiClient(originalRequest);
+    try {
+      const token = await executeRefresh();
+      if (token) {
+        originalRequest.headers.Authorization = `Bearer ${token}`;
+        return apiClient(originalRequest);
+      }
+    } catch {
+      return Promise.reject(error);
     }
 
     return Promise.reject(error);
