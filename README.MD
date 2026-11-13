@@ -102,23 +102,25 @@ Install dependency:
 npm install
 ```
 
-Salin file environment:
+Salin file environment sesuai kebutuhan skenario Anda:
 
-```powershell
-Copy-Item .env.example .env
-```
+- **Skenario A — Terhubung ke Backend Lokal (Default):**
+  Frontend otomatis membaca `.env.development` yang telah dikonfigurasi menggunakan Vite proxy ke `http://localhost:8000`:
+  ```powershell
+  npm run dev
+  ```
 
-Sesuaikan nilai API pada `.env`:
+- **Skenario B — Terhubung ke Backend Server Development:**
+  Salin template mode dev-server lalu sesuaikan target proxy:
+  ```powershell
+  Copy-Item .env.dev-server.example .env.dev-server
+  # Edit VITE_DEV_PROXY_TARGET pada .env.dev-server jika host/port berbeda
+  npm run dev:server
+  ```
 
-```env
-VITE_API_BASE_URL=http://localhost:8000
-```
-
-Jalankan development server:
-
-```powershell
-npm run dev
-```
+> [!TIP]
+> Panduan lengkap arsitektur multi-environment, guard proteksi production, dan pemecahan masalah dapat dibaca pada dokumen resmi:
+> 👉 `api_warehouse_app/docs/core/environment-setup-guide.md`.
 
 Buka aplikasi pada:
 
