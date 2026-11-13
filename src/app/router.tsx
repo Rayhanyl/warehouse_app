@@ -1,4 +1,4 @@
-import { createBrowserRouter } from "react-router-dom";
+import { createBrowserRouter, Navigate } from "react-router-dom";
 import { AppShell } from "@/components/layout/AppShell";
 import { AuditLogsPage } from "@/features/audit-logs/pages/AuditLogsPage";
 import { ProtectedRoute } from "@/features/auth/components/ProtectedRoute";
@@ -169,6 +169,10 @@ export const router = createBrowserRouter([
           {
             path: "/stock",
             element: <StockPage />,
+          },
+          {
+            path: "/stock/balances",
+            element: <Navigate to="/stock" replace />,
           },
           {
             path: "/stock/by-location",
