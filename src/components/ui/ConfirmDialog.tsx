@@ -38,7 +38,7 @@ export function ConfirmDialog({
       <div
         aria-labelledby="confirm-dialog-title"
         aria-modal="true"
-        className="w-full max-w-md rounded-[var(--radius-lg)] border border-line-200 bg-surface-0 p-5 shadow-[var(--shadow-2)]"
+        className="w-full max-w-lg rounded-[var(--radius-lg)] border border-line-200 bg-surface-0 p-6 shadow-[var(--shadow-2)]"
         onMouseDown={(event) => event.stopPropagation()}
         role="dialog"
       >

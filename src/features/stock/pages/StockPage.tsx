@@ -3,6 +3,7 @@ import { RotateCcw, ScanBarcode, Search } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { StockLookupModal } from "@/components/ui/StockLookupModal";
+import { usePermission } from "@/hooks/usePermission";
 import { formatDecimal } from "@/lib/decimal";
 import {
   useStockBalances,
@@ -49,6 +50,8 @@ function formatDate(value: string) {
 
 export function StockPage() {
   const { pathname } = useLocation();
+  const { can } = usePermission();
+  const canReadLedger = can("ledger:read");
   const [params, setParams] = useState(initialParams);
   const [draft, setDraft] = useState(initialParams);
   const [lookupOpen, setLookupOpen] = useState(false);
@@ -70,7 +73,7 @@ export function StockPage() {
   const balances = useStockBalances(params, !isWarehouseView && !isSummaryView && !isLedgerView);
   const warehouseBalances = useWarehouseBalances(params, isWarehouseView);
   const summary = useStockSummary(params, isSummaryView);
-  const movements = useStockMovements(params, isLedgerView);
+  const movements = useStockMovements(params, isLedgerView && canReadLedger);
   const query = isLedgerView
     ? movements
     : isWarehouseView
@@ -157,7 +160,9 @@ export function StockPage() {
           </button>
         </div>
       </form>
-      {query.isLoading ? (
+      {isLedgerView && !canReadLedger ? (
+        <State error={false} text="Anda tidak memiliki izin untuk melihat riwayat buku besar pergerakan stok." />
+      ) : query.isLoading ? (
         <State text="Memuat data stok..." />
       ) : query.isError ? (
         <State error onRetry={() => void query.refetch()} text="Data stok belum dapat dimuat. Periksa koneksi lalu coba lagi." />
@@ -184,24 +189,29 @@ export function StockPage() {
 }
 
 function StockNavigation({ activePath }: { activePath: string }) {
-  const links = [
+  const { can } = usePermission();
+  const canReadLedger = can("ledger:read");
+  const links: [string, string][] = [
     ["/stock/by-location", "Per lokasi"],
     ["/stock/by-warehouse", "Per gudang"],
     ["/stock/summary", "Ringkasan"],
     ["/stock/in-transit", "Dalam perjalanan"],
-    ["/stock/ledger", "Buku besar"],
+    ...(canReadLedger ? [["/stock/ledger", "Buku besar"] as [string, string]] : []),
   ];
   return (
     <nav aria-label="Tampilan stok" className="mb-6 flex gap-1 overflow-x-auto border-b border-line-200">
-      {links.map(([path, label]) => (
-        <Link
-          className={`min-h-11 shrink-0 border-b-2 px-3 py-2 text-sm font-semibold ${activePath === path ? "border-teal-600 text-teal-700" : "border-transparent text-slate-700 hover:border-line-500 hover:text-ink-950"}`}
-          key={path}
-          to={path}
-        >
-          {label}
-        </Link>
-      ))}
+      {links.map(([path, label]) => {
+        const isCurrent = activePath === path || (activePath === "/stock" && path === "/stock/by-location");
+        return (
+          <Link
+            className={`min-h-11 shrink-0 border-b-2 px-3 py-2 text-sm font-semibold ${isCurrent ? "border-teal-600 text-teal-700" : "border-transparent text-slate-700 hover:border-line-500 hover:text-ink-950"}`}
+            key={path}
+            to={path}
+          >
+            {label}
+          </Link>
+        );
+      })}
     </nav>
   );
 }

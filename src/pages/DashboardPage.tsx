@@ -243,7 +243,7 @@ export function DashboardPage() {
             {/* Card 2: Saldo On-Hand */}
             <Link
               className="group flex flex-col justify-between rounded-[var(--radius-lg)] border border-line-200 bg-surface-0 p-5 shadow-[var(--shadow-1)] transition hover:border-emerald-500"
-              to="/stock/balances"
+              to="/stock"
             >
               <div className="flex items-center justify-between">
                 <span className="text-xs font-semibold text-slate-600">Total Stok Fisik</span>
@@ -293,7 +293,7 @@ export function DashboardPage() {
             {/* Card 4: Stok Kritis */}
             <Link
               className="group flex flex-col justify-between rounded-[var(--radius-lg)] border border-line-200 bg-surface-0 p-5 shadow-[var(--shadow-1)] transition hover:border-rose-500"
-              to="/stock/balances"
+              to="/stock"
             >
               <div className="flex items-center justify-between">
                 <span className="text-xs font-semibold text-slate-600">Perhatian Stok Kritis</span>

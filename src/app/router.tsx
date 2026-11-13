@@ -1,4 +1,4 @@
-import { createBrowserRouter } from "react-router-dom";
+import { createBrowserRouter, Navigate } from "react-router-dom";
 import { AppShell } from "@/components/layout/AppShell";
 import { AuditLogsPage } from "@/features/audit-logs/pages/AuditLogsPage";
 import { ProtectedRoute } from "@/features/auth/components/ProtectedRoute";
@@ -11,7 +11,7 @@ import { SuppliersPage } from "@/features/master-data/suplliers/pages/SuppliersP
 import { UomsPage } from "@/features/master-data/uoms/pages/UomsPage";
 import { WarehousesPage } from "@/features/master-data/warehouses/pages/WarehousesPage";
 import { PurchaseOrderCreatePage, PurchaseOrdersPage } from "@/features/purchase-orders/pages/PurchaseOrdersPage";
-import { GoodsReceiptsPage } from "@/features/goods-receipts/pages/GoodsReceiptsPage";
+import { GoodsReceiptCreatePage, GoodsReceiptsPage } from "@/features/goods-receipts/pages/GoodsReceiptsPage";
 import { StockTransfersPage } from "@/features/stock-transfers/pages/StockTransfersPage";
 import { StockOpnamesPage } from "@/features/stock-opnames/pages/StockOpnamesPage";
 import { StockPage } from "@/features/stock/pages/StockPage";
@@ -111,7 +111,15 @@ export const router = createBrowserRouter([
             element: <StorageLocationsPage />,
           },
           {
+            path: "/admin/audit-logs",
+            element: <AuditLogsPage />,
+          },
+          {
             path: "/audit-logs",
+            element: <AuditLogsPage />,
+          },
+          {
+            path: "/audit",
             element: <AuditLogsPage />,
           },
           {
@@ -151,8 +159,16 @@ export const router = createBrowserRouter([
             element: <PurchaseOrdersPage />,
           },
           {
+            path: "/goods-receipts/new",
+            element: <GoodsReceiptCreatePage />,
+          },
+          {
             path: "/goods-receipts",
             element: <GoodsReceiptsPage />,
+          },
+          {
+            path: "/purchasing/goods-receipts/new",
+            element: <GoodsReceiptCreatePage />,
           },
           {
             path: "/purchasing/goods-receipts",
@@ -161,6 +177,10 @@ export const router = createBrowserRouter([
           {
             path: "/stock",
             element: <StockPage />,
+          },
+          {
+            path: "/stock/balances",
+            element: <Navigate to="/stock" replace />,
           },
           {
             path: "/stock/by-location",

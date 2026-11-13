@@ -76,7 +76,7 @@ export function StockDetailDialog({
       <div
         aria-labelledby="stock-detail-title"
         aria-modal="true"
-        className="print-dialog-panel max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-[var(--radius-lg)] border border-line-200 bg-surface-0 p-5 shadow-[var(--shadow-2)] sm:p-6"
+        className="print-dialog-panel max-h-[90vh] w-full max-w-4xl overflow-y-auto rounded-[var(--radius-lg)] border border-line-200 bg-surface-0 p-5 shadow-[var(--shadow-2)] sm:p-6"
         onMouseDown={(event) => event.stopPropagation()}
         role="dialog"
       >

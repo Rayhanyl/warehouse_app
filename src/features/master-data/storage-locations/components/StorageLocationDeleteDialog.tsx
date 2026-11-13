@@ -35,7 +35,7 @@ export function StorageLocationDeleteDialog({
       aria-modal="true"
       aria-labelledby="storage-location-delete-title"
     >
-      <div className="w-full max-w-md rounded-lg border border-slate-200 bg-white shadow-xl">
+      <div className="w-full max-w-lg rounded-lg border border-slate-200 bg-white shadow-xl">
         <div className="flex items-start justify-between gap-3 border-b border-slate-200 px-6 py-4">
           <div className="flex items-center gap-2.5">
             <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-red-100 text-red-800">
