@@ -108,22 +108,22 @@ function resolveRouteContext(
     return { title: "Stock opname", groupName: "Operasional gudang" };
   }
   if (pathname === "/stock") {
-    return { title: "Saldo stok per lokasi", groupName: "Stok dan buku besar" };
+    return { title: "Saldo stok per lokasi", groupName: "Monitoring saldo stok" };
   }
   if (pathname === "/stock/warehouse" || pathname === "/stock/by-warehouse") {
-    return { title: "Saldo stok per gudang", groupName: "Stok dan buku besar" };
+    return { title: "Saldo stok per gudang", groupName: "Monitoring saldo stok" };
   }
   if (pathname === "/stock/by-location") {
-    return { title: "Saldo stok per lokasi", groupName: "Stok dan buku besar" };
+    return { title: "Saldo stok per lokasi", groupName: "Monitoring saldo stok" };
   }
   if (pathname === "/stock/summary") {
-    return { title: "Ringkasan stok", groupName: "Stok dan buku besar" };
+    return { title: "Ringkasan stok", groupName: "Monitoring saldo stok" };
   }
   if (pathname === "/stock/in-transit") {
-    return { title: "Stok dalam perjalanan", groupName: "Stok dan buku besar" };
+    return { title: "Stok dalam perjalanan", groupName: "Monitoring saldo stok" };
   }
   if (pathname === "/stock/ledger") {
-    return { title: "Buku besar stok", groupName: "Stok dan buku besar" };
+    return { title: "Buku besar stok", groupName: "Monitoring saldo stok" };
   }
   return { title: "Dasbor", groupName: null };
 }
