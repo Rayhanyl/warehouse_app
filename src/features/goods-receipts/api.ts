@@ -101,15 +101,24 @@ export function useGoodsReceiptReferences() {
   return useQuery({
     queryKey: [...goodsReceiptKeys.all, "references"],
     queryFn: async () => {
-      const [purchaseOrders, locations] = await Promise.all([
+      const [issuedRes, partialRes, locationsRes] = await Promise.all([
         apiClient.get<PurchaseOrderPage>("/purchase-orders", {
           params: { limit: 200, offset: 0, status: "ISSUED", sort_by: "id", sort_dir: "desc" },
+        }),
+        apiClient.get<PurchaseOrderPage>("/purchase-orders", {
+          params: { limit: 200, offset: 0, status: "PARTIALLY_RECEIVED", sort_by: "id", sort_dir: "desc" },
         }),
         apiClient.get<{ items: GoodsReceiptLocation[] }>("/locations", {
           params: { limit: 200, offset: 0, is_active: "true" },
         }),
       ]);
-      return { purchaseOrders: purchaseOrders.data.items, locations: locations.data.items };
+      const poMap = new Map<number, (typeof issuedRes.data.items)[number]>();
+      for (const po of [...issuedRes.data.items, ...partialRes.data.items]) {
+        poMap.set(po.id, po);
+      }
+      const purchaseOrders = Array.from(poMap.values()).sort((a, b) => b.id - a.id);
+
+      return { purchaseOrders, locations: locationsRes.data.items };
     },
   });
 }
