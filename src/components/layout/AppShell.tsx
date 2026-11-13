@@ -98,8 +98,16 @@ function resolveRouteContext(
   if (pathname === "/purchase-orders" || pathname === "/purchasing/purchase-orders") {
     return { title: "Purchase order", groupName: "Pengadaan dan penerimaan" };
   }
-  if (pathname === "/goods-receipts" || pathname === "/purchasing/goods-receipts") {
-    return { title: "Penerimaan barang", groupName: "Pengadaan dan penerimaan" };
+  if (
+    pathname === "/goods-receipts" ||
+    pathname === "/goods-receipts/new" ||
+    pathname === "/purchasing/goods-receipts" ||
+    pathname === "/purchasing/goods-receipts/new"
+  ) {
+    return {
+      title: pathname.endsWith("/new") ? "Buat penerimaan barang" : "Penerimaan barang",
+      groupName: "Pengadaan dan penerimaan",
+    };
   }
   if (pathname === "/stock-transfers" || pathname === "/operations/stock-transfers") {
     return { title: "Transfer stok", groupName: "Operasional gudang" };
