@@ -33,6 +33,7 @@ export interface ResponsiveDataViewProps<T> {
   emptyTitle?: string;
   emptyDescription?: string;
   emptyAction?: ReactNode;
+  mobileListAriaLabel?: string;
   mobileListClassName?: string;
   tableContainerClassName?: string;
   className?: string;
@@ -54,6 +55,7 @@ export function ResponsiveDataView<T>({
   emptyTitle,
   emptyDescription,
   emptyAction,
+  mobileListAriaLabel,
   mobileListClassName,
   tableContainerClassName,
   className,
@@ -94,6 +96,22 @@ export function ResponsiveDataView<T>({
   }
 
   if (isMobile) {
+    if (mobileListAriaLabel) {
+      return (
+        <ul
+          aria-label={mobileListAriaLabel}
+          data-slot="responsive-mobile-list"
+          className={cn("space-y-3", mobileListClassName, className)}
+        >
+          {data.map((item, index) => (
+            <li key={keyExtractor(item, index)}>
+              {renderMobileCard(item, index)}
+            </li>
+          ))}
+        </ul>
+      );
+    }
+
     return (
       <div
         data-slot="responsive-mobile-list"

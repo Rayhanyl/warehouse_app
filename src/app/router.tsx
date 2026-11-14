@@ -7,7 +7,7 @@ import { ProfilePage } from "@/features/auth/pages/ProfilePage";
 import { CategoriesPage } from "@/features/master-data/categories/pages/CategoriesPage";
 import { StocksPage } from "@/features/master-data/stocks/pages/StocksPage";
 import { StorageLocationsPage } from "@/features/master-data/storage-locations/pages/StorageLocationsPage";
-import { SuppliersPage } from "@/features/master-data/suplliers/pages/SuppliersPage";
+import { SuppliersPage } from "@/features/master-data/suppliers/pages/SuppliersPage";
 import { UomsPage } from "@/features/master-data/uoms/pages/UomsPage";
 import { WarehousesPage } from "@/features/master-data/warehouses/pages/WarehousesPage";
 import { PurchaseOrderCreatePage, PurchaseOrdersPage } from "@/features/purchase-orders/pages/PurchaseOrdersPage";
