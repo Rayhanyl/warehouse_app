@@ -4,9 +4,7 @@ Frontend untuk **Jejakstok**, sistem manajemen gudang berbasis React yang
 disiapkan untuk membantu tim mengelola stok, gudang, pengadaan, penerimaan,
 transfer, stock opname, dan jejak aktivitas dalam satu alur kerja.
 
-> **Status:** fondasi frontend, landing page, halaman login, branding, dan
-> struktur feature-based sudah tersedia. Modul bisnis dan integrasi autentikasi
-> backend dikembangkan secara bertahap.
+> **Status:** Aplikasi operasional telah selesai dikembangkan hingga **Tahap 30** (seluruh modul MVP, ekstensi retail/cabang, template dokumen cetak modular, panduan pengguna interaktif, responsivitas lintas perangkat, isolasi *warehouse scoping* global, dan pengujian otomatis `101/101` lulus).
 
 ## Gambaran umum
 
@@ -14,64 +12,62 @@ Jejakstok memiliki dua area utama:
 
 1. **Landing page publik** pada `/`
    - dapat dilihat siapa pun tanpa login;
-   - menggunakan konten JSON statis berbahasa Indonesia;
-   - menjelaskan alur Terima → Simpan → Pindahkan → Hitung;
+   - menggunakan konten JSON statis tervalidasi berbahasa Indonesia (`src/content/landing/`);
+   - dimodularisasi ke `src/components/landing/` dan menjelaskan alur Terima → Simpan → Pindahkan → Hitung beserta fitur barcode/QR, stiker label `50x30 mm`, dan cetak dokumen fisik;
    - tidak mengambil data operasional atau memanggil API autentikasi.
 2. **Ruang kerja** untuk pengguna terautentikasi
-   - login pada `/login`;
-   - dashboard informatif pada `/dashboard`;
-   - modul stok, master data, PO, penerimaan, transfer, opname, pengguna, dan
-     audit log disiapkan melalui feature-based architecture.
-
-Halaman login mengirim kredensial ke endpoint autentikasi backend, menyimpan
-refresh token secara lokal, memuat profil pengguna aktif, dan mengarahkan
-pengguna yang berhasil login ke `/dashboard`. Akun yang digunakan harus sudah
-tersedia pada backend.
+   - login pada `/login` dengan pengiriman kredensial ke `/api/v1/auth/login`, penyimpanan `access_token` di memori Zustand, serta dukungan sesi `HttpOnly` cookie (`withCredentials: true`) dan sinkronisasi multi-tab (`BroadcastChannel`);
+   - *topbar* kontekstual (`AppTopbar.tsx`), *Command Palette* cepat, dan selektor cakupan gudang global (`useWarehouseScopeStore`, parameter `warehouse_id`);
+   - dashboard informatif pada `/dashboard` (`KPI`, tugas tertunda lintas modul, dan mutasi terkini sesuai hak akses & filter gudang);
+   - profil pengguna & ganti kata sandi (`/profile`), administrasi pengguna/role/menu/template dokumen (`/admin/*`), master data (`/master/*`), monitoring saldo stok terpadu & buku besar (`/stock/*`), PO (`/purchase-orders/*`), penerimaan barang (`/goods-receipts/*`, `/goods-receipts/new`), transfer antar-gudang (`/stock-transfers/*`), stock opname (`/stock-opnames/*`), audit log (`/audit-logs`, `/admin/audit-logs`), serta Pusat Panduan Pengguna Interaktif (`UserGuideModal`).
 
 ## Area bisnis
 
-Struktur aplikasi disiapkan untuk area berikut:
+Aplikasi mencakup domain bisnis berikut:
 
-- autentikasi, session, role, permission, dan penugasan gudang;
-- master data kategori, UOM, supplier, dan item (lengkap dengan kode SKU & Barcode unik);
-- gudang serta lokasi penyimpanan;
-- saldo stok per gudang/lokasi, stok in-transit, dan stock ledger;
-- purchase order;
-- goods receipt atau penerimaan barang (termasuk scan barcode penerimaan & cetak fisik GRN / Bukti Penerimaan Barang);
-- stock transfer antar-gudang / cabang (termasuk scan barcode penyiapan & cetak fisik Surat Jalan Transfer Stok);
-- stock opname (termasuk scan barcode hitung fisik barang snapshot maupun temuan);
-- cetak dokumen fisik berstandar A4 (`@media print`) untuk kebutuhan operasional retail, toko cabang, dan B2B;
-- integrasi pemindai Barcode / QR (kamera Web `BarcodeDetector` & USB/Bluetooth HID Barcode Gun);
-- audit log.
+- **Autentikasi, Session, Profil & RBAC:** Login, pemulihan sesi otomatis, profil + daftar gudang terakses, ganti kata sandi, manajemen user/role/permission, penugasan gudang, dan katalog menu dinamis (`/admin/users`, `/admin/roles`, `/admin/menus`);
+- **Dashboard & Cakupan Gudang Global:** KPI real-time, antrean tugas tertunda, mutasi terakhir, serta pemilih gudang aktif di topbar untuk menyaring metrik & transaksi secara global;
+- **Master Data (`master-data`):** Kategori, UOM (`allow_decimal`), Pemasok/Supplier (termasuk import Excel), Barang/SKU (termasuk Barcode EAN-13/Code-128 & auto-generate GS1 internal `200..299` serta import Excel), Gudang (`allow_negative_stock`), dan Lokasi Penyimpanan (*Bin/Rack*);
+- **Monitoring Saldo Stok & Buku Besar Terpadu (`/stock`):** Tab terpadu saldo per lokasi, per gudang, ringkasan lintas gudang, barang *in-transit*, dan kartu stok (*ledger*), dilengkapi modal lookup barcode dua arah (`StockLookupModal`);
+- **Purchase Order (`/purchase-orders`):** Pembuatan draft, revisi, penerbitan, pembatalan, penutupan, filter multi-status, dan pratinjau cetak PO;
+- **Goods Receipt (`/goods-receipts` & `/goods-receipts/new`):** Penerimaan barang referensi PO (parsial/penuh), scan barcode penerimaan, posting atomik, dan cetak fisik Bukti Penerimaan Barang (GRN);
+- **Stock Transfer (`/stock-transfers`):** Transfer antar-gudang/rak 2 tahap (`DRAFT` → `APPROVED` → `SHIPPED` → `RECEIVED`), pencatatan selisih & alasan selisih, scan barcode, dan cetak Surat Jalan Transfer Stok;
+- **Stock Opname (`/stock-opnames`):** Sesi opname per gudang/lokasi dengan pembekuan lokasi otomatis, hitung fisik berbasis scan barcode (snapshot & temuan), submit, dan persetujuan/penolakan selisih;
+- **Template Dokumen Cetak Modular (`/admin/document-templates`):** Pengaturan logo perusahaan, ukuran/margin kertas (`A4`/`LETTER`/`F4`), urutan bagian, kolom tabel, dan blok tanda tangan untuk GRN, Surat Jalan, dan PO lengkap dengan *Live Preview*;
+- **Visualisasi & Cetak Label Stiker (`50x30 mm`):** Generator SVG Barcode 1D (EAN-13/Code-128B) dan QR Code 2D, konfigurator label preset/custom, serta pencetakan terisolasi (`StickerPrintDialog`);
+- **Pemindai Barcode / QR & Pusat Panduan Interaktif:** Kamera Web (`BarcodeDetector`), USB/Bluetooth HID Barcode Gun (`useBarcodeScanner`), serta modal panduan & simulasi barcode interaktif;
+- **Audit Log (`/audit-logs`, `/admin/audit-logs`):** Penelusuran jejak audit *append-only* dengan filter kategori (`business`/`security`/`failed`), status, aksi, entitas, rentang waktu, dan inspeksi JSON `old_values`/`new_values`.
 
 ## Tech stack
 
 ### Aplikasi
 
 - React `19.3.1`
-- React Router `7`
+- React Router `7` (`7.18.x`)
 - Vite `8`
-- TypeScript `5`
+- TypeScript `5.9.x`
 - Tailwind CSS `4`
-- shadcn/ui
-- Poppins sebagai font utama, dibundel melalui `@fontsource/poppins`
+- shadcn/ui + Radix UI (`radix-ui`)
+- Poppins sebagai font utama (`@fontsource/poppins`)
 - TanStack Query `5` untuk server state dan cache API
-- Zustand `5` untuk session auth dan state UI kecil
-- Axios untuk HTTP client
+- Zustand `5` untuk session auth (`useAuthStore`), cakupan gudang (`useWarehouseScopeStore`), dan panduan pengguna (`useUserGuideStore`)
+- Axios (`withCredentials: true` + interceptor auto-refresh `401`)
 - React Hook Form + Zod untuk form dan validasi
 - TanStack Table untuk tabel operasional
+- React Error Boundary (`react-error-boundary`)
+- QRCode (`qrcode`) untuk rendering matriks QR 2D SVG/Canvas
 - Decimal.js untuk perhitungan kuantitas desimal
-- date-fns untuk format tanggal
+- date-fns untuk format tanggal lokal (`id-ID`)
 - Sonner untuk notifikasi
 - Lucide React untuk ikon
 
 ### Quality dan development
 
-- Vitest
-- Testing Library
-- MSW untuk mock API
-- ESLint
-- OpenAPI TypeScript untuk menghasilkan tipe dari schema FastAPI
+- Vitest `5` + JSDOM
+- Testing Library (`@testing-library/react`, `@testing-library/jest-dom`, `user-event`)
+- MSW untuk mock API pada level network
+- ESLint `10` & TypeScript (`tsc -b`)
+- OpenAPI TypeScript (`openapi-typescript`) untuk menghasilkan tipe dari schema FastAPI
 - Docker Compose untuk development dengan hot reload
 
 ## Persyaratan
@@ -178,12 +174,13 @@ VITE_API_BASE_URL=http://localhost:8000
 
 | Perintah | Fungsi |
 |---|---|
-| `npm run dev` | Menjalankan Vite development server. |
-| `npm run typecheck` | Memeriksa tipe TypeScript. |
-| `npm run lint` | Menjalankan ESLint. |
-| `npm test` | Menjalankan test sekali. |
+| `npm run dev` | Menjalankan Vite development server (proxy ke backend lokal). |
+| `npm run dev:server` | Menjalankan Vite dalam mode `dev-server` (`.env.dev-server`). |
+| `npm run typecheck` | Memeriksa tipe TypeScript (`tsc -b`). |
+| `npm run lint` | Menjalankan ESLint (`eslint .`). |
+| `npm test` | Menjalankan seluruh suite test Vitest sekali. |
 | `npm run test:watch` | Menjalankan test dalam watch mode. |
-| `npm run build` | Memeriksa tipe dan membuat production bundle. |
+| `npm run build` | Memeriksa tipe (`tsc -b`) dan membuat production bundle (`vite build`). |
 | `npm run preview` | Menyajikan hasil build secara lokal. |
 | `npm run generate:api-types` | Menghasilkan tipe TypeScript dari OpenAPI backend. |
 
@@ -203,40 +200,44 @@ warehouse_app/
 ├── public/
 │   └── assets/image/           # logo, ikon, dan ilustrasi WMS
 ├── src/
-│   ├── app/                    # provider, router, dan komposisi aplikasi
-│   │   └── guards/             # placeholder route/permission guard
+│   ├── app/                    # App.tsx, providers.tsx, router.tsx, App/responsive/scope tests
 │   ├── components/
-│   │   ├── layout/             # AppShell dan layout aplikasi
-│   │   ├── shared/             # komponen lintas fitur
-│   │   └── ui/                 # primitive UI dan komponen shadcn/ui
+│   │   ├── landing/            # komponen landing page modular (Hero, PainAndSecurity, Workflow, CtaFooter)
+│   │   ├── layout/             # AppShell, AppTopbar, Sidebar, PageHeader, CommandPaletteModal, routeContext
+│   │   ├── print/              # ModularDocumentPrintSheet (mesin render cetak dinamis berbasis template)
+│   │   ├── shared/             # DataPagination, DataStateBanner, ResponsiveDataView, RouteTabNav, StatusBadge, StickerPrintDialog
+│   │   └── ui/                 # komponen shadcn/ui + BarcodeVisual, BarcodePrintConfigurator, BarcodeScannerModal, StockLookupModal (+ stock-lookup/)
 │   ├── content/
-│   │   └── landing/             # JSON landing, schema, dan loader
+│   │   └── landing/            # JSON landing tervalidasi (schema.ts + loader index.ts)
 │   ├── features/
-│   │   ├── auth/                # store, halaman login, komponen auth
-│   │   ├── users/               # user, role, permission, assignment gudang
-│   │   ├── master-data/         # kategori, UOM, supplier, item
-│   │   ├── warehouses/          # gudang dan lokasi
-│   │   ├── stock/               # saldo, in-transit, stock ledger
-│   │   ├── purchase-orders/     # purchase order
-│   │   ├── goods-receipts/      # penerimaan barang
-│   │   ├── stock-transfers/     # transfer antar-gudang
-│   │   ├── stock-opnames/       # stock opname
-│   │   └── audit-logs/          # log audit
-│   ├── hooks/                   # hook reusable lintas fitur
-│   ├── lib/                     # API client, query, error, utility
-│   ├── mocks/                   # handler MSW
-│   ├── pages/                   # page composition publik dan umum
-│   ├── styles/                  # stylesheet global dan font
-│   ├── test/                    # setup dan helper testing
-│   ├── types/                   # tipe domain/API bersama
-│   └── main.tsx                 # entry point React 19
-├── docs/                        # dokumentasi lokal yang di-ignore Git
-├── docker-compose.dev.yml       # Compose development
-├── Dockerfile.dev               # image Node untuk development
-├── index.html                   # metadata, favicon, dan Vite entry
-├── package.json                 # scripts dan dependency
-├── vite.config.ts               # konfigurasi Vite dan alias @
-└── vitest.config.ts             # konfigurasi Vitest
+│   │   ├── administration/     # administrasi users, roles & permission matrix, menus, & warehouse assignments
+│   │   ├── audit-logs/         # penelusuran & filter audit log (kategori, status, diff old/new)
+│   │   ├── auth/               # store Zustand, tokenStorage, tabSync, LoginPage, ProfilePage, ProtectedRoute
+│   │   ├── dashboard/          # api.ts & widget KPI, tugas tertunda, mutasi terkini, warehouse scope bar
+│   │   ├── document-templates/ # configurator layout dokumen cetak, upload logo, & Live Preview
+│   │   ├── goods-receipts/     # halaman daftar/form/detail GR, GoodsReceiptPrintSheet, test scanner & cetak
+│   │   ├── master-data/        # categories/, stocks/ (+ barcode & Excel import), storage-locations/, suppliers/, uoms/, warehouses/
+│   │   ├── navigation/         # api.ts my-menu, mapping allowlist icon canonical, & tipe menu
+│   │   ├── purchase-orders/    # daftar, detail, form PO, PurchaseOrderPrintSheet
+│   │   ├── stock/              # Monitoring Saldo Stok terpadu (5 tab) & StockPage
+│   │   ├── stock-opnames/      # daftar, detail, form, hitung fisik opname
+│   │   ├── stock-transfers/    # daftar, detail, transfer antar-gudang, StockTransferPrintSheet
+│   │   └── user-guide/         # modal panduan pengguna interaktif, kamus field, walkthrough, & simulasi barcode
+│   ├── hooks/                  # useBarcodeScanner, useIsMobile, usePermission, useWarehouseScope
+│   ├── lib/                    # api-client, decimal, errors, query-client, storage, utils, validation
+│   ├── mocks/                  # handler MSW untuk pengujian
+│   ├── pages/                  # LandingPage.tsx & DashboardPage.tsx
+│   ├── stores/                 # warehouseScopeStore.ts (cakupan gudang global + unit test)
+│   ├── styles/                 # globals.css (tema Tailwind v4 & @media print A4 / stiker 50x30 mm / F4 / Letter)
+│   ├── test/                   # setup.ts konfigurasi Vitest & jsdom
+│   ├── types/                  # tipe domain/API bersama (api.ts)
+│   └── main.tsx                # entry point React 19
+├── docker-compose.dev.yml      # Compose development
+├── Dockerfile.dev              # image Node untuk development
+├── index.html                  # metadata, favicon, dan Vite entry
+├── package.json                # scripts dan dependency
+├── vite.config.ts              # konfigurasi Vite dan alias @
+└── vitest.config.ts            # konfigurasi Vitest
 ```
 
 Halaman yang menjadi bagian dari domain tertentu ditempatkan di
@@ -246,15 +247,20 @@ Halaman yang menjadi bagian dari domain tertentu ditempatkan di
 src/features/auth/
 ├── components/
 ├── pages/
-│   └── LoginPage.tsx
-└── store.ts
+│   ├── LoginPage.tsx
+│   └── ProfilePage.tsx
+├── api.ts
+├── store.ts
+├── tabSync.ts
+└── tokenStorage.ts
 ```
 
 Landing page publik berada di [src/pages/LandingPage.tsx](./src/pages/LandingPage.tsx)
 karena bukan bagian dari domain autentikasi.
 
-Dokumentasi struktur yang lebih lengkap tersedia pada
-[FOLDER_STRUCTURE.MD](./docs/CORE/FOLDER_STRUCTURE.MD).
+Dokumentasi arsitektur frontend dan struktur folder monorepo tersedia di
+[FOLDER_STRUCTURE.MD](../api_warehouse_app/docs/core/FOLDER_STRUCTURE.MD) dan
+[PRD_FRONTEND.md](../api_warehouse_app/docs/core/PRD_FRONTEND.md).
 
 ## Aset dan branding
 
@@ -320,17 +326,21 @@ Base URL API berasal dari:
 VITE_API_BASE_URL=http://localhost:8000
 ```
 
-HTTP client tersedia pada `src/lib/api-client.ts`. Service autentikasi frontend menggunakan:
+HTTP client tersedia pada `src/lib/api-client.ts` dengan `withCredentials: true`
+agar cookie `HttpOnly` (`refresh_token`) dikirim otomatis oleh peramban pada
+request `/api/v1/auth/*`. Service autentikasi frontend menggunakan:
 
-- `POST /api/v1/auth/login` untuk memperoleh token;
-- `GET /api/v1/auth/me` untuk memuat profil dan permission;
-- `POST /api/v1/auth/refresh` untuk memperbarui access token;
-- `POST /api/v1/auth/logout` untuk mencabut refresh token.
+- `POST /api/v1/auth/login` untuk memperoleh `access_token` (dan cookie `HttpOnly` `refresh_token`);
+- `GET /api/v1/auth/me` untuk memuat profil, daftar permission, `has_all_warehouse_access`, dan daftar `warehouses` aktif;
+- `POST /api/v1/auth/refresh` untuk merotasi token dan memperbarui `access_token` baru;
+- `POST /api/v1/auth/logout` untuk mencabut sesi *refresh token* dan membersihkan cookie.
 
-Access token hanya disimpan di memory Zustand. Refresh token disimpan pada
-`localStorage` dengan key `wms.frontend.auth.refresh-token`. Route `/dashboard`
-dilindungi oleh `ProtectedRoute`, dan API client akan mencoba refresh satu kali
-ketika menerima response `401`.
+`access_token` hanya disimpan di memori Zustand (`useAuthStore`). Koordinasi refresh
+antar-tab dikelola melalui `BroadcastChannel` dan lock penyimpanan (`tabSync.ts`),
+sementara `tokenStorage.ts` hanya menyimpan token cadangan jika payload API
+mengembalikannya secara eksplisit pada lingkungan pengujian/non-cookie. Route
+terlindungi menggunakan `ProtectedRoute`, dan interceptor API client otomatis
+mencoba pembaruan token satu kali ketika menerima response `401`.
 
 Jika backend menyediakan schema OpenAPI pada
 `http://localhost:8000/openapi.json`, generate tipe API dengan:
@@ -384,28 +394,23 @@ ke bundle browser.
 
 ## Dokumentasi tambahan
 
-Dokumentasi desain dan struktur folder tersedia secara lokal pada:
+Seluruh dokumentasi spesifikasi, arsitektur, kontrak API, dan panduan setup
+tersedia terpusat pada repositori backend di workspace ini:
+
+- [PRD_FRONTEND.md](../api_warehouse_app/docs/core/PRD_FRONTEND.md) — spesifikasi halaman, UX, state, dan integrasi API frontend
+- [FOLDER_STRUCTURE.MD](../api_warehouse_app/docs/core/FOLDER_STRUCTURE.MD) — struktur folder backend dan frontend
+- [environment-setup-guide.md](../api_warehouse_app/docs/core/environment-setup-guide.md) — panduan multi-environment lokal vs dev-server & guard production
+- [frontend-local-development-guide.MD](../api_warehouse_app/docs/core/frontend-local-development-guide.MD) — panduan menjalankan frontend lokal
+- [API Indeks](../api_warehouse_app/docs/API/README.md) — daftar lengkap seluruh endpoint REST API backend
+- [QA.MD](../api_warehouse_app/docs/QA/QA.MD) — matriks verifikasi AC dan cakupan pengujian frontend & backend
+
+## Status validasi terkini
+
+Baseline aplikasi telah terverifikasi pada pengujian terakhir:
 
 ```text
-docs/CORE/DESIGN.MD
-docs/CORE/FOLDER_STRUCTURE.MD
-docs/CORE/PRD_FRONTEND.md
-docs/CORE/Panduan_bahasa_landing.MD
-```
-
-Folder `docs/` dan file `AGENTS.MD` sengaja dikecualikan dari Git melalui
-`.gitignore`, sehingga dokumentasi tersebut tidak ikut dipush ke repository
-GitHub. Dokumentasi API sebaiknya dikelola di repository backend atau
-ditambahkan sebagai dokumentasi publik tersendiri jika dibutuhkan contributor.
-
-## Status validasi baseline
-
-Baseline project telah divalidasi dengan:
-
-```text
-npm run typecheck  ✅
-npm run lint       ✅
-npm test           ✅
-npm run build      ✅
-npm audit          ✅
+npm run typecheck  ✅ lulus (tsc -b)
+npm run lint       ✅ lulus (eslint ., 0 error / 0 warning)
+npm test           ✅ lulus (22 test file / 101 test Vitest)
+npm run build      ✅ lulus (tsc -b && vite build)
 ```
