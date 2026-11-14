@@ -1,161 +1,28 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import {
-  ChevronDown,
-  Command,
-  HelpCircle,
-  LogOut,
-  Menu as MenuIcon,
-  ScanBarcode,
-  Search,
-  UserCircle,
-  Warehouse,
-  X,
-} from "lucide-react";
-import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
+import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { logout } from "@/features/auth/api";
 import { useAuthStore } from "@/features/auth/store";
 import { useMyMenu } from "@/features/navigation/api";
-import type { MenuItem } from "@/features/navigation/types";
 import { UserGuideModal } from "@/features/user-guide/components/UserGuideModal";
 import { resolveGuideModuleFromPath } from "@/features/user-guide/guideContent";
 import { AppShellGuideHostContext } from "@/features/user-guide/guideContext";
 import { useUserGuideStore } from "@/features/user-guide/store";
 import { extractApiErrorInfo } from "@/lib/errors";
 import { StockLookupModal } from "@/components/ui/StockLookupModal";
-import { Badge } from "@/components/ui/badge";
-import { formatWarehouseScopeLabel, useWarehouseScope } from "@/hooks/useWarehouseScope";
+import { useWarehouseScope } from "@/hooks/useWarehouseScope";
+import { AppTopbar } from "./AppTopbar";
+import { CommandPaletteModal } from "./CommandPaletteModal";
 import { PageHeader } from "./PageHeader";
 import { Sidebar } from "./Sidebar";
+import {
+  flattenMenuEntries,
+  getInitialCollapsedState,
+  resolveRouteContext,
+} from "./routeContext";
 
-interface FlattenedMenuEntry {
-  item: MenuItem;
-  groupName: string | null;
-}
-
-function flattenMenuEntries(
-  items: MenuItem[],
-  parentName: string | null = null,
-): FlattenedMenuEntry[] {
-  return items.flatMap((item) => {
-    const current: FlattenedMenuEntry = { item, groupName: parentName };
-    const descendants = flattenMenuEntries(item.children, item.name);
-    return [current, ...descendants];
-  });
-}
-
-function resolveRouteContext(
-  pathname: string,
-  entries: FlattenedMenuEntry[],
-): { title: string; groupName: string | null } {
-  const matched = entries.find((entry) => entry.item.path === pathname);
-  if (matched) {
-    return { title: matched.item.name, groupName: matched.groupName };
-  }
-  if (pathname === "/profile") {
-    return { title: "Profil", groupName: null };
-  }
-  if (pathname === "/master/categories" || pathname === "/categories") {
-    return { title: "Kategori barang", groupName: "Master data" };
-  }
-  if (
-    pathname === "/master/uom" ||
-    pathname === "/master/uoms" ||
-    pathname === "/uom" ||
-    pathname === "/uoms"
-  ) {
-    return { title: "Satuan ukur (UoM)", groupName: "Master data" };
-  }
-  if (pathname === "/master/suppliers" || pathname === "/suppliers") {
-    return { title: "Pemasok", groupName: "Master data" };
-  }
-  if (
-    pathname === "/master/items" ||
-    pathname === "/items" ||
-    pathname === "/master/stocks" ||
-    pathname === "/stocks"
-  ) {
-    return { title: "Barang (SKU)", groupName: "Master data" };
-  }
-  if (pathname === "/master/warehouses" || pathname === "/warehouses") {
-    return { title: "Gudang", groupName: "Master data" };
-  }
-  if (
-    pathname === "/master/locations" ||
-    pathname === "/master/storage-locations" ||
-    pathname === "/locations" ||
-    pathname === "/storage-locations"
-  ) {
-    return { title: "Lokasi penyimpanan", groupName: "Master data" };
-  }
-  if (pathname === "/audit-logs") {
-    return { title: "Audit log", groupName: "Administrasi" };
-  }
-  if (pathname === "/users" || pathname === "/admin" || pathname === "/admin/users") {
-    return { title: "Pengguna dan peran", groupName: "Administrasi dan keamanan" };
-  }
-  if (pathname === "/admin/roles") {
-    return { title: "Peran dan permission", groupName: "Administrasi dan keamanan" };
-  }
-  if (pathname === "/admin/menus") {
-    return { title: "Menu", groupName: "Administrasi dan keamanan" };
-  }
-  if (
-    pathname === "/admin/document-templates" ||
-    pathname === "/document-templates"
-  ) {
-    return { title: "Template dokumen", groupName: "Administrasi dan keamanan" };
-  }
-  if (pathname === "/purchase-orders/new" || pathname === "/purchasing/purchase-orders/new") {
-    return { title: "Buat purchase order", groupName: "Pengadaan dan penerimaan" };
-  }
-  if (pathname === "/purchase-orders" || pathname === "/purchasing/purchase-orders") {
-    return { title: "Purchase order", groupName: "Pengadaan dan penerimaan" };
-  }
-  if (
-    pathname === "/goods-receipts" ||
-    pathname === "/goods-receipts/new" ||
-    pathname === "/purchasing/goods-receipts" ||
-    pathname === "/purchasing/goods-receipts/new"
-  ) {
-    return {
-      title: pathname.endsWith("/new") ? "Buat penerimaan barang" : "Penerimaan barang",
-      groupName: "Pengadaan dan penerimaan",
-    };
-  }
-  if (pathname === "/stock-transfers" || pathname === "/operations/stock-transfers") {
-    return { title: "Transfer stok", groupName: "Operasional gudang" };
-  }
-  if (pathname === "/stock-opnames" || pathname === "/operations/stock-opnames") {
-    return { title: "Stock opname", groupName: "Operasional gudang" };
-  }
-  if (pathname === "/stock") {
-    return { title: "Saldo stok per lokasi", groupName: "Monitoring saldo stok" };
-  }
-  if (pathname === "/stock/warehouse" || pathname === "/stock/by-warehouse") {
-    return { title: "Saldo stok per gudang", groupName: "Monitoring saldo stok" };
-  }
-  if (pathname === "/stock/by-location") {
-    return { title: "Saldo stok per lokasi", groupName: "Monitoring saldo stok" };
-  }
-  if (pathname === "/stock/summary") {
-    return { title: "Ringkasan stok", groupName: "Monitoring saldo stok" };
-  }
-  if (pathname === "/stock/in-transit") {
-    return { title: "Stok dalam perjalanan", groupName: "Monitoring saldo stok" };
-  }
-  if (pathname === "/stock/ledger") {
-    return { title: "Buku besar stok", groupName: "Monitoring saldo stok" };
-  }
-  return { title: "Dasbor", groupName: null };
-}
-
-function getInitialCollapsedState(): boolean {
-  if (typeof window === "undefined") {
-    return false;
-  }
-  return window.innerWidth >= 768 && window.innerWidth < 1024;
-}
-
+/**
+ * Main authenticated application shell coordinating sidebar, topbar, command palette, and global modals.
+ */
 export function AppShell() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -218,9 +85,6 @@ export function AppShell() {
         (parent && parent.toLocaleLowerCase().includes(query)),
     );
   }, [navigableEntries, search]);
-
-  const safeActiveIndex =
-    searchResults.length > 0 ? Math.min(activeIndex, searchResults.length - 1) : 0;
 
   const menuErrorInfo = isError ? extractApiErrorInfo(error) : null;
 
@@ -305,355 +169,118 @@ export function AppShell() {
     navigate("/login", { replace: true });
   }
 
-  function handlePaletteKeyDown(event: React.KeyboardEvent<HTMLInputElement>) {
-    if (event.key === "Escape") {
-      event.preventDefault();
-      closePalette();
-      return;
-    }
-    if (event.key === "ArrowDown") {
-      event.preventDefault();
-      if (searchResults.length > 0) {
-        setActiveIndex((current) => (current + 1) % searchResults.length);
-      }
-      return;
-    }
-    if (event.key === "ArrowUp") {
-      event.preventDefault();
-      if (searchResults.length > 0) {
-        setActiveIndex(
-          (current) => (current - 1 + searchResults.length) % searchResults.length,
-        );
-      }
-      return;
-    }
-    if (event.key === "Enter" && searchResults[safeActiveIndex]) {
-      event.preventDefault();
-      const targetPath = searchResults[safeActiveIndex].item.path;
-      setIsPaletteOpen(false);
-      setSearch("");
-      setActiveIndex(0);
-      navigate(targetPath);
-    }
+  function handleSelectPalettePath(targetPath: string) {
+    setIsPaletteOpen(false);
+    setSearch("");
+    setActiveIndex(0);
+    navigate(targetPath);
   }
 
   return (
     <AppShellGuideHostContext.Provider value={true}>
       <div className="min-h-screen overflow-x-hidden bg-canvas-50 text-ink-950">
-      <a
-        className="sr-only fixed left-4 top-4 z-50 rounded-[var(--radius-md)] bg-teal-600 px-4 py-3 text-sm font-semibold text-surface-0 focus:not-sr-only"
-        href="#main-content"
-      >
-        Lompat ke konten utama
-      </a>
-      <Sidebar
-        isCollapsed={isCollapsed}
-        isMobileOpen={isMobileOpen}
-        menu={menu}
-        onCloseMobile={() => setIsMobileOpen(false)}
-        onToggleCollapsed={() => setIsCollapsed((value) => !value)}
-      />
-      <div
-        className={`min-h-screen min-w-0 transition-[padding] duration-200 print:pl-0 ${
-          isCollapsed ? "md:pl-[72px]" : "md:pl-[248px]"
-        }`}
-      >
-        <header className="sticky top-0 z-20 flex min-h-14 flex-wrap items-center gap-x-2 gap-y-2 border-b border-line-200 bg-surface-0 px-3 py-2 sm:min-h-16 sm:px-6 lg:flex-nowrap lg:gap-3 lg:py-0 lg:px-8 print:hidden">
-          <button
-            aria-controls="admin-sidebar"
-            aria-expanded={isMobileOpen}
-            aria-label="Buka menu navigasi"
-            className="inline-flex min-h-11 items-center gap-2 rounded-[var(--radius-md)] border border-line-200 bg-surface-0 px-3 text-sm font-semibold text-ink-950 transition hover:bg-canvas-50 md:hidden"
-            onClick={() => setIsMobileOpen(true)}
-            type="button"
-          >
-            <MenuIcon aria-hidden="true" size={18} />
-            <span>Menu</span>
-          </button>
-          <button
-            aria-label={isCollapsed ? "Perluas navigasi" : "Ciutkan navigasi"}
-            className="hidden min-h-11 min-w-11 place-items-center rounded-[var(--radius-md)] text-ink-950 transition hover:bg-canvas-50 md:grid"
-            onClick={() => setIsCollapsed((value) => !value)}
-            type="button"
-          >
-            <MenuIcon aria-hidden="true" size={20} />
-          </button>
-          <div className="hidden min-w-0 items-center gap-2 text-sm text-slate-600 sm:flex">
-            <span>Ruang kerja</span>
-            {groupName && (
-              <>
-                <span aria-hidden="true">/</span>
-                <span className="truncate">{groupName}</span>
-              </>
-            )}
-            <span aria-hidden="true">/</span>
-            <span className="truncate font-semibold text-ink-950">{title}</span>
-          </div>
-          {showTopbarSelector ? (
-            <div className="order-last flex w-full items-center justify-between gap-2 border-t border-line-200/70 pt-2 lg:order-none lg:ml-auto lg:w-auto lg:border-t-0 lg:pt-0">
-              <span className="text-xs font-semibold text-slate-600 lg:hidden">Gudang aktif</span>
-              <label className="sr-only" htmlFor="topbar-warehouse-select">
-                Pilih gudang aktif
-              </label>
-              <div className="relative flex flex-1 items-center lg:flex-initial">
-                <Warehouse
-                  aria-hidden="true"
-                  className="pointer-events-none absolute left-3 text-teal-700"
-                  size={15}
-                />
-                <select
-                  aria-label="Pilih gudang aktif"
-                  className="min-h-11 w-full rounded-md border border-input bg-card py-1.5 pr-8 pl-8 text-xs font-semibold text-foreground shadow-xs transition outline-none hover:bg-accent focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 md:min-h-10 lg:w-auto"
-                  id="topbar-warehouse-select"
-                  onChange={(event) => {
-                    const nextValue = event.target.value;
-                    setSelectedWarehouseId(nextValue ? Number(nextValue) : null);
-                  }}
-                  value={activeWarehouseId !== null ? String(activeWarehouseId) : ""}
-                >
-                  {canAccessAllWarehouses ? (
-                    <option value="">Semua gudang</option>
-                  ) : null}
-                  {warehouseOptions.map((warehouse) => (
-                    <option key={warehouse.id} value={warehouse.id}>
-                      {formatWarehouseScopeLabel(warehouse)}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-          ) : (
-            <Badge
-              aria-label="Cakupan gudang aktif"
-              className="order-last inline-flex min-h-8 w-full items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-semibold lg:order-none lg:ml-auto lg:w-auto"
-              variant="secondary"
-            >
-              <Warehouse aria-hidden="true" size={14} />
-              <span>{activeWarehouseLabel}</span>
-            </Badge>
-          )}
-          <div className="ml-auto flex items-center gap-1.5 sm:gap-2 lg:ml-0 lg:gap-3">
-            <button
-              aria-label="Buka panduan / bantuan aplikasi"
-              className="flex min-h-11 items-center gap-1.5 rounded-[var(--radius-md)] border border-line-200 bg-surface-0 px-3 text-xs font-semibold text-slate-700 transition hover:border-teal-600/40 hover:bg-teal-50/70 hover:text-teal-800"
-              onClick={() =>
-                openUserGuide(resolveGuideModuleFromPath(location.pathname), "module")
-              }
-              type="button"
-            >
-              <HelpCircle aria-hidden="true" size={16} />
-              <span className="hidden md:inline">Bantuan</span>
-            </button>
-            <button
-              aria-label="Pindai barcode untuk cek stok dan posisi rak gudang"
-              className="flex min-h-11 items-center gap-1.5 rounded-[var(--radius-md)] border border-teal-600/30 bg-teal-50/70 px-3 text-xs font-semibold text-teal-800 transition hover:bg-teal-100 hover:text-teal-950"
-              onClick={() => setIsStockLookupOpen(true)}
-              type="button"
-            >
-              <ScanBarcode aria-hidden="true" size={16} />
-              <span className="hidden md:inline">Cek Stok / Rak</span>
-            </button>
-            <button
-              aria-label="Cari menu"
-              className="flex min-h-11 items-center gap-2 rounded-[var(--radius-md)] border border-line-200 bg-canvas-50/70 px-3 text-sm font-medium text-slate-700 transition hover:bg-canvas-50 hover:text-ink-950"
-              onClick={() => {
-                setActiveIndex(0);
-                setIsPaletteOpen(true);
-              }}
-              ref={paletteTriggerRef}
-              type="button"
-            >
-              <Search aria-hidden="true" size={18} />
-              <span className="hidden sm:inline">Cari menu</span>
-              <kbd className="hidden rounded border border-line-200 bg-surface-0 px-1.5 py-0.5 text-[11px] font-semibold text-slate-600 sm:inline">
-                Ctrl K
-              </kbd>
-            </button>
-            <div className="relative" ref={profileRef}>
-              <button
-                aria-expanded={isUserMenuOpen}
-                aria-haspopup="menu"
-                aria-label="Menu akun pengguna"
-                className="flex min-h-11 items-center gap-2 rounded-[var(--radius-md)] px-2 text-left transition hover:bg-canvas-50"
-                onClick={() => setIsUserMenuOpen((value) => !value)}
-                type="button"
-              >
-                <span className="grid size-9 shrink-0 place-items-center rounded-full bg-amber-600 text-sm font-bold text-surface-0">
-                  {(user?.full_name || user?.username || "P")
-                    .charAt(0)
-                    .toUpperCase()}
-                </span>
-                <span className="hidden max-w-36 sm:block">
-                  <span className="block truncate text-sm font-semibold text-ink-950">
-                    {user?.full_name || user?.username || "Pengguna"}
-                  </span>
-                  <span className="block truncate text-xs text-slate-600">
-                    {user?.role_name || "Pengguna"}
-                  </span>
-                </span>
-                <ChevronDown
-                  aria-hidden="true"
-                  className="hidden text-slate-600 sm:block"
-                  size={16}
-                />
-              </button>
-              {isUserMenuOpen && (
-                <div
-                  className="absolute right-0 top-13 w-60 rounded-[var(--radius-md)] border border-line-200 bg-surface-0 p-2 shadow-[var(--shadow-2)]"
-                  role="menu"
-                >
-                  <div className="border-b border-line-200 px-3 py-2">
-                    <p className="truncate text-sm font-semibold text-ink-950">
-                      {user?.full_name || user?.username || "Pengguna"}
-                    </p>
-                    <p className="truncate text-xs text-slate-600">
-                      {user?.role_name || "Pengguna"}
-                    </p>
-                  </div>
-                  <Link
-                    className="mt-1 flex min-h-11 items-center gap-2 rounded-[var(--radius-md)] px-3 text-sm font-medium text-ink-950 transition hover:bg-canvas-50"
-                    onClick={() => setIsUserMenuOpen(false)}
-                    role="menuitem"
-                    to="/profile"
-                  >
-                    <UserCircle aria-hidden="true" size={17} /> Profil
-                  </Link>
-                  <button
-                    className="flex min-h-11 w-full items-center gap-2 rounded-[var(--radius-md)] px-3 text-sm font-medium text-red-700 transition hover:bg-red-100"
-                    onClick={() => void handleLogout()}
-                    role="menuitem"
-                    type="button"
-                  >
-                    <LogOut aria-hidden="true" size={17} /> Keluar
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
-        </header>
-        <main
-          className="mx-auto min-w-0 max-w-[1440px] overflow-x-hidden px-4 py-6 sm:px-6 sm:py-8 lg:px-8 print:max-w-none print:overflow-visible print:p-0"
-          id="main-content"
+        <a
+          className="sr-only fixed left-4 top-4 z-50 rounded-[var(--radius-md)] bg-teal-600 px-4 py-3 text-sm font-semibold text-surface-0 focus:not-sr-only"
+          href="#main-content"
         >
-          {isLoading ? (
-            <div
-              className="rounded-[var(--radius-lg)] border border-line-200 bg-surface-0 p-6 text-sm text-slate-700 shadow-[var(--shadow-1)]"
-              role="status"
-            >
-              Memuat navigasi...
-            </div>
-          ) : isError ? (
-            <div
-              className="rounded-[var(--radius-lg)] border border-red-600/30 bg-red-100 p-6 text-sm text-red-700"
-              role="alert"
-            >
-              <p className="font-semibold">Menu navigasi belum dapat dimuat</p>
-              <p className="mt-1 text-slate-700">
-                Periksa koneksi ke server, lalu muat ulang navigasi.
-              </p>
-              {menuErrorInfo?.requestId && (
-                <p className="mt-2 text-xs text-slate-600 tabular-nums">
-                  ID Permintaan: {menuErrorInfo.requestId}
-                </p>
-              )}
-              <button
-                className="mt-4 inline-flex min-h-11 items-center justify-center rounded-[var(--radius-md)] bg-red-600 px-4 text-sm font-semibold text-surface-0 transition hover:bg-red-700"
-                onClick={() => void refetch()}
-                type="button"
-              >
-                Muat ulang navigasi
-              </button>
-            </div>
-          ) : (
-            <Outlet />
-          )}
-        </main>
-      </div>
-      {isPaletteOpen && (
+          Lompat ke konten utama
+        </a>
+        <Sidebar
+          isCollapsed={isCollapsed}
+          isMobileOpen={isMobileOpen}
+          menu={menu}
+          onCloseMobile={() => setIsMobileOpen(false)}
+          onToggleCollapsed={() => setIsCollapsed((value) => !value)}
+        />
         <div
-          className="fixed inset-0 z-50 grid place-items-center bg-ink-950/55 p-4"
-          onMouseDown={closePalette}
+          className={`min-h-screen min-w-0 transition-[padding] duration-200 print:pl-0 ${
+            isCollapsed ? "md:pl-[72px]" : "md:pl-[248px]"
+          }`}
         >
-          <div
-            aria-label="Pencarian menu"
-            aria-modal="true"
-            className="max-h-[min(80vh,36rem)] w-full max-w-2xl rounded-[var(--radius-lg)] border border-line-200 bg-surface-0 p-3 shadow-[var(--shadow-2)]"
-            onMouseDown={(event) => event.stopPropagation()}
-            role="dialog"
+          <AppTopbar
+            activeWarehouseId={activeWarehouseId}
+            activeWarehouseLabel={activeWarehouseLabel}
+            canAccessAllWarehouses={canAccessAllWarehouses}
+            groupName={groupName}
+            isCollapsed={isCollapsed}
+            isMobileOpen={isMobileOpen}
+            isUserMenuOpen={isUserMenuOpen}
+            onCloseUserMenu={() => setIsUserMenuOpen(false)}
+            onLogout={() => void handleLogout()}
+            onOpenHelp={() =>
+              openUserGuide(resolveGuideModuleFromPath(location.pathname), "module")
+            }
+            onOpenMobile={() => setIsMobileOpen(true)}
+            onOpenPalette={() => {
+              setActiveIndex(0);
+              setIsPaletteOpen(true);
+            }}
+            onOpenStockLookup={() => setIsStockLookupOpen(true)}
+            onSelectWarehouse={setSelectedWarehouseId}
+            onToggleCollapsed={() => setIsCollapsed((value) => !value)}
+            onToggleUserMenu={() => setIsUserMenuOpen((value) => !value)}
+            paletteTriggerRef={paletteTriggerRef}
+            profileRef={profileRef}
+            showTopbarSelector={showTopbarSelector}
+            title={title}
+            user={user}
+            warehouseOptions={warehouseOptions}
+          />
+          <main
+            className="mx-auto min-w-0 max-w-[1440px] overflow-x-hidden px-4 py-6 sm:px-6 sm:py-8 lg:px-8 print:max-w-none print:overflow-visible print:p-0"
+            id="main-content"
           >
-            <div className="flex items-center gap-2 border-b border-line-200 px-2 pb-3">
-              <Command aria-hidden="true" className="shrink-0 text-teal-600" size={19} />
-              <input
-                aria-label="Ketik nama menu atau rute"
-                className="min-h-11 flex-1 border-0 bg-transparent text-sm text-ink-950 placeholder:text-slate-600 focus:outline-none"
-                onChange={(event) => {
-                  setSearch(event.target.value);
-                  setActiveIndex(0);
-                }}
-                onKeyDown={handlePaletteKeyDown}
-                placeholder="Cari menu atau halaman..."
-                ref={paletteInputRef}
-                value={search}
-              />
-              <button
-                aria-label="Tutup pencarian"
-                className="grid min-h-11 min-w-11 shrink-0 place-items-center rounded-[var(--radius-md)] text-slate-700 transition hover:bg-canvas-50 hover:text-ink-950"
-                onClick={closePalette}
-                type="button"
+            {isLoading ? (
+              <div
+                className="rounded-[var(--radius-lg)] border border-line-200 bg-surface-0 p-6 text-sm text-slate-700 shadow-[var(--shadow-1)]"
+                role="status"
               >
-                <X aria-hidden="true" size={18} />
-              </button>
-            </div>
-            <div className="max-h-80 overflow-y-auto py-2" role="listbox">
-              {searchResults.length === 0 ? (
-                <p className="px-3 py-6 text-center text-sm text-slate-700">
-                  Tidak ada menu yang cocok. Periksa ejaan atau gunakan kata kunci lain.
+                Memuat navigasi...
+              </div>
+            ) : isError ? (
+              <div
+                className="rounded-[var(--radius-lg)] border border-red-600/30 bg-red-100 p-6 text-sm text-red-700"
+                role="alert"
+              >
+                <p className="font-semibold">Menu navigasi belum dapat dimuat</p>
+                <p className="mt-1 text-slate-700">
+                  Periksa koneksi ke server, lalu muat ulang navigasi.
                 </p>
-              ) : (
-                searchResults.map(({ item, groupName: parent }, index) => {
-                  const isHighlighted = index === safeActiveIndex;
-                  return (
-                    <button
-                      aria-selected={isHighlighted}
-                      className={`flex min-h-11 w-full items-center gap-3 rounded-[var(--radius-md)] px-3 py-2 text-left text-sm transition ${
-                        isHighlighted
-                          ? "bg-teal-100 text-teal-700"
-                          : "text-ink-950 hover:bg-canvas-50"
-                      }`}
-                      key={item.id}
-                      onClick={() => {
-                        setIsPaletteOpen(false);
-                        setSearch("");
-                        setActiveIndex(0);
-                        navigate(item.path);
-                      }}
-                      onMouseEnter={() => setActiveIndex(index)}
-                      role="option"
-                      type="button"
-                    >
-                      <span className="font-semibold">{item.name}</span>
-                      {parent && (
-                        <span className="rounded-full bg-canvas-50 px-2.5 py-0.5 text-xs font-medium text-slate-700">
-                          {parent}
-                        </span>
-                      )}
-                      <span className="ml-auto text-xs font-normal text-slate-600 tabular-nums">
-                        {item.path}
-                      </span>
-                    </button>
-                  );
-                })
-              )}
-            </div>
-          </div>
+                {menuErrorInfo?.requestId && (
+                  <p className="mt-2 text-xs text-slate-600 tabular-nums">
+                    ID Permintaan: {menuErrorInfo.requestId}
+                  </p>
+                )}
+                <button
+                  className="mt-4 inline-flex min-h-11 items-center justify-center rounded-[var(--radius-md)] bg-red-600 px-4 text-sm font-semibold text-surface-0 transition hover:bg-red-700"
+                  onClick={() => void refetch()}
+                  type="button"
+                >
+                  Muat ulang navigasi
+                </button>
+              </div>
+            ) : (
+              <Outlet />
+            )}
+          </main>
         </div>
-      )}
-      <StockLookupModal
-        isOpen={isStockLookupOpen}
-        onClose={() => setIsStockLookupOpen(false)}
-      />
-      <UserGuideModal />
-    </div>
+        <CommandPaletteModal
+          activeIndex={activeIndex}
+          inputRef={paletteInputRef}
+          isOpen={isPaletteOpen}
+          onActiveIndexChange={setActiveIndex}
+          onClose={closePalette}
+          onSearchChange={setSearch}
+          onSelectPath={handleSelectPalettePath}
+          results={searchResults}
+          search={search}
+        />
+        <StockLookupModal
+          isOpen={isStockLookupOpen}
+          onClose={() => setIsStockLookupOpen(false)}
+        />
+        <UserGuideModal />
+      </div>
     </AppShellGuideHostContext.Provider>
   );
 }

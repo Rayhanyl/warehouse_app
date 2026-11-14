@@ -2,22 +2,22 @@ import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import {
   AlertCircle,
   Camera,
-  Layers,
-  MapPin,
-  Package,
   RefreshCw,
   ScanBarcode,
   Search,
-  Warehouse,
   X,
 } from "lucide-react";
-import { apiClient } from "@/lib/api-client";
 import { formatDecimal, toDecimal } from "@/lib/decimal";
 import { useBarcodeScanner } from "@/hooks/useBarcodeScanner";
-import { BarcodeScannerModal } from "./BarcodeScannerModal";
-import { BarcodeVisual, QrCodeVisual } from "./BarcodeVisual";
 import type { StockBalance } from "@/features/stock/types";
-import type { Paginated } from "@/types/api";
+import { BarcodeScannerModal } from "./BarcodeScannerModal";
+import { StockLookupItemResult } from "./stock-lookup/StockLookupItemResult";
+import { StockLookupLocationResult } from "./stock-lookup/StockLookupLocationResult";
+import {
+  fetchStockLookupResult,
+  type ItemSummary,
+  type LocationSummary,
+} from "./stock-lookup/stockLookupApi";
 
 export interface StockLookupModalProps {
   isOpen: boolean;
@@ -25,190 +25,9 @@ export interface StockLookupModalProps {
   initialQuery?: string;
 }
 
-interface ItemSummary {
-  id: number;
-  sku: string;
-  barcode: string | null;
-  name: string;
-  category_name?: string;
-  uom_code?: string;
-}
-
-interface LocationSummary {
-  scope: "location" | "warehouse";
-  code: string;
-  name: string;
-  warehouse_code: string;
-  warehouse_name: string;
-}
-
-interface LookupResolution {
-  balances: StockBalance[];
-  itemInfo: ItemSummary | null;
-  locationInfo: LocationSummary | null;
-}
-
-async function fetchStockLookupResult(trimmed: string): Promise<LookupResolution> {
-  const lower = trimmed.toLowerCase();
-  const { data: balanceData } = await apiClient.get<Paginated<StockBalance>>(
-    "/stock/by-location",
-    {
-      params: {
-        search: trimmed,
-        limit: 100,
-      },
-    },
-  );
-
-  const items = balanceData?.items || [];
-  if (items.length > 0) {
-    const first = items[0];
-    const exactLocationMatch = items.some(
-      (row) =>
-        row.location_code.toLowerCase() === lower ||
-        row.location_name.toLowerCase() === lower,
-    );
-    const exactWarehouseMatch =
-      !exactLocationMatch &&
-      items.some(
-        (row) =>
-          row.warehouse_code.toLowerCase() === lower ||
-          row.warehouse_name.toLowerCase() === lower,
-      );
-    const anyItemFieldMatch = items.some(
-      (row) =>
-        row.item_sku.toLowerCase().includes(lower) ||
-        Boolean(row.item_barcode && row.item_barcode.toLowerCase().includes(lower)) ||
-        row.item_name.toLowerCase().includes(lower),
-    );
-
-    if (exactLocationMatch || exactWarehouseMatch || !anyItemFieldMatch) {
-      return {
-        balances: items,
-        itemInfo: null,
-        locationInfo: exactWarehouseMatch
-          ? {
-              scope: "warehouse",
-              code: first.warehouse_code,
-              name: first.warehouse_name,
-              warehouse_code: first.warehouse_code,
-              warehouse_name: first.warehouse_name,
-            }
-          : {
-              scope: "location",
-              code: first.location_code,
-              name: first.location_name,
-              warehouse_code: first.warehouse_code,
-              warehouse_name: first.warehouse_name,
-            },
-      };
-    }
-
-    return {
-      balances: items,
-      locationInfo: null,
-      itemInfo: {
-        id: first.item_id,
-        sku: first.item_sku,
-        barcode: first.item_barcode || null,
-        name: first.item_name,
-        category_name: first.category_name,
-        uom_code: first.uom_code,
-      },
-    };
-  }
-
-  let resolvedItemInfo: ItemSummary | null = null;
-  try {
-    const { data: itemData } = await apiClient.get<
-      Paginated<{
-        id: number;
-        sku: string;
-        barcode: string | null;
-        name: string;
-        category_name: string;
-        uom_code: string;
-      }>
-    >("/items", {
-      params: {
-        search: trimmed,
-        limit: 5,
-      },
-    });
-
-    const matched =
-      itemData?.items?.find(
-        (it) =>
-          it.sku.toLowerCase() === lower ||
-          (it.barcode && it.barcode.toLowerCase() === lower),
-      ) || itemData?.items?.[0];
-
-    if (matched) {
-      resolvedItemInfo = {
-        id: matched.id,
-        sku: matched.sku,
-        barcode: matched.barcode,
-        name: matched.name,
-        category_name: matched.category_name,
-        uom_code: matched.uom_code,
-      };
-    }
-  } catch {
-    // Abaikan dan lanjutkan cek lokasi rak bila perlu
-  }
-
-  if (resolvedItemInfo) {
-    return {
-      balances: [],
-      itemInfo: resolvedItemInfo,
-      locationInfo: null,
-    };
-  }
-
-  let resolvedLocationInfo: LocationSummary | null = null;
-  try {
-    const { data: locationData } = await apiClient.get<
-      Paginated<{
-        id: number;
-        code: string;
-        name: string;
-        warehouse_code: string;
-        warehouse_name: string;
-      }>
-    >("/locations", {
-      params: {
-        search: trimmed,
-        limit: 5,
-      },
-    });
-
-    const matchedLoc =
-      locationData?.items?.find(
-        (loc) =>
-          loc.code.toLowerCase() === lower ||
-          loc.name.toLowerCase() === lower,
-      ) || locationData?.items?.[0];
-
-    if (matchedLoc) {
-      resolvedLocationInfo = {
-        scope: "location",
-        code: matchedLoc.code,
-        name: matchedLoc.name,
-        warehouse_code: matchedLoc.warehouse_code,
-        warehouse_name: matchedLoc.warehouse_name,
-      };
-    }
-  } catch {
-    // Biarkan kosong jika tidak ditemukan di items maupun locations
-  }
-
-  return {
-    balances: [],
-    itemInfo: null,
-    locationInfo: resolvedLocationInfo,
-  };
-}
-
+/**
+ * Interactive modal for looking up real-time item stock or bin location contents via search or barcode scanner.
+ */
 export function StockLookupModal({
   isOpen,
   onClose,
@@ -285,7 +104,6 @@ function StockLookupModalInner({
     };
   }, [trimmedInitial]);
 
-  // Hardware barcode scanner support (USB / Bluetooth HID)
   useBarcodeScanner({
     enabled: !isCameraOpen,
     onScan: (scannedCode) => {
@@ -297,7 +115,6 @@ function StockLookupModalInner({
     },
   });
 
-  // Handle ESC key to close
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape" && !isCameraOpen) {
@@ -343,7 +160,6 @@ function StockLookupModalInner({
     executeLookup(code);
   }
 
-  // Ringkasan kalkulasi saldo
   const {
     totalOnHand,
     totalInTransit,
@@ -490,276 +306,30 @@ function StockLookupModalInner({
               <div className="grid size-12 place-items-center rounded-full bg-amber-100 text-amber-700">
                 <AlertCircle aria-hidden="true" size={26} />
               </div>
-              <h3 className="mt-3 text-sm font-bold text-ink-950">
-                Barang tidak ditemukan
-              </h3>
+              <h3 className="mt-3 text-sm font-bold text-ink-950">Barang tidak ditemukan</h3>
               <p className="mt-1 text-xs text-slate-600">
                 Tidak ada barang, lokasi rak, atau saldo stok yang cocok dengan kata kunci &quot;{searchTerm}&quot;.
               </p>
             </div>
           )}
 
-          {/* MODE 1: Hasil Pemindaian Lokasi Rak / Gudang (Multi-SKU Inspection) */}
           {!isLoading && hasSearched && locationInfo && (
-            <div className="space-y-6">
-              <div className="rounded-[var(--radius-lg)] border border-line-400 bg-surface-0 p-5 shadow-xs">
-                <div className="flex flex-wrap items-start justify-between gap-4">
-                  <div>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="inline-flex items-center gap-1 rounded bg-blue-100 px-2.5 py-0.5 text-xs font-bold text-blue-800">
-                        <MapPin aria-hidden="true" size={13} />
-                        {locationInfo.scope === "warehouse" ? "GUDANG" : "LOKASI RAK"}: {locationInfo.code}
-                      </span>
-                      <span className="inline-flex items-center gap-1 rounded bg-slate-100 px-2.5 py-0.5 text-xs font-semibold text-slate-800">
-                        <Warehouse aria-hidden="true" size={13} />
-                        {locationInfo.warehouse_code} · {locationInfo.warehouse_name}
-                      </span>
-                    </div>
-                    <h3 className="mt-2 text-base font-bold text-ink-950 sm:text-lg">
-                      {locationInfo.name}
-                    </h3>
-                  </div>
-
-                  <div className="flex flex-wrap items-center gap-3">
-                    <QrCodeVisual
-                      className="hidden border border-line-200 sm:inline-flex"
-                      showValue={false}
-                      size={44}
-                      value={locationInfo.code}
-                    />
-                    <div className="rounded-lg border border-blue-200 bg-blue-50/70 px-4 py-2 text-right">
-                      <p className="text-[11px] font-medium text-blue-800">Macam Barang (SKU)</p>
-                      <p className="text-lg font-bold text-blue-950 tabular-nums">
-                        {distinctItemsCount} <span className="text-xs font-normal text-blue-800">SKU</span>
-                      </p>
-                    </div>
-                    <div className="rounded-lg border border-teal-200 bg-teal-50/60 px-4 py-2 text-right">
-                      <p className="text-[11px] font-medium text-teal-700">Total Unit Fisik</p>
-                      <p className="text-lg font-bold text-teal-950 tabular-nums">
-                        {totalOnHand}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div>
-                <div className="mb-2.5 flex flex-wrap items-center justify-between gap-2">
-                  <div className="flex items-center gap-2">
-                    <Layers aria-hidden="true" className="text-teal-700" size={18} />
-                    <h4 className="text-sm font-bold text-ink-950">
-                      Daftar Macam Barang di Lokasi Ini
-                    </h4>
-                  </div>
-                  <span className="text-xs font-medium text-slate-600">
-                    {distinctItemsCount} macam SKU ({balances.length} baris stok)
-                  </span>
-                </div>
-
-                {balances.length === 0 ? (
-                  <div className="rounded-[var(--radius-md)] border border-amber-200 bg-amber-50/60 p-4 text-xs text-amber-900">
-                    <p className="font-semibold">Lokasi rak saat ini kosong</p>
-                    <p className="mt-0.5 text-amber-800">
-                      Tidak ada barang yang sedang tersimpan di lokasi rak {locationInfo.code}.
-                    </p>
-                  </div>
-                ) : (
-                  <div className="overflow-x-auto rounded-[var(--radius-md)] border border-line-400">
-                    <table className="w-full min-w-[600px] text-left text-xs text-ink-950">
-                      <thead className="border-b border-line-400 bg-canvas-50 text-[11px] font-semibold text-slate-700">
-                        <tr>
-                          <th className="px-3.5 py-2.5">SKU / Barcode</th>
-                          <th className="px-3.5 py-2.5">Nama Barang</th>
-                          <th className="px-3.5 py-2.5">Kategori</th>
-                          <th className="px-3.5 py-2.5">Rak / Bin</th>
-                          <th className="px-3.5 py-2.5 text-right">Qty Fisik</th>
-                          <th className="px-3.5 py-2.5 text-right">In-Transit</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-line-300 bg-surface-0">
-                        {balances.map((row) => (
-                          <tr
-                            className="transition hover:bg-canvas-50/80"
-                            key={`${row.warehouse_id}-${row.location_id}-${row.item_id}`}
-                          >
-                            <td className="px-3.5 py-2.5 font-semibold tabular-nums">
-                              <div className="flex items-center gap-1.5 text-teal-800">
-                                <Package aria-hidden="true" size={13} />
-                                <span>{row.item_sku}</span>
-                              </div>
-                              {row.item_barcode && (
-                                <div className="mt-0.5 font-mono text-[10px] font-normal text-slate-500">
-                                  BC: {row.item_barcode}
-                                </div>
-                              )}
-                            </td>
-                            <td className="px-3.5 py-2.5 font-semibold text-ink-950">
-                              {row.item_name}
-                            </td>
-                            <td className="px-3.5 py-2.5 text-slate-600">
-                              {row.category_name}
-                            </td>
-                            <td className="px-3.5 py-2.5">
-                              <span className="inline-block rounded bg-slate-100 px-2 py-0.5 font-mono font-bold text-slate-800">
-                                {row.location_code}
-                              </span>
-                            </td>
-                            <td className="px-3.5 py-2.5 text-right font-bold tabular-nums text-ink-950">
-                              {formatDecimal(row.qty_on_hand)} {row.uom_code}
-                            </td>
-                            <td className="px-3.5 py-2.5 text-right tabular-nums text-slate-600">
-                              {formatDecimal(row.qty_in_transit)} {row.uom_code}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </div>
-            </div>
+            <StockLookupLocationResult
+              balances={balances}
+              distinctItemsCount={distinctItemsCount}
+              locationInfo={locationInfo}
+              totalOnHand={totalOnHand}
+            />
           )}
 
-          {/* MODE 2: Hasil Pemindaian Barang (Single Item Stock & Rack Distribution) */}
           {!isLoading && hasSearched && itemInfo && (
-            <div className="space-y-6">
-              {/* Item Card */}
-              <div className="rounded-[var(--radius-lg)] border border-line-400 bg-surface-0 p-5 shadow-xs">
-                <div className="flex flex-wrap items-start justify-between gap-4">
-                  <div>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="rounded bg-teal-100 px-2.5 py-0.5 text-xs font-bold text-teal-800">
-                        {itemInfo.sku}
-                      </span>
-                      {itemInfo.barcode ? (
-                        <span className="inline-flex items-center gap-1 rounded bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-800 tabular-nums">
-                          <ScanBarcode aria-hidden="true" size={13} />
-                          {itemInfo.barcode}
-                        </span>
-                      ) : (
-                        <span className="rounded bg-slate-100 px-2 py-0.5 text-xs text-slate-500">
-                          Tanpa Barcode
-                        </span>
-                      )}
-                      {itemInfo.category_name && (
-                        <span className="rounded border border-line-400 px-2 py-0.5 text-xs text-slate-700">
-                          {itemInfo.category_name}
-                        </span>
-                      )}
-                    </div>
-                    <h3 className="mt-2 text-base font-bold text-ink-950 sm:text-lg">
-                      {itemInfo.name}
-                    </h3>
-                  </div>
-
-                  {/* Summary Metric Badges */}
-                  <div className="flex flex-wrap items-center gap-3">
-                    <BarcodeVisual
-                      className="hidden border border-line-200 sm:inline-flex"
-                      height={32}
-                      showValue={false}
-                      value={itemInfo.barcode || itemInfo.sku}
-                    />
-                    <div className="rounded-lg border border-teal-200 bg-teal-50/60 px-4 py-2 text-right">
-                      <p className="text-[11px] font-medium text-teal-700">Total Saldo Fisik</p>
-                      <p className="text-lg font-bold text-teal-950 tabular-nums">
-                        {totalOnHand} <span className="text-xs font-normal text-teal-700">{itemInfo.uom_code || ""}</span>
-                      </p>
-                    </div>
-                    <div className="rounded-lg border border-line-300 bg-canvas-50 px-4 py-2 text-right">
-                      <p className="text-[11px] font-medium text-slate-600">Dalam Pengiriman</p>
-                      <p className="text-lg font-bold text-ink-950 tabular-nums">
-                        {totalInTransit} <span className="text-xs font-normal text-slate-600">{itemInfo.uom_code || ""}</span>
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Rack Location Table */}
-              <div>
-                <div className="mb-2.5 flex flex-wrap items-center justify-between gap-2">
-                  <div className="flex items-center gap-2">
-                    <MapPin aria-hidden="true" className="text-teal-700" size={18} />
-                    <h4 className="text-sm font-bold text-ink-950">
-                      Sebaran Posisi Rak & Gudang Penyimpanan
-                    </h4>
-                  </div>
-                  <span className="text-xs font-medium text-slate-600">
-                    {balances.length} lokasi rak ({distinctWarehousesCount} gudang)
-                  </span>
-                </div>
-
-                {balances.length === 0 ? (
-                  <div className="rounded-[var(--radius-md)] border border-amber-200 bg-amber-50/60 p-4 text-xs text-amber-900">
-                    <p className="font-semibold">Saldo belum tersedia di rak gudang</p>
-                    <p className="mt-0.5 text-amber-800">
-                      Barang terdaftar pada master data, namun belum memiliki kuantitas aktif pada rak gudang mana pun.
-                    </p>
-                  </div>
-                ) : (
-                  <div className="overflow-x-auto rounded-[var(--radius-md)] border border-line-400">
-                    <table className="w-full min-w-[600px] text-left text-xs text-ink-950">
-                      <thead className="border-b border-line-400 bg-canvas-50 text-[11px] font-semibold text-slate-700">
-                        <tr>
-                          <th className="px-3.5 py-2.5">Gudang</th>
-                          <th className="px-3.5 py-2.5">Kode Rak / Bin</th>
-                          <th className="px-3.5 py-2.5">Nama Lokasi</th>
-                          <th className="px-3.5 py-2.5 text-right">Qty Fisik</th>
-                          <th className="px-3.5 py-2.5 text-right">In-Transit</th>
-                          <th className="px-3.5 py-2.5 text-center">Status</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-line-300 bg-surface-0">
-                        {balances.map((row) => {
-                          const onHand = parseFloat(row.qty_on_hand || "0");
-                          const isAvailable = onHand > 0;
-                          return (
-                            <tr
-                              className="transition hover:bg-canvas-50/80"
-                              key={`${row.warehouse_id}-${row.location_id}-${row.item_id}`}
-                            >
-                              <td className="px-3.5 py-2.5 font-medium">
-                                <div className="flex items-center gap-1.5">
-                                  <Warehouse aria-hidden="true" className="text-slate-500" size={14} />
-                                  <span>{row.warehouse_name}</span>
-                                  <span className="text-[10px] text-slate-500 font-mono">({row.warehouse_code})</span>
-                                </div>
-                              </td>
-                              <td className="px-3.5 py-2.5">
-                                <span className="inline-block rounded bg-slate-100 px-2 py-0.5 font-mono font-bold text-teal-800">
-                                  {row.location_code}
-                                </span>
-                              </td>
-                              <td className="px-3.5 py-2.5 text-slate-700">
-                                {row.location_name}
-                              </td>
-                              <td className="px-3.5 py-2.5 text-right font-bold tabular-nums text-ink-950">
-                                {formatDecimal(row.qty_on_hand)} {row.uom_code}
-                              </td>
-                              <td className="px-3.5 py-2.5 text-right tabular-nums text-slate-600">
-                                {formatDecimal(row.qty_in_transit)} {row.uom_code}
-                              </td>
-                              <td className="px-3.5 py-2.5 text-center">
-                                <span
-                                  className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-bold ${
-                                    isAvailable
-                                      ? "bg-green-100 text-green-800"
-                                      : "bg-slate-100 text-slate-600"
-                                  }`}
-                                >
-                                  {isAvailable ? "Tersedia" : "Kosong"}
-                                </span>
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </div>
-            </div>
+            <StockLookupItemResult
+              balances={balances}
+              distinctWarehousesCount={distinctWarehousesCount}
+              itemInfo={itemInfo}
+              totalInTransit={totalInTransit}
+              totalOnHand={totalOnHand}
+            />
           )}
         </div>
 
