@@ -1,12 +1,23 @@
 import { useState } from "react";
-import { ChevronDown, ChevronLeft, ChevronRight, Filter, RotateCcw } from "lucide-react";
+import {
+  CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
+  Eye,
+  Filter,
+  RotateCcw,
+  XCircle,
+} from "lucide-react";
 import axios from "axios";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { extractApiErrorInfo } from "@/lib/errors";
 import { useAuditLogs } from "../api";
+import { AuditLogDetailModal } from "../components/AuditLogDetailModal";
 import type { AuditLog, AuditLogFilters } from "../types";
 
 const initialFilters: AuditLogFilters = {
+  search: "",
+  status: "",
   action: "",
   entity_type: "",
   date_from: "",
@@ -20,77 +31,69 @@ function formatDate(value: string) {
   }).format(new Date(value));
 }
 
-function formatValues(values: Record<string, unknown> | null) {
-  return values ? JSON.stringify(values, null, 2) : "Tidak ada perubahan";
-}
-
-function AuditLogRow({ log }: { log: AuditLog }) {
-  const [isExpanded, setIsExpanded] = useState(false);
+function AuditLogRow({
+  log,
+  onSelect,
+}: {
+  log: AuditLog;
+  onSelect: (entry: AuditLog) => void;
+}) {
+  const isFailed = log.status === "FAILED";
 
   return (
-    <>
-      <tr className="border-t border-line-200 align-top">
-        <td className="px-4 py-4 text-xs text-slate-600 tabular-nums">
-          {formatDate(log.created_at)}
-        </td>
-        <td className="px-4 py-4">
-          <p className="font-semibold text-ink-950">{log.username || "Sistem"}</p>
-          <p className="mt-1 text-xs text-slate-600 tabular-nums">
-            {log.ip_address || "IP tidak tersedia"}
+    <tr className="border-t border-line-200 align-top">
+      <td className="px-4 py-4 text-xs text-slate-600 tabular-nums">
+        {formatDate(log.created_at)}
+      </td>
+      <td className="px-4 py-4">
+        <p className="font-semibold text-ink-950">{log.username || "Sistem"}</p>
+        {log.user_id !== null && (
+          <p className="mt-0.5 text-xs text-slate-600 tabular-nums">
+            ID #{log.user_id}
           </p>
-        </td>
-        <td className="px-4 py-4">
-          <span className="rounded-full bg-teal-100 px-2.5 py-1 text-xs font-semibold text-teal-700">
-            {log.action}
-          </span>
-        </td>
-        <td className="px-4 py-4 text-sm">
-          <p className="font-semibold text-ink-950">{log.entity_type}</p>
-          <p className="mt-1 text-xs text-slate-600 tabular-nums">
-            ID: {log.entity_id || "Tidak tersedia"}
-          </p>
-        </td>
-        <td className="px-4 py-4 text-right">
-          <button
-            aria-expanded={isExpanded}
-            className="inline-flex min-h-11 items-center gap-1 rounded-[var(--radius-md)] px-3 text-xs font-semibold text-teal-700 transition hover:bg-teal-100"
-            onClick={() => setIsExpanded((value) => !value)}
-            type="button"
-          >
-            Detail
-            <ChevronDown
-              aria-hidden="true"
-              className={`transition-transform duration-150 ${isExpanded ? "rotate-180" : ""}`}
-              size={15}
-            />
-          </button>
-        </td>
-      </tr>
-      {isExpanded && (
-        <tr className="bg-canvas-50/75">
-          <td className="px-4 pb-5" colSpan={5}>
-            <div className="grid gap-4 md:grid-cols-2">
-              <div>
-                <h3 className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-700">
-                  Sebelum
-                </h3>
-                <pre className="max-h-48 overflow-auto rounded-[var(--radius-md)] bg-ink-950 p-3 text-xs leading-5 text-canvas-50">
-                  {formatValues(log.old_values)}
-                </pre>
-              </div>
-              <div>
-                <h3 className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-700">
-                  Sesudah
-                </h3>
-                <pre className="max-h-48 overflow-auto rounded-[var(--radius-md)] bg-ink-950 p-3 text-xs leading-5 text-canvas-50">
-                  {formatValues(log.new_values)}
-                </pre>
-              </div>
-            </div>
-          </td>
-        </tr>
-      )}
-    </>
+        )}
+      </td>
+      <td className="px-4 py-4 font-mono text-xs text-slate-700 tabular-nums">
+        {log.ip_address || "—"}
+      </td>
+      <td className="px-4 py-4">
+        <span className="rounded-full bg-canvas-50 px-2.5 py-1 font-mono text-xs font-semibold text-ink-950">
+          {log.action}
+        </span>
+      </td>
+      <td className="px-4 py-4">
+        <span
+          className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold ${
+            isFailed
+              ? "bg-red-100 text-red-700"
+              : "bg-teal-100 text-teal-700"
+          }`}
+        >
+          {isFailed ? (
+            <XCircle aria-hidden="true" size={13} />
+          ) : (
+            <CheckCircle2 aria-hidden="true" size={13} />
+          )}
+          {isFailed ? "Gagal" : "Berhasil"}
+        </span>
+      </td>
+      <td className="px-4 py-4 text-sm">
+        <p className="font-semibold text-ink-950">{log.entity_type}</p>
+        <p className="mt-1 text-xs text-slate-600 tabular-nums">
+          ID: {log.entity_id || "—"}
+        </p>
+      </td>
+      <td className="px-4 py-4 text-right">
+        <button
+          className="inline-flex min-h-11 items-center gap-1.5 rounded-[var(--radius-md)] px-3 text-xs font-semibold text-teal-700 transition hover:bg-teal-100"
+          onClick={() => onSelect(log)}
+          type="button"
+        >
+          <Eye aria-hidden="true" size={15} />
+          Detail
+        </button>
+      </td>
+    </tr>
   );
 }
 
@@ -98,6 +101,7 @@ export function AuditLogsPage() {
   const [filters, setFilters] = useState(initialFilters);
   const [draftFilters, setDraftFilters] = useState(initialFilters);
   const [offset, setOffset] = useState(0);
+  const [selectedLog, setSelectedLog] = useState<AuditLog | null>(null);
   const { data, isLoading, isFetching, isError, error, refetch } = useAuditLogs(
     filters,
     offset,
@@ -125,11 +129,42 @@ export function AuditLogsPage() {
   return (
     <>
       <PageHeader
-        description="Telusuri aktivitas dan perubahan data sistem yang tercatat secara baca-saja."
+        description="Telusuri aktivitas pengguna, status eksekusi, IP address, dan perubahan data sistem secara baca-saja."
         title="Audit log"
       />
       <section className="mb-6 rounded-[var(--radius-lg)] border border-line-200 bg-surface-0 p-4 shadow-[var(--shadow-1)] sm:p-5">
-        <form className="grid gap-4 md:grid-cols-2 lg:grid-cols-3" onSubmit={applyFilters}>
+        <form
+          className="grid gap-4 md:grid-cols-2 lg:grid-cols-3"
+          onSubmit={applyFilters}
+        >
+          <label className="text-sm font-semibold text-ink-950">
+            Pencarian
+            <input
+              className="mt-2 h-11 w-full rounded-[var(--radius-md)] border border-line-500 bg-surface-0 px-3 text-sm font-normal text-ink-950 placeholder:text-slate-600 focus:border-teal-600 focus:outline-none focus:ring-2 focus:ring-teal-600/20"
+              onChange={(event) =>
+                setDraftFilters({ ...draftFilters, search: event.target.value })
+              }
+              placeholder="Username, aksi, IP, atau Request ID"
+              value={draftFilters.search}
+            />
+          </label>
+          <label className="text-sm font-semibold text-ink-950">
+            Status aksi
+            <select
+              className="mt-2 h-11 w-full rounded-[var(--radius-md)] border border-line-500 bg-surface-0 px-3 text-sm font-normal text-ink-950 focus:border-teal-600 focus:outline-none focus:ring-2 focus:ring-teal-600/20"
+              onChange={(event) =>
+                setDraftFilters({
+                  ...draftFilters,
+                  status: event.target.value as AuditLogFilters["status"],
+                })
+              }
+              value={draftFilters.status}
+            >
+              <option value="">Semua status</option>
+              <option value="SUCCESS">Berhasil (SUCCESS)</option>
+              <option value="FAILED">Gagal (FAILED)</option>
+            </select>
+          </label>
           <label className="text-sm font-semibold text-ink-950">
             Aksi
             <input
@@ -146,7 +181,10 @@ export function AuditLogsPage() {
             <input
               className="mt-2 h-11 w-full rounded-[var(--radius-md)] border border-line-500 bg-surface-0 px-3 text-sm font-normal text-ink-950 placeholder:text-slate-600 focus:border-teal-600 focus:outline-none focus:ring-2 focus:ring-teal-600/20"
               onChange={(event) =>
-                setDraftFilters({ ...draftFilters, entity_type: event.target.value })
+                setDraftFilters({
+                  ...draftFilters,
+                  entity_type: event.target.value,
+                })
               }
               placeholder="Contoh: users"
               value={draftFilters.entity_type}
@@ -157,7 +195,10 @@ export function AuditLogsPage() {
             <input
               className="mt-2 h-11 w-full rounded-[var(--radius-md)] border border-line-500 bg-surface-0 px-3 text-sm font-normal text-ink-950 focus:border-teal-600 focus:outline-none focus:ring-2 focus:ring-teal-600/20"
               onChange={(event) =>
-                setDraftFilters({ ...draftFilters, date_from: event.target.value })
+                setDraftFilters({
+                  ...draftFilters,
+                  date_from: event.target.value,
+                })
               }
               type="datetime-local"
               value={draftFilters.date_from}
@@ -168,7 +209,10 @@ export function AuditLogsPage() {
             <input
               className="mt-2 h-11 w-full rounded-[var(--radius-md)] border border-line-500 bg-surface-0 px-3 text-sm font-normal text-ink-950 focus:border-teal-600 focus:outline-none focus:ring-2 focus:ring-teal-600/20"
               onChange={(event) =>
-                setDraftFilters({ ...draftFilters, date_to: event.target.value })
+                setDraftFilters({
+                  ...draftFilters,
+                  date_to: event.target.value,
+                })
               }
               type="datetime-local"
               value={draftFilters.date_to}
@@ -230,20 +274,26 @@ export function AuditLogsPage() {
       ) : (
         <section className="overflow-hidden rounded-[var(--radius-lg)] border border-line-200 bg-surface-0 shadow-[var(--shadow-1)]">
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[760px] text-left text-sm">
+            <table className="w-full min-w-[920px] text-left text-sm">
               <caption className="sr-only">Daftar audit log</caption>
               <thead className="bg-canvas-50 text-xs font-bold uppercase tracking-wider text-slate-700">
                 <tr>
                   <th className="px-4 py-3">Waktu</th>
                   <th className="px-4 py-3">Pelaku</th>
+                  <th className="px-4 py-3">IP Address</th>
                   <th className="px-4 py-3">Aksi</th>
+                  <th className="px-4 py-3">Status</th>
                   <th className="px-4 py-3">Entitas</th>
                   <th className="px-4 py-3 text-right">Tindakan</th>
                 </tr>
               </thead>
               <tbody>
                 {data?.items.map((log) => (
-                  <AuditLogRow key={log.id} log={log} />
+                  <AuditLogRow
+                    key={log.id}
+                    log={log}
+                    onSelect={setSelectedLog}
+                  />
                 ))}
               </tbody>
             </table>
@@ -277,6 +327,10 @@ export function AuditLogsPage() {
           </div>
         </section>
       )}
+      <AuditLogDetailModal
+        log={selectedLog}
+        onClose={() => setSelectedLog(null)}
+      />
     </>
   );
 }
