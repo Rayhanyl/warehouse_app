@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ChevronDown,
   Command,
+  HelpCircle,
   LogOut,
   Menu as MenuIcon,
   ScanBarcode,
@@ -15,6 +16,10 @@ import { logout } from "@/features/auth/api";
 import { useAuthStore } from "@/features/auth/store";
 import { useMyMenu } from "@/features/navigation/api";
 import type { MenuItem } from "@/features/navigation/types";
+import { UserGuideModal } from "@/features/user-guide/components/UserGuideModal";
+import { resolveGuideModuleFromPath } from "@/features/user-guide/guideContent";
+import { AppShellGuideHostContext } from "@/features/user-guide/guideContext";
+import { useUserGuideStore } from "@/features/user-guide/store";
 import { extractApiErrorInfo } from "@/lib/errors";
 import { StockLookupModal } from "@/components/ui/StockLookupModal";
 import { PageHeader } from "./PageHeader";
@@ -153,6 +158,7 @@ export function AppShell() {
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isPaletteOpen, setIsPaletteOpen] = useState(false);
   const [isStockLookupOpen, setIsStockLookupOpen] = useState(false);
+  const openUserGuide = useUserGuideStore((state) => state.openGuide);
   const [search, setSearch] = useState("");
   const [activeIndex, setActiveIndex] = useState(0);
   const [selectedWarehouseId, setSelectedWarehouseId] = useState<number | null>(
@@ -318,7 +324,8 @@ export function AppShell() {
       : assignedWarehouses[0] ?? null;
 
   return (
-    <div className="min-h-screen overflow-x-hidden bg-canvas-50 text-ink-950">
+    <AppShellGuideHostContext.Provider value={true}>
+      <div className="min-h-screen overflow-x-hidden bg-canvas-50 text-ink-950">
       <a
         className="sr-only fixed left-4 top-4 z-50 rounded-[var(--radius-md)] bg-teal-600 px-4 py-3 text-sm font-semibold text-surface-0 focus:not-sr-only"
         href="#main-content"
@@ -406,6 +413,17 @@ export function AppShell() {
                 {activeWarehouse ? `Gudang #${activeWarehouse}` : "Semua gudang"}
               </span>
             )}
+            <button
+              aria-label="Buka panduan / bantuan aplikasi"
+              className="flex min-h-11 items-center gap-1.5 rounded-[var(--radius-md)] border border-line-200 bg-surface-0 px-3 text-xs font-semibold text-slate-700 transition hover:border-teal-600/40 hover:bg-teal-50/70 hover:text-teal-800"
+              onClick={() =>
+                openUserGuide(resolveGuideModuleFromPath(location.pathname), "module")
+              }
+              type="button"
+            >
+              <HelpCircle aria-hidden="true" size={16} />
+              <span className="hidden md:inline">Bantuan</span>
+            </button>
             <button
               aria-label="Pindai barcode untuk cek stok dan posisi rak gudang"
               className="flex min-h-11 items-center gap-1.5 rounded-[var(--radius-md)] border border-teal-600/30 bg-teal-50/70 px-3 text-xs font-semibold text-teal-800 transition hover:bg-teal-100 hover:text-teal-950"
@@ -614,7 +632,9 @@ export function AppShell() {
         isOpen={isStockLookupOpen}
         onClose={() => setIsStockLookupOpen(false)}
       />
+      <UserGuideModal />
     </div>
+    </AppShellGuideHostContext.Provider>
   );
 }
 

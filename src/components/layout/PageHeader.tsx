@@ -1,11 +1,17 @@
-import { ChevronRight, Home } from "lucide-react";
-import { Link } from "react-router-dom";
+import { BookOpen, ChevronRight, Home } from "lucide-react";
+import { Link, useLocation } from "react-router-dom";
+import { UserGuideModal } from "@/features/user-guide/components/UserGuideModal";
+import { resolveGuideModuleFromPath } from "@/features/user-guide/guideContent";
+import { useIsInsideAppShellGuideHost } from "@/features/user-guide/guideContext";
+import { useUserGuideStore } from "@/features/user-guide/store";
+import type { GuideModuleId } from "@/features/user-guide/types";
 
 interface PageHeaderProps {
   title: string;
   description?: string;
   action?: React.ReactNode;
   warehouseLabel?: string;
+  guideModule?: GuideModuleId;
 }
 
 export function PageHeader({
@@ -13,7 +19,13 @@ export function PageHeader({
   description,
   action,
   warehouseLabel,
+  guideModule,
 }: PageHeaderProps) {
+  const { pathname } = useLocation();
+  const openGuide = useUserGuideStore((state) => state.openGuide);
+  const insideAppShell = useIsInsideAppShellGuideHost();
+  const resolvedGuideModule = guideModule ?? resolveGuideModuleFromPath(pathname);
+
   return (
     <header className="mb-6 sm:mb-8">
       <nav
@@ -48,8 +60,21 @@ export function PageHeader({
             </span>
           )}
         </div>
-        {action && <div className="flex shrink-0 flex-wrap items-center gap-2">{action}</div>}
+        <div className="flex shrink-0 flex-wrap items-center gap-2">
+          <button
+            aria-label="Panduan / Bantuan"
+            className="inline-flex min-h-11 items-center gap-1.5 rounded-[var(--radius-md)] border border-line-200 bg-surface-0 px-3 text-xs font-semibold text-slate-700 transition hover:border-teal-600/40 hover:bg-teal-50/70 hover:text-teal-800"
+            onClick={() => openGuide(resolvedGuideModule, "module")}
+            title="Buka panduan SOP & contoh pengisian halaman ini"
+            type="button"
+          >
+            <BookOpen aria-hidden="true" size={16} />
+            <span>Panduan</span>
+          </button>
+          {action}
+        </div>
       </div>
+      {!insideAppShell && <UserGuideModal />}
     </header>
   );
 }
