@@ -117,8 +117,8 @@ export const BARCODE_LABEL_PRESETS: BarcodeLabelPreset[] = [
     marginMm: 2.5,
     columns: 3,
     rows: 8,
-    pageMarginMm: 8,
-    gapMm: 2,
+    pageMarginMm: 5,
+    gapMm: 1.5,
     defaultCopies: 24,
   },
   {
@@ -132,8 +132,8 @@ export const BARCODE_LABEL_PRESETS: BarcodeLabelPreset[] = [
     marginMm: 2,
     columns: 4,
     rows: 10,
-    pageMarginMm: 8,
-    gapMm: 2,
+    pageMarginMm: 5,
+    gapMm: 1.5,
     defaultCopies: 40,
   },
 ];
@@ -264,7 +264,7 @@ export function evaluateBarcodeScannability(
     } catch {
       moduleCount = 29;
     }
-    const quietModules = 4; // margin=2 di kedua sisi
+    const quietModules = 6; // margin=3 di kedua sisi sesuai quiet-zone ISO/IEC 18004
     const qrSideMm = Math.min(innerWidthMm, innerHeightMm) * scaleFactor;
     const moduleSizeMm = qrSideMm / (moduleCount + quietModules);
 
@@ -291,8 +291,8 @@ export function evaluateBarcodeScannability(
   }
 
   const totalUnits = isValidEan13(trimmed)
-    ? 95 + 16
-    : 11 * Math.max(1, trimmed.length) + 35 + 16;
+    ? 95 + 20
+    : 11 * Math.max(1, trimmed.length) + 35 + 20;
   const barcodeWidthMm = Math.min(innerWidthMm, 68) * scaleFactor;
   const moduleSizeMm = barcodeWidthMm / totalUnits;
 

@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { vi } from "vitest";
 import { AppShell } from "@/components/layout/AppShell";
@@ -243,15 +243,16 @@ describe("AppShell, Sidebar, DashboardPage, & ProfilePage", () => {
     expect(
       screen.getByText("Belum ada menu yang tersedia untuk peran akun Anda."),
     ).toBeInTheDocument();
-    expect(screen.getByRole("heading", { level: 1, name: "Profil" })).toBeInTheDocument();
-    expect(screen.getByText("#1")).toBeInTheDocument();
-    expect(screen.getByText("Aktif")).toBeInTheDocument();
-    expect(screen.getByText("WH-JKT - Gudang Pusat Jakarta")).toBeInTheDocument();
-    expect(screen.getByText("WH-SBY - Gudang Surabaya")).toBeInTheDocument();
-    expect(screen.getByText("2 permission")).toBeInTheDocument();
-    expect(screen.getByText("Barang (SKU)")).toBeInTheDocument();
-    expect(screen.getByText("items:read")).toBeInTheDocument();
-    expect(screen.getByText("warehouses:read")).toBeInTheDocument();
+    const main = within(screen.getByRole("main"));
+    expect(main.getByRole("heading", { level: 1, name: "Profil" })).toBeInTheDocument();
+    expect(main.getByText("#1")).toBeInTheDocument();
+    expect(main.getByText("Aktif")).toBeInTheDocument();
+    expect(main.getByText("WH-JKT - Gudang Pusat Jakarta")).toBeInTheDocument();
+    expect(main.getByText("WH-SBY - Gudang Surabaya")).toBeInTheDocument();
+    expect(main.getByText("2 permission")).toBeInTheDocument();
+    expect(main.getByText("Barang (SKU)")).toBeInTheDocument();
+    expect(main.getByText("items:read")).toBeInTheDocument();
+    expect(main.getByText("warehouses:read")).toBeInTheDocument();
 
     const toggleCurrentBtn = screen.getByRole("button", {
       name: "Tampilkan kata sandi saat ini",

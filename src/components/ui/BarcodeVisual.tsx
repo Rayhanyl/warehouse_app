@@ -35,7 +35,7 @@ export function BarcodeVisual({
 
   const isEan = isValidEan13(trimmed);
   const bits = isEan ? encodeEan13Bits(trimmed) : encodeCode128BBits(trimmed);
-  const quietZone = 8;
+  const quietZone = 10;
   const totalUnits = bits.length + quietZone * 2;
 
   const rects: Array<{ x: number; width: number }> = [];
@@ -130,7 +130,7 @@ export function QrCodeVisual({
   try {
     const qr = QRCode.create(trimmed, { errorCorrectionLevel });
     const moduleCount = qr.modules.size;
-    const margin = 2;
+    const margin = 3;
     viewBoxSize = moduleCount + margin * 2;
 
     for (let r = 0; r < moduleCount; r += 1) {
@@ -227,16 +227,16 @@ export function BarcodeStickerSheet({
 
   const pageCssRule =
     effectiveConfig.paperMode === "a4"
-      ? `@page { size: A4 portrait; margin: ${effectiveConfig.pageMarginMm || 8}mm; }`
+      ? `@page { size: A4 portrait; margin: ${effectiveConfig.pageMarginMm || 5}mm; }`
       : `@page { size: ${safeWidthMm}mm ${safeHeightMm}mm; margin: 0; }`;
 
-  const gridStyle: React.CSSProperties | undefined =
+  const gridStyle: React.CSSProperties =
     effectiveConfig.paperMode === "a4"
       ? {
           display: "grid",
           gridTemplateColumns: `repeat(${Math.max(1, effectiveConfig.columns || 3)}, ${safeWidthMm}mm)`,
-          gap: `${Math.max(0, effectiveConfig.gapMm ?? 2)}mm`,
-          justifyContent: "start",
+          gap: `${Math.max(0, effectiveConfig.gapMm ?? 1.5)}mm`,
+          justifyContent: "center",
         }
       : {
           display: "flex",
@@ -248,35 +248,36 @@ export function BarcodeStickerSheet({
   return (
     <section
       aria-label={`Label stiker ${format === "qr" ? "QR code" : "barcode"} ${code}`}
-      className={`printable-document-sheet ${
+      className={`printable-document-sheet printable-sticker-sheet ${
         visibleOnScreen ? "mt-3 block overflow-x-auto" : "hidden"
       } text-ink-950 print:mt-0 print:block print:overflow-visible`}
       data-paper-mode={effectiveConfig.paperMode}
       data-preset-id={effectiveConfig.presetId}
+      data-slot="barcode-sticker-sheet"
     >
       <style>{`@media print { ${pageCssRule} .print-sticker-card { break-inside: avoid; page-break-inside: avoid; } }`}</style>
-      <div className="mx-auto w-fit" style={gridStyle}>
+      <div className="printable-sticker-grid mx-auto w-fit" style={gridStyle}>
         {Array.from({ length: safeCopies }).map((_, copyIdx) => (
           <article
             key={copyIdx}
-            className="print-sticker-card box-border flex flex-col justify-between overflow-hidden rounded-[var(--radius-sm)] border border-dashed border-ink-950/60 bg-white text-ink-950 print:rounded-none print:border-solid print:border-ink-950"
+            className="print-sticker-card box-border flex flex-col justify-between overflow-hidden rounded-[var(--radius-sm)] border border-dashed border-ink-950/60 bg-white text-ink-950 print:rounded-none print:border-solid"
             style={{
               width: `${safeWidthMm}mm`,
-              minHeight: `${safeHeightMm}mm`,
+              height: `${safeHeightMm}mm`,
               padding: `${safeMarginMm}mm`,
             }}
           >
             <div
-              className={`flex items-center justify-between gap-1.5 border-b border-ink-950/30 pb-0.5 font-bold tracking-wider uppercase ${
-                isMini ? "text-[7px]" : isLarge ? "text-[11px]" : "text-[9px]"
+              className={`flex shrink-0 items-center justify-between gap-1.5 border-b border-ink-950/30 pb-0.5 leading-none font-bold tracking-wider uppercase ${
+                isMini ? "text-[6.5px]" : isLarge ? "text-[10.5px]" : "text-[8.5px]"
               }`}
             >
-              <span>JEJAKSTOK</span>
-              <span className="truncate">{badgeText}</span>
+              <span className="shrink-0">JEJAKSTOK</span>
+              <span className="min-w-0 truncate">{badgeText}</span>
             </div>
 
             <p
-              className={`mt-0.5 line-clamp-2 font-bold text-ink-950 ${
+              className={`mt-0.5 shrink-0 font-bold text-ink-950 ${
                 effectiveConfig.codeAlign === "left"
                   ? "text-left"
                   : effectiveConfig.codeAlign === "right"
@@ -284,30 +285,33 @@ export function BarcodeStickerSheet({
                     : "text-center"
               } ${
                 isMini
-                  ? "text-[8px] leading-3"
+                  ? "line-clamp-1 text-[7.5px] leading-tight"
                   : isLarge
-                    ? "text-sm leading-5"
-                    : "text-[11px] leading-4"
+                    ? "line-clamp-2 text-sm leading-tight"
+                    : "line-clamp-2 text-[10.5px] leading-tight"
               }`}
             >
               {title}
             </p>
 
-            <div className={`my-0.5 flex w-full items-center ${alignClass}`}>
+            <div className={`my-auto flex min-h-0 w-full items-center overflow-hidden ${alignClass}`}>
               {format === "qr" ? (
                 <QrCodeVisual
-                  className="py-0.5"
+                  className="max-w-full py-0.5"
                   compact={isMini}
                   size={qrSizePx}
                   value={code}
                 />
               ) : (
                 <BarcodeVisual
-                  className="py-0.5"
+                  className="w-full max-w-full py-0.5"
                   compact={isMini}
                   height={barcodeHeightPx}
-                  svgClassName="w-full"
-                  svgStyle={{ width: `${barcodeMaxWidthPercent}%`, maxWidth: "100%" }}
+                  svgClassName="mx-auto"
+                  svgStyle={{
+                    width: `${Math.min(100, barcodeMaxWidthPercent)}%`,
+                    maxWidth: "100%",
+                  }}
                   value={code}
                 />
               )}
@@ -315,14 +319,14 @@ export function BarcodeStickerSheet({
 
             {effectiveConfig.showMeta && (
               <div
-                className={`mt-0.5 flex flex-wrap items-center justify-between gap-1 border-t border-ink-950/30 pt-0.5 font-semibold text-slate-700 tabular-nums ${
-                  isMini ? "text-[7px]" : isLarge ? "text-[11px]" : "text-[9px]"
+                className={`mt-0.5 flex shrink-0 items-center justify-between gap-1.5 border-t border-ink-950/30 pt-0.5 leading-none font-semibold text-slate-700 tabular-nums ${
+                  isMini ? "text-[6.5px]" : isLarge ? "text-[10.5px]" : "text-[8.5px]"
                 }`}
               >
-                <span className="truncate">
+                <span className="min-w-0 truncate">
                   {secondaryCode ? `SKU: ${secondaryCode}` : `KODE: ${code}`}
                 </span>
-                {metaLabel && <span className="truncate">{metaLabel}</span>}
+                {metaLabel && <span className="min-w-0 truncate text-right">{metaLabel}</span>}
               </div>
             )}
           </article>

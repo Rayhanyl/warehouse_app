@@ -18,3 +18,7 @@ export {
   type RouteTabNavProps,
 } from "@/components/shared/RouteTabNav";
 export { StatusBadge, type StatusBadgeProps } from "@/components/shared/StatusBadge";
+export {
+  StickerPrintDialog,
+  type StickerPrintDialogProps,
+} from "@/components/shared/StickerPrintDialog";

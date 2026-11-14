@@ -184,4 +184,71 @@ body {
     break-inside: avoid;
     page-break-inside: avoid;
   }
+
+  /* Isolasi total cetak stiker barcode/QR: sembunyikan seluruh root aplikasi (#root),
+     overlay modal, toast, dan chrome dialog agar hanya BarcodeStickerSheet yang tercetak. */
+  body.wms-sticker-print-mode #root,
+  body:has([data-sticker-print-dialog="true"]) #root,
+  body.wms-sticker-print-mode [data-slot="dialog-overlay"],
+  body:has([data-sticker-print-dialog="true"]) [data-slot="dialog-overlay"] {
+    display: none !important;
+  }
+
+  [data-sticker-print-dialog="true"] {
+    position: static !important;
+    inset: auto !important;
+    top: auto !important;
+    left: auto !important;
+    right: auto !important;
+    bottom: auto !important;
+    transform: none !important;
+    display: block !important;
+    width: 100% !important;
+    max-width: none !important;
+    max-height: none !important;
+    height: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: none !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    background: transparent !important;
+    overflow: visible !important;
+  }
+
+  [data-sticker-print-dialog="true"] [data-slot="dialog-close"] {
+    display: none !important;
+  }
+
+  .printable-sticker-sheet {
+    display: block !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+    background: #ffffff !important;
+  }
+
+  .printable-sticker-sheet[data-paper-mode="thermal"] .printable-sticker-grid {
+    display: block !important;
+    width: auto !important;
+    margin: 0 !important;
+    gap: 0 !important;
+  }
+
+  .printable-sticker-sheet[data-paper-mode="thermal"] .print-sticker-card {
+    margin: 0 !important;
+    border-color: transparent !important;
+    border-radius: 0 !important;
+  }
+
+  .printable-sticker-sheet[data-paper-mode="thermal"] .print-sticker-card:not(:last-child) {
+    break-after: page;
+    page-break-after: always;
+  }
+
+  .printable-sticker-sheet[data-paper-mode="a4"] .print-sticker-card {
+    border-color: #cbd5e1 !important;
+    border-radius: 0 !important;
+  }
 }

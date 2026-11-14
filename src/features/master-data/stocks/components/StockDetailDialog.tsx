@@ -1,7 +1,6 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
   Calendar,
-  CheckCircle2,
   Edit3,
   FileText,
   Layers,
@@ -10,9 +9,13 @@ import {
   RotateCcw,
   Ruler,
   SlidersHorizontal,
-  X,
 } from "lucide-react";
 import { toast } from "sonner";
+
+import { StickerPrintDialog } from "@/components/shared/StickerPrintDialog";
+import { StatusBadge } from "@/components/shared/StatusBadge";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { BarcodePrintConfigurator } from "@/components/ui/BarcodePrintConfigurator";
 import { BarcodeVisual, QrCodeVisual } from "@/components/ui/BarcodeVisual";
 import {
@@ -36,10 +39,7 @@ function formatDateTime(value: string) {
   }).format(new Date(value));
 }
 
-export function StockDetailDialog({
-  item,
-  ...rest
-}: StockDetailDialogProps) {
+export function StockDetailDialog({ item, ...rest }: StockDetailDialogProps) {
   if (!item) {
     return null;
   }
@@ -59,16 +59,6 @@ function StockDetailDialogContent({
     createConfigFromPreset("50x30"),
   );
 
-  useEffect(() => {
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") {
-        onClose();
-      }
-    }
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [onClose]);
-
   const scanCode = item.barcode || item.sku;
 
   function handlePrintSticker() {
@@ -78,96 +68,129 @@ function StockDetailDialogContent({
   }
 
   return (
-    <div
-      className="print-dialog-backdrop fixed inset-0 z-50 grid place-items-center bg-ink-950/55 p-2 sm:p-4 print:p-0"
-      onMouseDown={onClose}
-    >
-      <div
-        aria-labelledby="stock-detail-title"
-        aria-modal="true"
-        className="print-dialog-panel flex max-h-[94dvh] w-full max-w-4xl flex-col overflow-hidden rounded-[var(--radius-lg)] border border-line-200 bg-surface-0 shadow-[var(--shadow-2)] sm:max-h-[92vh] print:max-h-none print:overflow-visible print:border-0 print:shadow-none"
-        onMouseDown={(event) => event.stopPropagation()}
-        role="dialog"
-      >
-        <div className="no-print flex shrink-0 items-start justify-between gap-3 border-b border-line-200 px-4 py-4 sm:px-6 sm:py-5">
-          <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="rounded-full bg-canvas-50 px-2.5 py-0.5 text-xs font-semibold text-slate-700 tabular-nums">
-                ID #{item.id}
-              </span>
-              <span className="rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-bold text-blue-700 tabular-nums">
-                {item.sku}
-              </span>
-              {item.barcode && (
-                <span className="rounded-full bg-canvas-50 px-2.5 py-0.5 text-xs font-semibold text-ink-950 tabular-nums">
-                  Barcode: {item.barcode}
-                </span>
-              )}
-              <span
-                className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold ${
-                  item.is_active
-                    ? "bg-teal-100 text-teal-700"
-                    : "bg-amber-100 text-amber-700"
-                }`}
-              >
-                <CheckCircle2 aria-hidden="true" size={13} />
-                {item.is_active ? "Aktif" : "Nonaktif"}
-              </span>
-            </div>
-            <h2
-              className="mt-2 text-lg font-bold text-ink-950"
-              id="stock-detail-title"
-            >
-              {item.name}
-            </h2>
-          </div>
-          <button
-            aria-label="Tutup detail barang"
-            className="grid min-h-11 min-w-11 shrink-0 place-items-center rounded-[var(--radius-md)] text-slate-700 transition hover:bg-canvas-50 hover:text-ink-950"
-            onClick={onClose}
-            type="button"
+    <StickerPrintDialog
+      closeAriaLabel="Tutup detail barang"
+      description="Detail katalog barang (SKU), visual kode pemindaian, dan pengaturan cetak stiker label."
+      footer={
+        <>
+          <Button
+            className="w-full sm:w-auto"
+            onClick={() => setShowStickerPreview((prev) => !prev)}
+            variant="outline"
           >
-            <X aria-hidden="true" size={18} />
-          </button>
+            <SlidersHorizontal aria-hidden="true" size={16} />
+            <span>
+              {showStickerPreview ? "Tutup Pratinjau Ukuran" : "Atur Ukuran & Pratinjau"}
+            </span>
+          </Button>
+          <Button
+            className="w-full sm:w-auto"
+            onClick={handlePrintSticker}
+            variant="outline"
+          >
+            <Printer aria-hidden="true" size={16} />
+            <span>Cetak Label Barcode</span>
+          </Button>
+          {canManage && (
+            <>
+              <Button
+                className={`w-full sm:w-auto ${
+                  item.is_active
+                    ? "border-red-600/40 text-red-700 hover:bg-red-100"
+                    : "border-teal-600/40 text-teal-700 hover:bg-teal-100"
+                }`}
+                onClick={() => {
+                  onClose();
+                  onToggleStatus(item);
+                }}
+                variant="outline"
+              >
+                {item.is_active ? (
+                  <>
+                    <PowerOff aria-hidden="true" size={16} />
+                    <span>Nonaktifkan</span>
+                  </>
+                ) : (
+                  <>
+                    <RotateCcw aria-hidden="true" size={16} />
+                    <span>Aktifkan kembali</span>
+                  </>
+                )}
+              </Button>
+              <Button
+                className="w-full sm:w-auto"
+                onClick={() => {
+                  onClose();
+                  onEdit(item);
+                }}
+              >
+                <Edit3 aria-hidden="true" size={16} />
+                <span>Ubah barang</span>
+              </Button>
+            </>
+          )}
+          <Button
+            className="w-full sm:w-auto"
+            onClick={onClose}
+            variant="outline"
+          >
+            Tutup
+          </Button>
+        </>
+      }
+      headerMeta={
+        <div className="flex flex-wrap items-center gap-2">
+          <Badge className="tabular-nums" variant="outline">
+            ID #{item.id}
+          </Badge>
+          <Badge className="font-bold tabular-nums" variant="info">
+            {item.sku}
+          </Badge>
+          {item.barcode ? (
+            <Badge className="tabular-nums" variant="outline">
+              Barcode: {item.barcode}
+            </Badge>
+          ) : null}
+          <StatusBadge status={item.is_active ? "ACTIVE" : "INACTIVE"} />
         </div>
-
-        <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-5 print:overflow-visible print:p-0">
-        <dl className="no-print space-y-4 text-sm">
-          <div className="flex flex-col items-start justify-between gap-3 rounded-[var(--radius-md)] border border-line-200 bg-canvas-50/70 p-3.5 sm:flex-row sm:items-center">
+      }
+      metadataSection={
+        <dl className="space-y-4 text-sm">
+          <div className="flex flex-col items-start justify-between gap-3 rounded-lg border border-border bg-muted/45 p-3.5 sm:flex-row sm:items-center">
             <div>
               <div className="flex flex-wrap items-center gap-2">
                 <dt className="text-xs font-semibold text-ink-950">
                   Visual Barcode Pemindaian
                 </dt>
-                <span className="rounded bg-teal-100 px-1.5 py-0.5 text-[10px] font-bold text-teal-800">
+                <Badge className="rounded px-1.5 py-0.5 text-[10px] font-bold" variant="secondary">
                   {codeFormat === "qr" ? "QR Code 2D" : "1D Code-128 / EAN-13"}
-                </span>
+                </Badge>
               </div>
               <dd className="mt-0.5 text-xs text-slate-600">
                 {item.barcode
                   ? "Standar EAN-13 / Code-128 / QR siap pindai"
                   : "Menggunakan kode SKU sebagai identitas cetak"}
               </dd>
-              <div className="mt-2 inline-flex items-center gap-1 rounded-[var(--radius-sm)] border border-line-300 bg-surface-0 p-0.5 text-xs">
+              <div className="mt-2 inline-flex items-center gap-1 rounded-md border border-border bg-card p-0.5 text-xs">
                 <button
-                  type="button"
-                  onClick={() => setCodeFormat("barcode")}
                   className={`rounded px-2.5 py-0.5 font-semibold transition ${
                     codeFormat === "barcode"
-                      ? "bg-teal-600 text-surface-0 shadow-sm"
+                      ? "bg-teal-600 text-surface-0 shadow-xs"
                       : "text-slate-600 hover:text-ink-950"
                   }`}
+                  onClick={() => setCodeFormat("barcode")}
+                  type="button"
                 >
                   Barcode (1D)
                 </button>
                 <button
-                  type="button"
-                  onClick={() => setCodeFormat("qr")}
                   className={`rounded px-2.5 py-0.5 font-semibold transition ${
                     codeFormat === "qr"
-                      ? "bg-teal-600 text-surface-0 shadow-sm"
+                      ? "bg-teal-600 text-surface-0 shadow-xs"
                       : "text-slate-600 hover:text-ink-950"
                   }`}
+                  onClick={() => setCodeFormat("qr")}
+                  type="button"
                 >
                   QR Code (2D)
                 </button>
@@ -176,13 +199,13 @@ function StockDetailDialogContent({
             <div className="max-w-full overflow-x-auto">
               {codeFormat === "qr" ? (
                 <QrCodeVisual
-                  className="border border-line-200"
+                  className="border border-border"
                   size={76}
                   value={scanCode}
                 />
               ) : (
                 <BarcodeVisual
-                  className="border border-line-200"
+                  className="border border-border"
                   height={40}
                   value={scanCode}
                 />
@@ -191,11 +214,7 @@ function StockDetailDialogContent({
           </div>
 
           <div className="flex items-start gap-3">
-            <FileText
-              aria-hidden="true"
-              className="mt-0.5 shrink-0 text-teal-700"
-              size={18}
-            />
+            <FileText aria-hidden="true" className="mt-0.5 shrink-0 text-teal-700" size={18} />
             <div>
               <dt className="text-xs font-medium text-slate-600">Deskripsi barang</dt>
               <dd className="mt-1 leading-6 text-ink-950">
@@ -204,27 +223,17 @@ function StockDetailDialogContent({
             </div>
           </div>
 
-          <div className="grid gap-4 rounded-[var(--radius-md)] border border-line-200 bg-canvas-50/60 p-4 sm:grid-cols-2">
+          <div className="grid gap-4 rounded-lg border border-border bg-muted/40 p-4 sm:grid-cols-2">
             <div className="flex items-start gap-2.5">
-              <Layers
-                aria-hidden="true"
-                className="mt-0.5 shrink-0 text-teal-700"
-                size={16}
-              />
+              <Layers aria-hidden="true" className="mt-0.5 shrink-0 text-teal-700" size={16} />
               <div>
                 <dt className="text-xs font-medium text-slate-600">Kategori</dt>
-                <dd className="mt-0.5 font-semibold text-ink-950">
-                  {item.category_name}
-                </dd>
+                <dd className="mt-0.5 font-semibold text-ink-950">{item.category_name}</dd>
               </div>
             </div>
 
             <div className="flex items-start gap-2.5">
-              <Ruler
-                aria-hidden="true"
-                className="mt-0.5 shrink-0 text-teal-700"
-                size={16}
-              />
+              <Ruler aria-hidden="true" className="mt-0.5 shrink-0 text-teal-700" size={16} />
               <div>
                 <dt className="text-xs font-medium text-slate-600">Satuan dasar</dt>
                 <dd className="mt-0.5 font-semibold text-ink-950 tabular-nums">
@@ -234,15 +243,9 @@ function StockDetailDialogContent({
             </div>
 
             <div className="flex items-start gap-2.5 sm:col-span-2">
-              <Calendar
-                aria-hidden="true"
-                className="mt-0.5 shrink-0 text-slate-600"
-                size={16}
-              />
+              <Calendar aria-hidden="true" className="mt-0.5 shrink-0 text-slate-600" size={16} />
               <div>
-                <dt className="text-xs font-medium text-slate-600">
-                  Terakhir diperbarui
-                </dt>
+                <dt className="text-xs font-medium text-slate-600">Terakhir diperbarui</dt>
                 <dd className="mt-0.5 font-semibold text-ink-950 tabular-nums">
                   {formatDateTime(item.updated_at)}
                 </dd>
@@ -250,7 +253,10 @@ function StockDetailDialogContent({
             </div>
           </div>
         </dl>
-
+      }
+      onClose={onClose}
+      open={true}
+      stickerSection={
         <BarcodePrintConfigurator
           badgeText="LABEL BARANG WMS"
           code={scanCode}
@@ -265,73 +271,9 @@ function StockDetailDialogContent({
           title={item.name}
           visibleOnScreen={showStickerPreview}
         />
-        </div>
-
-        <div className="no-print flex shrink-0 flex-col-reverse gap-2 border-t border-line-200 bg-surface-0 px-4 py-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end sm:px-6 sm:py-4">
-          <button
-            className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-[var(--radius-md)] border border-line-300 bg-canvas-50 px-3.5 text-sm font-semibold text-ink-950 transition hover:bg-canvas-100 sm:w-auto"
-            onClick={() => setShowStickerPreview((prev) => !prev)}
-            type="button"
-          >
-            <SlidersHorizontal aria-hidden="true" size={16} />
-            {showStickerPreview ? "Tutup Pratinjau Ukuran" : "Atur Ukuran & Pratinjau"}
-          </button>
-          <button
-            className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-[var(--radius-md)] border border-line-500 bg-surface-0 px-3.5 text-sm font-semibold text-ink-950 transition hover:bg-canvas-50 sm:w-auto"
-            onClick={handlePrintSticker}
-            type="button"
-          >
-            <Printer aria-hidden="true" size={16} />
-            Cetak Label Barcode
-          </button>
-          {canManage && (
-            <>
-              <button
-                className={`inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-[var(--radius-md)] border px-3.5 text-sm font-semibold transition sm:w-auto ${
-                  item.is_active
-                    ? "border-red-600/40 bg-surface-0 text-red-700 hover:bg-red-100"
-                    : "border-teal-600/40 bg-surface-0 text-teal-700 hover:bg-teal-100"
-                }`}
-                onClick={() => {
-                  onClose();
-                  onToggleStatus(item);
-                }}
-                type="button"
-              >
-                {item.is_active ? (
-                  <>
-                    <PowerOff aria-hidden="true" size={16} />
-                    Nonaktifkan
-                  </>
-                ) : (
-                  <>
-                    <RotateCcw aria-hidden="true" size={16} />
-                    Aktifkan kembali
-                  </>
-                )}
-              </button>
-              <button
-                className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-[var(--radius-md)] bg-teal-600 px-4 text-sm font-semibold text-surface-0 transition hover:bg-teal-700 sm:w-auto"
-                onClick={() => {
-                  onClose();
-                  onEdit(item);
-                }}
-                type="button"
-              >
-                <Edit3 aria-hidden="true" size={16} />
-                Ubah barang
-              </button>
-            </>
-          )}
-          <button
-            className="inline-flex min-h-11 w-full items-center justify-center rounded-[var(--radius-md)] border border-line-500 bg-surface-0 px-4 text-sm font-semibold text-ink-950 transition hover:bg-canvas-50 sm:w-auto"
-            onClick={onClose}
-            type="button"
-          >
-            Tutup
-          </button>
-        </div>
-      </div>
-    </div>
+      }
+      title={item.name}
+      titleId="stock-detail-title"
+    />
   );
 }

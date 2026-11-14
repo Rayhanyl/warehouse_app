@@ -1,8 +1,12 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { useState } from "react";
+import { StockDetailDialog } from "@/features/master-data/stocks/components/StockDetailDialog";
+import { StorageLocationDetailDialog } from "@/features/master-data/storage-locations/components/StorageLocationDetailDialog";
+import { WarehouseDetailDialog } from "@/features/master-data/warehouses/components/WarehouseDetailDialog";
 import { BarcodePrintConfigurator } from "./BarcodePrintConfigurator";
 import { BarcodeStickerSheet } from "./BarcodeVisual";
 import {
+  BARCODE_LABEL_PRESETS,
   type BarcodeFormat,
   type BarcodePrintConfig,
   createConfigFromPreset,
@@ -113,9 +117,28 @@ describe("Tahap 16: Fleksibilitas Ukuran Cetak QR Code dan Barcode", () => {
     const cards = container.querySelectorAll("article.print-sticker-card");
     expect(cards).toHaveLength(6);
     expect((cards[0] as HTMLElement).style.width).toBe("63.5mm");
+    expect((cards[0] as HTMLElement).style.height).toBe("33.9mm");
     expect((cards[0] as HTMLElement).style.padding).toBe("3mm");
     expect(screen.getAllByLabelText("Visual QR code JKT-RAK-A1")).toHaveLength(6);
     expect(container.textContent).not.toMatch(/[—–]/);
+  });
+
+  it("memastikan kalibrasi grid preset A4 muat di halaman 210x297mm tanpa luber ke halaman berikutnya", () => {
+    const a4Presets = BARCODE_LABEL_PRESETS.filter((preset) => preset.paperMode === "a4");
+    expect(a4Presets.length).toBeGreaterThanOrEqual(2);
+
+    for (const preset of a4Presets) {
+      const totalWidthMm =
+        preset.columns * preset.widthMm +
+        (preset.columns - 1) * preset.gapMm +
+        preset.pageMarginMm * 2;
+      const totalHeightMm =
+        preset.rows * preset.heightMm +
+        (preset.rows - 1) * preset.gapMm +
+        preset.pageMarginMm * 2;
+      expect(totalWidthMm).toBeLessThanOrEqual(210);
+      expect(totalHeightMm).toBeLessThanOrEqual(297);
+    }
   });
 
   it("memungkinkan pemilihan preset, edit ukuran kustom, ganti posisi, validasi error, dan trigger cetak pada BarcodePrintConfigurator", () => {
@@ -151,5 +174,113 @@ describe("Tahap 16: Fleksibilitas Ukuran Cetak QR Code dan Barcode", () => {
     expect(printBtn).not.toBeDisabled();
     fireEvent.click(printBtn);
     expect(printSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it("mengisolasi lembar cetak stiker terdedikasi dari konten halaman <main>, overlay, header, metadata, dan footer modal detail", () => {
+    const { unmount } = render(
+      <div id="root">
+        <main>
+          <h1>Halaman Latar Belakang Barang</h1>
+        </main>
+        <StockDetailDialog
+          canManage={false}
+          item={{
+            id: 10,
+            sku: "ELK-ESP32-01",
+            barcode: "2000000000107",
+            name: "Microcontroller ESP32-S3",
+            description: "Board MCU",
+            category_id: 1,
+            category_name: "Elektronik",
+            uom_id: 1,
+            uom_code: "PCS",
+            uom_name: "Pieces",
+            allow_decimal: false,
+            is_active: true,
+            created_by: 1,
+            created_at: "2026-11-10T08:00:00Z",
+            updated_at: "2026-11-14T08:00:00Z",
+          }}
+          onClose={vi.fn()}
+          onEdit={vi.fn()}
+          onToggleStatus={vi.fn()}
+        />
+      </div>,
+    );
+
+    expect(document.body).toHaveClass("wms-sticker-print-mode");
+    const dialog = screen.getByRole("dialog", { name: "Microcontroller ESP32-S3" });
+    expect(dialog).toHaveAttribute("data-sticker-print-dialog", "true");
+    // Portal shadcn Dialog berada di luar #root sehingga #root bisa disembunyikan utuh saat cetak
+    expect(dialog.closest("#root")).toBeNull();
+
+    const metadata = dialog.querySelector('[data-slot="sticker-dialog-metadata"]');
+    expect(metadata).not.toBeNull();
+    expect(metadata).toHaveClass("no-print");
+
+    const header = dialog.querySelector('[data-slot="dialog-header"]');
+    const footer = dialog.querySelector('[data-slot="dialog-footer"]');
+    expect(header).toHaveClass("no-print");
+    expect(footer).toHaveClass("no-print");
+
+    const stickerSheet = dialog.querySelector('[data-slot="barcode-sticker-sheet"]');
+    expect(stickerSheet).not.toBeNull();
+    expect(stickerSheet).toHaveClass("printable-sticker-sheet");
+    expect(stickerSheet).not.toHaveClass("no-print");
+    expect(stickerSheet?.closest(".no-print")).toBeNull();
+
+    unmount();
+    expect(document.body).not.toHaveClass("wms-sticker-print-mode");
+
+    const locView = render(
+      <StorageLocationDetailDialog
+        canManage={false}
+        location={{
+          id: "3",
+          warehouse_id: "1",
+          warehouse_code: "WH-JKT",
+          warehouse_name: "Gudang Pusat Jakarta",
+          code: "RAK-A01",
+          name: "Rak Utama A01",
+          is_active: true,
+          created_by: "1",
+          created_at: "2026-11-10T08:00:00Z",
+          updated_at: "2026-11-14T08:00:00Z",
+        }}
+        onClose={vi.fn()}
+        onEdit={vi.fn()}
+      />,
+    );
+    expect(document.body).toHaveClass("wms-sticker-print-mode");
+    expect(
+      screen.getByRole("dialog", { name: "Rak Utama A01" }),
+    ).toHaveAttribute("data-sticker-print-dialog", "true");
+    locView.unmount();
+
+    const whView = render(
+      <WarehouseDetailDialog
+        canManage={false}
+        onClose={vi.fn()}
+        onEdit={vi.fn()}
+        onToggleStatus={vi.fn()}
+        warehouse={{
+          id: 1,
+          code: "WH-JKT",
+          name: "Gudang Pusat Jakarta",
+          address: "Jl. Industri No. 1",
+          allow_negative_stock: false,
+          is_active: true,
+          created_by: 1,
+          created_at: "2026-11-10T08:00:00Z",
+          updated_at: "2026-11-14T08:00:00Z",
+        }}
+      />,
+    );
+    expect(document.body).toHaveClass("wms-sticker-print-mode");
+    expect(
+      screen.getByRole("dialog", { name: "Gudang Pusat Jakarta" }),
+    ).toHaveAttribute("data-sticker-print-dialog", "true");
+    whView.unmount();
+    expect(document.body).not.toHaveClass("wms-sticker-print-mode");
   });
 });

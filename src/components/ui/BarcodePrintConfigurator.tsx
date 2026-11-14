@@ -90,8 +90,8 @@ export function BarcodePrintConfigurator({
       presetId: "custom",
       paperMode: nextMode,
       columns: nextMode === "a4" ? Math.max(2, config.columns || 3) : 1,
-      pageMarginMm: nextMode === "a4" ? config.pageMarginMm || 8 : 0,
-      gapMm: nextMode === "a4" ? config.gapMm || 2 : 0,
+      pageMarginMm: nextMode === "a4" ? config.pageMarginMm || 5 : 0,
+      gapMm: nextMode === "a4" ? config.gapMm || 1.5 : 0,
       copies: nextMode === "a4" && config.copies === 1 ? 12 : config.copies,
     });
   }
