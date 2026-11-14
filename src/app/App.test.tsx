@@ -140,6 +140,14 @@ describe("AppShell, Sidebar, DashboardPage, & ProfilePage", () => {
       is_active: true,
       permissions: ["items:read", "warehouses:read"],
       warehouse_ids: [1, 2],
+      has_all_warehouse_access: false,
+      warehouses: [
+        { id: 1, code: "WH-JKT", name: "Gudang Pusat Jakarta", is_active: true },
+        { id: 2, code: "WH-SBY", name: "Gudang Surabaya", is_active: true },
+      ],
+      last_login_at: "2026-11-14T08:30:00Z",
+      created_at: "2026-10-01T01:00:00Z",
+      updated_at: "2026-11-10T05:00:00Z",
     });
   });
 
@@ -236,6 +244,14 @@ describe("AppShell, Sidebar, DashboardPage, & ProfilePage", () => {
       screen.getByText("Belum ada menu yang tersedia untuk peran akun Anda."),
     ).toBeInTheDocument();
     expect(screen.getByRole("heading", { level: 1, name: "Profil" })).toBeInTheDocument();
+    expect(screen.getByText("#1")).toBeInTheDocument();
+    expect(screen.getByText("Aktif")).toBeInTheDocument();
+    expect(screen.getByText("WH-JKT - Gudang Pusat Jakarta")).toBeInTheDocument();
+    expect(screen.getByText("WH-SBY - Gudang Surabaya")).toBeInTheDocument();
+    expect(screen.getByText("2 permission")).toBeInTheDocument();
+    expect(screen.getByText("Barang (SKU)")).toBeInTheDocument();
+    expect(screen.getByText("items:read")).toBeInTheDocument();
+    expect(screen.getByText("warehouses:read")).toBeInTheDocument();
 
     const toggleCurrentBtn = screen.getByRole("button", {
       name: "Tampilkan kata sandi saat ini",
@@ -244,6 +260,47 @@ describe("AppShell, Sidebar, DashboardPage, & ProfilePage", () => {
     expect(
       screen.getByRole("button", { name: "Sembunyikan kata sandi saat ini" }),
     ).toHaveAttribute("aria-pressed", "true");
+  });
+
+  it("menampilkan label Akses Seluruh Gudang dan info akun lengkap untuk Super Admin di ProfilePage", () => {
+    useAuthStore.getState().setAuthenticated("token-super", {
+      id: 99,
+      username: "superadmin",
+      email: "super@wms.local",
+      full_name: "Super Admin WMS",
+      role_id: 1,
+      role_name: "Super Admin",
+      is_active: true,
+      permissions: ["user:manage", "po:create", "po:issue"],
+      warehouse_ids: [],
+      has_all_warehouse_access: true,
+      warehouses: [],
+      last_login_at: null,
+      created_at: "2026-10-01T01:00:00Z",
+      updated_at: "2026-11-12T04:00:00Z",
+    });
+
+    const queryClient = new QueryClient();
+    queryClient.setQueryData(menuQueryKey, []);
+
+    const { container } = render(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter initialEntries={["/profile"]}>
+          <Routes>
+            <Route element={<AppShell />}>
+              <Route path="/profile" element={<ProfilePage />} />
+            </Route>
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+
+    expect(container.textContent).not.toMatch(/[—–]/);
+    expect(screen.getByText("#99")).toBeInTheDocument();
+    expect(screen.getByText("Belum pernah login")).toBeInTheDocument();
+    expect(screen.getByText("Akses Seluruh Gudang")).toBeInTheDocument();
+    expect(screen.getByText("3 permission")).toBeInTheDocument();
+    expect(screen.getByText("Purchase Order (PO)")).toBeInTheDocument();
   });
 });
 

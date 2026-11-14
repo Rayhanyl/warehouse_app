@@ -9,7 +9,10 @@ import { CollapsibleFilterPanel } from "@/components/ui/CollapsibleFilterPanel";
 import { StockLookupModal } from "@/components/ui/StockLookupModal";
 import { AuditLogsPage } from "@/features/audit-logs/pages/AuditLogsPage";
 import type { AuditLog } from "@/features/audit-logs/types";
+import { AdministrationPage } from "@/features/administration/pages/AdministrationPage";
 import { useAuthStore } from "@/features/auth/store";
+import type { DashboardSummaryOut } from "@/features/dashboard/types";
+import { DashboardPage } from "@/pages/DashboardPage";
 import {
   initialSampleStockItems,
   sampleCategoryOptions,
@@ -508,5 +511,173 @@ describe("Tahap 22: Responsive Mobile (375px) & Tablet (768px) Layouting", () =>
     expect(
       screen.getByRole("dialog", { name: /Cek Stok & Posisi Rak Barang/i }),
     ).toBeInTheDocument();
+  });
+
+  it("beralih antara kartu mutasi mobile dan tabel desktop di DashboardPage serta mendukung navigasi tab SPA di StockPage dan AdministrationPage", async () => {
+    const media = createMatchMediaController(true);
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+
+    const dashboardSummary: DashboardSummaryOut = {
+      stock_summary: {
+        total_active_items: 12,
+        total_qty_on_hand: "95.0000",
+        total_qty_in_transit: "5.0000",
+        low_stock_items_count: 1,
+      },
+      pending_actions: {
+        pending_po_receipt_count: 2,
+        draft_gr_count: 1,
+        pending_transfer_ship_count: 0,
+        pending_transfer_receive_count: 1,
+        active_opname_count: 0,
+      },
+      recent_activities: [
+        {
+          id: 501,
+          movement_type: "IN_PURCHASE",
+          reference_type: "GOODS_RECEIPT",
+          reference_id: 21,
+          reference_number: "GR-202611-0021",
+          item_id: 10,
+          item_sku: "ELK-ESP32-01",
+          item_name: "Microcontroller ESP32-S3",
+          warehouse_id: 1,
+          warehouse_code: "WH-JKT",
+          warehouse_name: "Gudang Pusat Jakarta",
+          qty_change: "15.0000",
+          qty_after: "95.0000",
+          created_at: "2026-11-14T09:15:00Z",
+        },
+      ],
+      assigned_warehouses: [{ id: 1, code: "WH-JKT", name: "Gudang Pusat Jakarta" }],
+    };
+
+    vi.spyOn(apiClient, "get").mockImplementation(async (url) => {
+      if (url === "/dashboard/summary") {
+        return { data: dashboardSummary };
+      }
+      if (url === "/menus/my-menu") {
+        return { data: sampleMenus };
+      }
+      if (url === "/stock/by-location") {
+        return { data: { items: [sampleBalance], total: 1, limit: 25, offset: 0 } };
+      }
+      if (url === "/stock/by-warehouse") {
+        return { data: { items: [], total: 0, limit: 25, offset: 0 } };
+      }
+      if (url === "/users") {
+        return { data: { items: [], total: 0, limit: 25, offset: 0 } };
+      }
+      if (url === "/users/roles") {
+        return {
+          data: [
+            {
+              id: 1,
+              name: "Super Admin",
+              description: "Akses penuh",
+              permissions: ["user:manage"],
+            },
+          ],
+        };
+      }
+      if (url === "/users/permissions") {
+        return {
+          data: [
+            { id: 1, code: "user:manage", description: "Kelola pengguna dan peran" },
+          ],
+        };
+      }
+      return { data: { items: [], total: 0, limit: 25, offset: 0 } };
+    });
+
+    const dashView = render(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter initialEntries={["/dashboard"]}>
+          <DashboardPage />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText("Microcontroller ESP32-S3")).toBeInTheDocument();
+    });
+    expect(screen.queryByRole("table")).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("article", { name: "Penerimaan PO Microcontroller ESP32-S3" }),
+    ).toBeInTheDocument();
+
+    act(() => {
+      media.setMobile(false);
+    });
+    expect(screen.getByRole("table")).toBeInTheDocument();
+    dashView.unmount();
+
+    useAuthStore.getState().setAuthenticated("token-admin", {
+      id: 1,
+      username: "admin.wms",
+      email: "admin@wms.local",
+      full_name: "Admin Sistem",
+      role_id: 1,
+      role_name: "Super Admin",
+      is_active: true,
+      permissions: ["stock:read", "ledger:read", "user:manage"],
+      warehouse_ids: [1, 2],
+    });
+
+    const adminView = render(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter initialEntries={["/admin/users"]}>
+          <Routes>
+            <Route path="/admin/*" element={<AdministrationPage />} />
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+
+    const adminNav = screen.getByRole("navigation", { name: "Administrasi" });
+    const usersTab = adminNav.querySelector('a[href="/admin/users"]');
+    const rolesTab = adminNav.querySelector('a[href="/admin/roles"]');
+    expect(usersTab).toHaveAttribute("aria-current", "page");
+    expect(usersTab).toHaveClass("min-h-11");
+    expect(rolesTab).not.toBeNull();
+
+    if (rolesTab) {
+      fireEvent.click(rolesTab);
+    }
+    await waitFor(() => {
+      expect(
+        screen.getByRole("heading", { level: 1, name: "Peran dan permission" }),
+      ).toBeInTheDocument();
+    });
+    expect(rolesTab).toHaveAttribute("aria-current", "page");
+    adminView.unmount();
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter initialEntries={["/stock/by-location"]}>
+          <Routes>
+            <Route path="/stock/*" element={<StockPage />} />
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+
+    const stockNav = screen.getByRole("navigation", { name: "Tampilan stok" });
+    const locTab = stockNav.querySelector('a[href="/stock/by-location"]');
+    const whTab = stockNav.querySelector('a[href="/stock/by-warehouse"]');
+    expect(locTab).toHaveAttribute("aria-current", "page");
+    expect(locTab).toHaveClass("min-h-11");
+
+    if (whTab) {
+      fireEvent.click(whTab);
+    }
+    await waitFor(() => {
+      expect(
+        screen.getByRole("heading", { level: 1, name: "Saldo stok per gudang" }),
+      ).toBeInTheDocument();
+    });
+    expect(whTab).toHaveAttribute("aria-current", "page");
   });
 });

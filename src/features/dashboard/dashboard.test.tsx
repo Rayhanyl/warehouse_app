@@ -1,9 +1,10 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { apiClient } from "@/lib/api-client";
 import { useAuthStore } from "@/features/auth/store";
+import { useWarehouseScopeStore } from "@/stores/warehouseScopeStore";
 import { DashboardPage } from "@/pages/DashboardPage";
 import type { DashboardSummaryOut } from "./types";
 
@@ -88,10 +89,12 @@ function renderDashboard(queryClient: QueryClient) {
 }
 
 describe("AC-38 & DSH-F01: Dashboard Summary Integration", () => {
+  const originalMatchMedia = window.matchMedia;
   let queryClient: QueryClient;
 
   beforeEach(() => {
     vi.clearAllMocks();
+    useWarehouseScopeStore.getState().reset();
     queryClient = new QueryClient({
       defaultOptions: {
         queries: {
@@ -111,10 +114,23 @@ describe("AC-38 & DSH-F01: Dashboard Summary Integration", () => {
         permissions: ["dashboard:read"],
         is_active: true,
         warehouse_ids: [1, 2],
+        warehouses: [
+          { id: 1, code: "WH-A", name: "Gudang Utama A", is_active: true },
+          { id: 2, code: "WH-B", name: "Gudang Cabang B", is_active: true },
+        ],
       },
       accessToken: "test-token",
       status: "authenticated",
       restoreError: null,
+    });
+  });
+
+  afterEach(() => {
+    useWarehouseScopeStore.getState().reset();
+    Object.defineProperty(window, "matchMedia", {
+      configurable: true,
+      writable: true,
+      value: originalMatchMedia,
     });
   });
 
@@ -276,5 +292,54 @@ describe("AC-38 & DSH-F01: Dashboard Summary Integration", () => {
 
     // formatDecimal fallback ke "0"
     expect(screen.getAllByText("0").length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("merender aktivitas mutasi sebagai kartu ringkas di viewport mobile serta tersambung dengan filter gudang aktif Top Bar", async () => {
+    Object.defineProperty(window, "matchMedia", {
+      configurable: true,
+      writable: true,
+      value: vi.fn().mockImplementation((query: string): MediaQueryList => ({
+        matches: query.includes("767px"),
+        media: query,
+        onchange: null,
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        dispatchEvent: () => true,
+      })),
+    });
+
+    act(() => {
+      useWarehouseScopeStore.getState().setSelectedWarehouseId(1);
+    });
+
+    vi.mocked(apiClient.get).mockImplementation((async (url: string) => {
+      if (url === "/dashboard/summary") {
+        return { data: mockSummaryData };
+      }
+      if (url === "/menus/my-menu") {
+        return { data: [] };
+      }
+      return { data: null };
+    }) as typeof apiClient.get);
+
+    const { container } = renderDashboard(queryClient);
+
+    await waitFor(() => {
+      expect(screen.getByText("Barang Uji Penerimaan")).toBeInTheDocument();
+    });
+
+    expect(apiClient.get).toHaveBeenCalledWith("/dashboard/summary", {
+      params: { warehouse_id: 1 },
+    });
+    expect(screen.getByText("Filter aktif: WH-A - Gudang Utama A")).toBeInTheDocument();
+    expect(screen.queryByRole("table")).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("article", { name: "Penerimaan PO Barang Uji Penerimaan" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("11 antrean")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /PO Siap Diterima/i })).toHaveClass("min-h-12");
+    expect(container.textContent).not.toMatch(/[—–]/);
   });
 });

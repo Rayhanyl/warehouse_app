@@ -12,4 +12,9 @@ export {
   type ResponsiveColumn,
   type ResponsiveDataViewProps,
 } from "@/components/shared/ResponsiveDataView";
+export {
+  RouteTabNav,
+  type RouteTabItem,
+  type RouteTabNavProps,
+} from "@/components/shared/RouteTabNav";
 export { StatusBadge, type StatusBadgeProps } from "@/components/shared/StatusBadge";

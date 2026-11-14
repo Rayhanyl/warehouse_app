@@ -1,8 +1,10 @@
 import { FormEvent, useState } from "react";
 import { ChevronLeft, ChevronRight, Edit3, Plus, Search, ShieldCheck, UserPlus } from "lucide-react";
+import { useLocation } from "react-router-dom";
 import { toast } from "sonner";
 import { z } from "zod";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { RouteTabNav } from "@/components/shared/RouteTabNav";
 import { CollapsibleFilterPanel } from "@/components/ui/CollapsibleFilterPanel";
 import { useIsMobile } from "@/hooks/useIsMobile";
 import { usePermission } from "@/hooks/usePermission";
@@ -118,7 +120,7 @@ const menuInitial: MenuParams = { limit: 25, offset: 0, search: "", is_active: "
 
 export function AdministrationPage() {
   const { can } = usePermission();
-  const { pathname } = window.location;
+  const { pathname } = useLocation();
   const activeSection = pathname.includes("/document-templates")
     ? "document-templates"
     : pathname.includes("/menus")
@@ -172,7 +174,23 @@ export function AdministrationPage() {
 }
 
 function AdminNavigation({ active }: { active: string }) {
-  return <nav aria-label="Administrasi" className="mb-6 flex gap-1 overflow-x-auto border-b border-line-200">{[["/admin/users", "Pengguna"], ["/admin/roles", "Peran dan permission"], ["/admin/menus", "Menu"], ["/admin/document-templates", "Template dokumen"]].map(([path, label]) => <a className={`min-h-11 shrink-0 border-b-2 px-3 py-2 text-sm font-semibold ${active === path.slice(7).split("/")[0] ? "border-teal-600 text-teal-700" : "border-transparent text-slate-700 hover:border-line-500"}`} href={path} key={path}>{label}</a>)}</nav>;
+  const sections = [
+    ["/admin/users", "users", "Pengguna"],
+    ["/admin/roles", "roles", "Peran dan permission"],
+    ["/admin/menus", "menus", "Menu"],
+    ["/admin/document-templates", "document-templates", "Template dokumen"],
+  ] as const;
+
+  return (
+    <RouteTabNav
+      ariaLabel="Administrasi"
+      items={sections.map(([path, key, label]) => ({
+        to: path,
+        label,
+        active: active === key,
+      }))}
+    />
+  );
 }
 
 function UsersPanel({ query, params, onParamsChange, onEdit }: { query: ReturnType<typeof useAdminUsers>; params: UserParams; onParamsChange: (params: UserParams) => void; onEdit: (user: AdminUser) => void }) {

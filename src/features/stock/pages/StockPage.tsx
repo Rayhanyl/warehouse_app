@@ -1,7 +1,8 @@
 import { FormEvent, useState } from "react";
 import { RotateCcw, ScanBarcode, Search } from "lucide-react";
-import { Link, useLocation } from "react-router-dom";
+import { useLocation } from "react-router-dom";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { RouteTabNav } from "@/components/shared/RouteTabNav";
 import { CollapsibleFilterPanel } from "@/components/ui/CollapsibleFilterPanel";
 import { StockLookupModal } from "@/components/ui/StockLookupModal";
 import { useIsMobile } from "@/hooks/useIsMobile";
@@ -246,20 +247,17 @@ function StockNavigation({ activePath }: { activePath: string }) {
     ...(canReadLedger ? [["/stock/ledger", "Buku besar"] as [string, string]] : []),
   ];
   return (
-    <nav aria-label="Tampilan stok" className="mb-6 flex gap-1 overflow-x-auto border-b border-line-200">
-      {links.map(([path, label]) => {
-        const isCurrent = activePath === path || (activePath === "/stock" && path === "/stock/by-location");
-        return (
-          <Link
-            className={`min-h-11 shrink-0 border-b-2 px-3 py-2 text-sm font-semibold ${isCurrent ? "border-teal-600 text-teal-700" : "border-transparent text-slate-700 hover:border-line-500 hover:text-ink-950"}`}
-            key={path}
-            to={path}
-          >
-            {label}
-          </Link>
-        );
-      })}
-    </nav>
+    <RouteTabNav
+      ariaLabel="Tampilan stok"
+      items={links.map(([path, label]) => ({
+        to: path,
+        label,
+        active:
+          activePath === path ||
+          (activePath === "/stock" && path === "/stock/by-location") ||
+          (activePath === "/stock/warehouse" && path === "/stock/by-warehouse"),
+      }))}
+    />
   );
 }
 
