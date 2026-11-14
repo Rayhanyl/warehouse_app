@@ -96,12 +96,13 @@ describe("AuditLogsPage (Tahap 14)", () => {
       },
     });
 
-    renderAuditLogsPage();
+    const { container } = renderAuditLogsPage();
 
     expect(await screen.findByText("103.10.20.30")).toBeInTheDocument();
     expect(screen.getByText("103.10.20.31")).toBeInTheDocument();
     expect(screen.getByText("Berhasil")).toBeInTheDocument();
     expect(screen.getByText("Gagal")).toBeInTheDocument();
+    expect(container.textContent).not.toMatch(/[—–]/);
 
     // Uji buka modal detail untuk baris pertama (diff viewer old vs new values)
     const detailButtons = screen.getAllByRole("button", { name: /Detail/i });
@@ -148,5 +149,79 @@ describe("AuditLogsPage (Tahap 14)", () => {
       const params = lastCall?.[1]?.params as URLSearchParams | undefined;
       expect(params?.get("status")).toBe("FAILED");
     });
+  });
+
+  it("mendukung filter kategori aktivitas dan toggle log teknis historis tanpa em-dash", async () => {
+    const getSpy = vi.spyOn(apiClient, "get").mockResolvedValue({
+      data: {
+        items: [
+          ...sampleLogs,
+          {
+            id: 103,
+            user_id: null,
+            username: null,
+            action: "ITEM_CREATED",
+            entity_type: "items",
+            entity_id: null,
+            old_values: { notes: undefined },
+            new_values: { sku: "SKU-NEW-1" },
+            status: "SUCCESS",
+            details: null,
+            ip_address: null,
+            user_agent: null,
+            request_id: null,
+            created_at: "2026-11-14T10:00:00Z",
+          },
+        ],
+        total: 3,
+        limit: 20,
+        offset: 0,
+      },
+    });
+
+    const { container } = renderAuditLogsPage();
+    expect(await screen.findByText("ITEM_CREATED")).toBeInTheDocument();
+    expect(container.textContent).not.toMatch(/[—–]/);
+
+    // Default query tidak mengirimkan include_technical=true maupun category
+    const initialParams = getSpy.mock.calls[0]?.[1]?.params as URLSearchParams | undefined;
+    expect(initialParams?.get("include_technical")).toBeNull();
+    expect(initialParams?.get("category")).toBeNull();
+
+    // Klik tab kategori "Aktivitas Bisnis & Data"
+    const bizTab = screen.getByRole("tab", { name: "Aktivitas Bisnis & Data" });
+    fireEvent.mouseDown(bizTab, { button: 0 });
+    fireEvent.click(bizTab);
+
+    await waitFor(() => {
+      const lastParams = getSpy.mock.calls.at(-1)?.[1]?.params as URLSearchParams | undefined;
+      expect(lastParams?.get("category")).toBe("business");
+    });
+
+    // Klik tab kategori "Autentikasi & Keamanan"
+    const secTab = screen.getByRole("tab", { name: "Autentikasi & Keamanan" });
+    fireEvent.mouseDown(secTab, { button: 0 });
+    fireEvent.click(secTab);
+
+    await waitFor(() => {
+      const lastParams = getSpy.mock.calls.at(-1)?.[1]?.params as URLSearchParams | undefined;
+      expect(lastParams?.get("category")).toBe("security");
+    });
+
+    // Aktifkan checkbox log teknis historis & terapkan filter
+    fireEvent.click(
+      screen.getByLabelText(/Sertakan log teknis historis/i),
+    );
+    fireEvent.click(screen.getByRole("button", { name: /Terapkan filter/i }));
+
+    await waitFor(() => {
+      const lastParams = getSpy.mock.calls.at(-1)?.[1]?.params as URLSearchParams | undefined;
+      expect(lastParams?.get("include_technical")).toBe("true");
+    });
+
+    // Buka detail baris ITEM_CREATED yang memiliki nilai null/undefined -> bebas em-dash
+    fireEvent.click(screen.getAllByRole("button", { name: /Detail/i })[2]);
+    expect(await screen.findByText("Detail Audit Log #103")).toBeInTheDocument();
+    expect(document.body.textContent).not.toMatch(/[—–]/);
   });
 });

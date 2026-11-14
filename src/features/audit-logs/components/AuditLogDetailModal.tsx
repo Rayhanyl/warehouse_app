@@ -16,7 +16,7 @@ function formatDateTime(value: string): string {
 
 function formatCellValue(value: unknown): string {
   if (value === undefined) {
-    return "—";
+    return "-";
   }
   if (value === null) {
     return "null";
@@ -284,7 +284,7 @@ export function AuditLogDetailModal({ log, onClose }: AuditLogDetailModalProps) 
                               : "text-slate-600"
                           }`}
                         >
-                          {row.hasOld ? formatCellValue(row.oldVal) : "—"}
+                          {row.hasOld ? formatCellValue(row.oldVal) : "-"}
                         </td>
                         <td
                           className={`px-3 py-2.5 break-all font-mono ${
@@ -293,7 +293,7 @@ export function AuditLogDetailModal({ log, onClose }: AuditLogDetailModalProps) 
                               : "text-slate-700"
                           }`}
                         >
-                          {row.hasNew ? formatCellValue(row.newVal) : "—"}
+                          {row.hasNew ? formatCellValue(row.newVal) : "-"}
                         </td>
                       </tr>
                     ))}

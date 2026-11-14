@@ -21,9 +21,13 @@ export interface AuditLog {
 
 export type AuditLogPage = Paginated<AuditLog>;
 
+export type AuditLogCategory = "" | "business" | "security" | "failed";
+
 export interface AuditLogFilters {
   search: string;
   status: "" | AuditLogStatus;
+  category: AuditLogCategory;
+  include_technical: boolean;
   action: string;
   entity_type: string;
   date_from: string;
