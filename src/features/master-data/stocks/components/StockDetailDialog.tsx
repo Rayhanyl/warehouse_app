@@ -9,10 +9,16 @@ import {
   Printer,
   RotateCcw,
   Ruler,
+  SlidersHorizontal,
   X,
 } from "lucide-react";
 import { toast } from "sonner";
-import { BarcodeStickerSheet, BarcodeVisual } from "@/components/ui/BarcodeVisual";
+import { BarcodePrintConfigurator } from "@/components/ui/BarcodePrintConfigurator";
+import { BarcodeVisual, QrCodeVisual } from "@/components/ui/BarcodeVisual";
+import {
+  type BarcodePrintConfig,
+  createConfigFromPreset,
+} from "@/components/ui/barcode-print-presets";
 import type { StockItem } from "../types";
 
 interface StockDetailDialogProps {
@@ -32,21 +38,28 @@ function formatDateTime(value: string) {
 
 export function StockDetailDialog({
   item,
+  ...rest
+}: StockDetailDialogProps) {
+  if (!item) {
+    return null;
+  }
+  return <StockDetailDialogContent key={item.id} item={item} {...rest} />;
+}
+
+function StockDetailDialogContent({
+  item,
   canManage,
   onClose,
   onEdit,
   onToggleStatus,
-}: StockDetailDialogProps) {
+}: Omit<StockDetailDialogProps, "item"> & { item: StockItem }) {
   const [showStickerPreview, setShowStickerPreview] = useState(false);
+  const [codeFormat, setCodeFormat] = useState<"barcode" | "qr">("barcode");
+  const [printConfig, setPrintConfig] = useState<BarcodePrintConfig>(() =>
+    createConfigFromPreset("50x30"),
+  );
 
   useEffect(() => {
-    setShowStickerPreview(false);
-  }, [item?.id]);
-
-  useEffect(() => {
-    if (!item) {
-      return;
-    }
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape") {
         onClose();
@@ -54,11 +67,7 @@ export function StockDetailDialog({
     }
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [item, onClose]);
-
-  if (!item) {
-    return null;
-  }
+  }, [onClose]);
 
   const scanCode = item.barcode || item.sku;
 
@@ -125,21 +134,58 @@ export function StockDetailDialog({
         <dl className="no-print mt-5 space-y-4 text-sm">
           <div className="flex flex-col items-start justify-between gap-3 rounded-[var(--radius-md)] border border-line-200 bg-canvas-50/70 p-3.5 sm:flex-row sm:items-center">
             <div>
-              <dt className="text-xs font-semibold text-ink-950">
-                Visual Barcode Pemindaian
-              </dt>
+              <div className="flex flex-wrap items-center gap-2">
+                <dt className="text-xs font-semibold text-ink-950">
+                  Visual Barcode Pemindaian
+                </dt>
+                <span className="rounded bg-teal-100 px-1.5 py-0.5 text-[10px] font-bold text-teal-800">
+                  {codeFormat === "qr" ? "QR Code 2D" : "1D Code-128 / EAN-13"}
+                </span>
+              </div>
               <dd className="mt-0.5 text-xs text-slate-600">
                 {item.barcode
-                  ? "Standar EAN-13 / Code-128 siap pindai"
-                  : "Menggunakan kode SKU sebagai barcode"}
+                  ? "Standar EAN-13 / Code-128 / QR siap pindai"
+                  : "Menggunakan kode SKU sebagai identitas cetak"}
               </dd>
+              <div className="mt-2 inline-flex items-center gap-1 rounded-[var(--radius-sm)] border border-line-300 bg-surface-0 p-0.5 text-xs">
+                <button
+                  type="button"
+                  onClick={() => setCodeFormat("barcode")}
+                  className={`rounded px-2.5 py-0.5 font-semibold transition ${
+                    codeFormat === "barcode"
+                      ? "bg-teal-600 text-surface-0 shadow-sm"
+                      : "text-slate-600 hover:text-ink-950"
+                  }`}
+                >
+                  Barcode (1D)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCodeFormat("qr")}
+                  className={`rounded px-2.5 py-0.5 font-semibold transition ${
+                    codeFormat === "qr"
+                      ? "bg-teal-600 text-surface-0 shadow-sm"
+                      : "text-slate-600 hover:text-ink-950"
+                  }`}
+                >
+                  QR Code (2D)
+                </button>
+              </div>
             </div>
             <div className="max-w-full overflow-x-auto">
-              <BarcodeVisual
-                className="border border-line-200"
-                height={40}
-                value={scanCode}
-              />
+              {codeFormat === "qr" ? (
+                <QrCodeVisual
+                  className="border border-line-200"
+                  size={76}
+                  value={scanCode}
+                />
+              ) : (
+                <BarcodeVisual
+                  className="border border-line-200"
+                  height={40}
+                  value={scanCode}
+                />
+              )}
             </div>
           </div>
 
@@ -204,16 +250,30 @@ export function StockDetailDialog({
           </div>
         </dl>
 
-        <BarcodeStickerSheet
+        <BarcodePrintConfigurator
           badgeText="LABEL BARANG WMS"
           code={scanCode}
+          config={printConfig}
+          defaultPresetId="50x30"
+          format={codeFormat}
           metaLabel={`${item.uom_code} · ${item.category_name}`}
+          onConfigChange={setPrintConfig}
+          onFormatChange={setCodeFormat}
+          onPrint={handlePrintSticker}
           secondaryCode={item.sku}
           title={item.name}
           visibleOnScreen={showStickerPreview}
         />
 
         <div className="no-print mt-6 flex flex-wrap items-center justify-end gap-2 border-t border-line-200 pt-4">
+          <button
+            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-[var(--radius-md)] border border-line-300 bg-canvas-50 px-3.5 text-sm font-semibold text-ink-950 transition hover:bg-canvas-100"
+            onClick={() => setShowStickerPreview((prev) => !prev)}
+            type="button"
+          >
+            <SlidersHorizontal aria-hidden="true" size={16} />
+            {showStickerPreview ? "Tutup Pratinjau Ukuran" : "Atur Ukuran & Pratinjau"}
+          </button>
           <button
             className="inline-flex min-h-11 items-center justify-center gap-2 rounded-[var(--radius-md)] border border-line-500 bg-surface-0 px-3.5 text-sm font-semibold text-ink-950 transition hover:bg-canvas-50"
             onClick={handlePrintSticker}

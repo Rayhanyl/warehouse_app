@@ -8,10 +8,16 @@ import {
   Printer,
   RotateCcw,
   ShieldAlert,
+  SlidersHorizontal,
   X,
 } from "lucide-react";
 import { toast } from "sonner";
-import { BarcodeStickerSheet, BarcodeVisual, QrCodeVisual } from "@/components/ui/BarcodeVisual";
+import { BarcodePrintConfigurator } from "@/components/ui/BarcodePrintConfigurator";
+import { BarcodeVisual, QrCodeVisual } from "@/components/ui/BarcodeVisual";
+import {
+  type BarcodePrintConfig,
+  createConfigFromPreset,
+} from "@/components/ui/barcode-print-presets";
 import type { WarehouseRecord } from "../types";
 
 interface WarehouseDetailDialogProps {
@@ -31,23 +37,36 @@ function formatDateTime(value: string) {
 
 export function WarehouseDetailDialog({
   warehouse,
+  ...rest
+}: WarehouseDetailDialogProps) {
+  if (!warehouse) {
+    return null;
+  }
+  return (
+    <WarehouseDetailDialogContent
+      key={warehouse.id}
+      warehouse={warehouse}
+      {...rest}
+    />
+  );
+}
+
+function WarehouseDetailDialogContent({
+  warehouse,
   canManage,
   onClose,
   onEdit,
   onToggleStatus,
-}: WarehouseDetailDialogProps) {
+}: Omit<WarehouseDetailDialogProps, "warehouse"> & {
+  warehouse: WarehouseRecord;
+}) {
   const [showStickerPreview, setShowStickerPreview] = useState(false);
   const [codeFormat, setCodeFormat] = useState<"qr" | "barcode">("qr");
+  const [printConfig, setPrintConfig] = useState<BarcodePrintConfig>(() =>
+    createConfigFromPreset("100x50"),
+  );
 
   useEffect(() => {
-    setShowStickerPreview(false);
-    setCodeFormat("qr");
-  }, [warehouse?.id]);
-
-  useEffect(() => {
-    if (!warehouse) {
-      return;
-    }
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape") {
         onClose();
@@ -55,11 +74,7 @@ export function WarehouseDetailDialog({
     }
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [warehouse, onClose]);
-
-  if (!warehouse) {
-    return null;
-  }
+  }, [onClose]);
 
   function handlePrintWarehouseSticker() {
     toast.dismiss();
@@ -212,17 +227,30 @@ export function WarehouseDetailDialog({
           </div>
         </dl>
 
-        <BarcodeStickerSheet
+        <BarcodePrintConfigurator
           badgeText="LABEL GUDANG WMS"
           code={warehouse.code}
+          config={printConfig}
+          defaultPresetId="100x50"
           format={codeFormat}
           metaLabel={warehouse.allow_negative_stock ? "Stok Negatif: Aktif" : "Stok Negatif: Ketat"}
+          onConfigChange={setPrintConfig}
+          onFormatChange={setCodeFormat}
+          onPrint={handlePrintWarehouseSticker}
           secondaryCode={warehouse.code}
           title={warehouse.name}
           visibleOnScreen={showStickerPreview}
         />
 
         <div className="no-print mt-6 flex flex-wrap items-center justify-end gap-2 border-t border-line-200 pt-4">
+          <button
+            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-[var(--radius-md)] border border-line-300 bg-canvas-50 px-3.5 text-sm font-semibold text-ink-950 transition hover:bg-canvas-100"
+            onClick={() => setShowStickerPreview((prev) => !prev)}
+            type="button"
+          >
+            <SlidersHorizontal aria-hidden="true" size={16} />
+            {showStickerPreview ? "Tutup Pratinjau Ukuran" : "Atur Ukuran & Pratinjau"}
+          </button>
           <button
             className="inline-flex min-h-11 items-center justify-center gap-2 rounded-[var(--radius-md)] border border-line-500 bg-surface-0 px-3.5 text-sm font-semibold text-ink-950 transition hover:bg-canvas-50"
             onClick={handlePrintWarehouseSticker}

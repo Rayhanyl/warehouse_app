@@ -1,7 +1,12 @@
 import { useEffect, useState } from "react";
-import { Printer, X } from "lucide-react";
+import { Printer, SlidersHorizontal, X } from "lucide-react";
 import { toast } from "sonner";
-import { BarcodeStickerSheet, BarcodeVisual, QrCodeVisual } from "@/components/ui/BarcodeVisual";
+import { BarcodePrintConfigurator } from "@/components/ui/BarcodePrintConfigurator";
+import { BarcodeVisual, QrCodeVisual } from "@/components/ui/BarcodeVisual";
+import {
+  type BarcodePrintConfig,
+  createConfigFromPreset,
+} from "@/components/ui/barcode-print-presets";
 import type { StorageLocationRecord } from "../types";
 
 interface StorageLocationDetailDialogProps {
@@ -24,20 +29,35 @@ function formatDateTime(iso: string): string {
 
 export function StorageLocationDetailDialog({
   location,
+  ...rest
+}: StorageLocationDetailDialogProps) {
+  if (!location) {
+    return null;
+  }
+  return (
+    <StorageLocationDetailDialogContent
+      key={location.id}
+      location={location}
+      {...rest}
+    />
+  );
+}
+
+function StorageLocationDetailDialogContent({
+  location,
   canManage,
   onClose,
   onEdit,
-}: StorageLocationDetailDialogProps) {
+}: Omit<StorageLocationDetailDialogProps, "location"> & {
+  location: StorageLocationRecord;
+}) {
   const [showStickerPreview, setShowStickerPreview] = useState(false);
   const [codeFormat, setCodeFormat] = useState<"qr" | "barcode">("qr");
+  const [printConfig, setPrintConfig] = useState<BarcodePrintConfig>(() =>
+    createConfigFromPreset("70x40"),
+  );
 
   useEffect(() => {
-    setShowStickerPreview(false);
-    setCodeFormat("qr");
-  }, [location?.id]);
-
-  useEffect(() => {
-    if (!location) return;
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         onClose();
@@ -45,11 +65,7 @@ export function StorageLocationDetailDialog({
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [location, onClose]);
-
-  if (!location) {
-    return null;
-  }
+  }, [onClose]);
 
   function handlePrintRackSticker() {
     toast.dismiss();
@@ -191,11 +207,16 @@ export function StorageLocationDetailDialog({
         </dl>
 
         <div className="px-4 sm:px-6">
-          <BarcodeStickerSheet
+          <BarcodePrintConfigurator
             badgeText="LABEL LOKASI RAK"
             code={location.code}
+            config={printConfig}
+            defaultPresetId="70x40"
             format={codeFormat}
             metaLabel={`GUDANG: ${location.warehouse_code}`}
+            onConfigChange={setPrintConfig}
+            onFormatChange={setCodeFormat}
+            onPrint={handlePrintRackSticker}
             secondaryCode={location.warehouse_name}
             title={`${location.code} · ${location.name}`}
             visibleOnScreen={showStickerPreview}
@@ -203,6 +224,14 @@ export function StorageLocationDetailDialog({
         </div>
 
         <div className="no-print flex flex-wrap items-center justify-end gap-2 border-t border-slate-200 bg-slate-50 px-4 py-4 sm:px-6">
+          <button
+            type="button"
+            onClick={() => setShowStickerPreview((prev) => !prev)}
+            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-md border border-slate-300 bg-slate-100 px-3.5 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-700"
+          >
+            <SlidersHorizontal className="h-4 w-4" aria-hidden="true" />
+            {showStickerPreview ? "Tutup Pratinjau Ukuran" : "Atur Ukuran & Pratinjau"}
+          </button>
           <button
             type="button"
             onClick={handlePrintRackSticker}
