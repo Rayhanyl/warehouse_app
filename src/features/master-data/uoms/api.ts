@@ -5,7 +5,7 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api-client";
-import { extractApiErrorInfo } from "@/lib/errors";
+import { extractApiErrorInfo, extractApiFieldErrors } from "@/lib/errors";
 import type {
   Uom,
   UomCreatePayload,
@@ -179,11 +179,16 @@ export function mapUomApiError(
   }
 
   if (info.status === 422 || info.code === "VALIDATION_ERROR") {
+    const parsedFields = extractApiFieldErrors(info.details, info.message);
     return {
       message:
         info.message ||
         "Data yang dikirim belum valid. Periksa kembali kode dan nama satuan ukur.",
       requestId: info.requestId,
+      fieldErrors: {
+        code: parsedFields.code,
+        name: parsedFields.name,
+      },
     };
   }
 

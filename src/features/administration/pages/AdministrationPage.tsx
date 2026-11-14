@@ -1,8 +1,98 @@
 import { FormEvent, useState } from "react";
 import { ChevronLeft, ChevronRight, Edit3, Plus, Search, ShieldCheck, UserPlus } from "lucide-react";
 import { toast } from "sonner";
+import { z } from "zod";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { usePermission } from "@/hooks/usePermission";
+import { mapApiFormError } from "@/lib/errors";
+import {
+  CODE_REGEX,
+  EMAIL_REGEX,
+  ICON_REGEX,
+  MENU_PATH_REGEX,
+  USERNAME_REGEX,
+  validateZodSchema,
+} from "@/lib/validation";
+
+const menuFormSchema = z.object({
+  code: z
+    .string()
+    .trim()
+    .min(1, "Kode menu wajib diisi (1 sampai 50 karakter).")
+    .max(50, "Kode menu maksimal 50 karakter.")
+    .regex(
+      CODE_REGEX,
+      "Kode hanya boleh diawali huruf/angka dan berisi huruf, angka, '.', '_', '/', atau '-'.",
+    ),
+  name: z
+    .string()
+    .trim()
+    .min(1, "Nama menu wajib diisi (1 sampai 100 karakter).")
+    .max(100, "Nama menu maksimal 100 karakter."),
+  path: z
+    .string()
+    .trim()
+    .min(1, "Path menu wajib diisi.")
+    .max(150, "Path menu maksimal 150 karakter.")
+    .regex(MENU_PATH_REGEX, "Path menu harus diawali '/' dan tidak boleh mengandung spasi."),
+  icon: z
+    .string()
+    .trim()
+    .max(50, "Nama ikon maksimal 50 karakter.")
+    .refine(
+      (value) => !value || ICON_REGEX.test(value),
+      "Gunakan format kebab-case huruf kecil (mis. 'package-check').",
+    ),
+  sort_order: z
+    .number()
+    .int("Urutan menu harus berupa bilangan bulat.")
+    .min(0, "Urutan menu minimal 0.")
+    .max(10000, "Urutan menu maksimal 10.000."),
+});
+
+const userBaseSchema = {
+  full_name: z
+    .string()
+    .trim()
+    .min(1, "Nama lengkap wajib diisi (1 sampai 150 karakter).")
+    .max(150, "Nama lengkap maksimal 150 karakter."),
+  email: z
+    .string()
+    .trim()
+    .min(3, "Email wajib diisi.")
+    .max(255, "Email maksimal 255 karakter.")
+    .regex(EMAIL_REGEX, "Format alamat email belum valid."),
+  role_id: z.number().int().positive("Pilih peran pengguna yang valid."),
+};
+
+const userCreateSchema = z.object({
+  ...userBaseSchema,
+  username: z
+    .string()
+    .trim()
+    .min(3, "Username minimal 3 karakter.")
+    .max(64, "Username maksimal 64 karakter.")
+    .regex(
+      USERNAME_REGEX,
+      "Username harus diawali huruf/angka dan hanya boleh berisi huruf, angka, '.', '_', atau '-'.",
+    ),
+  password: z
+    .string()
+    .min(8, "Kata sandi minimal 8 karakter.")
+    .max(255, "Kata sandi maksimal 255 karakter.")
+    .refine((value) => value.trim().length > 0, "Kata sandi tidak boleh hanya berisi spasi."),
+});
+
+const userUpdateSchema = z.object({
+  ...userBaseSchema,
+  password: z
+    .string()
+    .max(255, "Kata sandi maksimal 255 karakter.")
+    .refine(
+      (value) => value.length === 0 || (value.length >= 8 && value.trim().length > 0),
+      "Kata sandi baru minimal 8 karakter dan tidak boleh hanya berisi spasi.",
+    ),
+});
 import {
   useAdminMenus,
   useAdminPermissions,
@@ -88,7 +178,12 @@ function RolesPanel({ roles, permissions, isLoading }: { roles: Role[]; permissi
   if (!selected) return <State text="Belum ada peran yang tersedia." />;
   const toggle = (code: string) => {
     const next = selected.permissions.includes(code) ? selected.permissions.filter((item) => item !== code) : [...selected.permissions, code];
-    void update.mutateAsync({ id: selected.id, permissions: next }).then(() => toast.success(`Permission untuk ${selected.name} diperbarui.`)).catch(() => toast.error("Permission belum dapat diperbarui."));
+    void update
+      .mutateAsync({ id: selected.id, permissions: next })
+      .then(() => toast.success(`Permission untuk ${selected.name} diperbarui.`))
+      .catch((error) => {
+        toast.error(mapApiFormError(error, "Permission belum dapat diperbarui.").formMessage);
+      });
   };
   return <div className="grid gap-6 lg:grid-cols-[260px_1fr]"><section className="rounded-[var(--radius-lg)] border border-line-200 bg-surface-0 p-3 shadow-[var(--shadow-1)]"><h2 className="px-3 py-2 text-sm font-bold">Peran</h2>{roles.map((role) => <button className={`flex min-h-11 w-full items-center justify-between rounded-[var(--radius-md)] px-3 text-left text-sm font-semibold ${role.id === selected.id ? "bg-teal-100 text-teal-700" : "hover:bg-canvas-50"}`} key={role.id} onClick={() => setSelectedId(role.id)} type="button">{role.name}<span className="text-xs">{role.permissions.length}</span></button>)}</section><section className="rounded-[var(--radius-lg)] border border-line-200 bg-surface-0 p-5 shadow-[var(--shadow-1)]"><h2 className="font-bold">{selected.name}</h2><p className="mt-1 text-sm text-slate-700">{selected.description}</p><div className="mt-5 grid gap-2 sm:grid-cols-2">{permissions.map((permission) => <label className="flex min-h-11 items-start gap-3 rounded-[var(--radius-md)] border border-line-200 p-3 text-sm" key={permission.code}><input checked={selected.permissions.includes(permission.code)} className="mt-1 size-4 accent-teal-600" disabled={update.isPending} onChange={() => toggle(permission.code)} type="checkbox" /><span><span className="block font-semibold">{permission.code}</span><span className="text-xs text-slate-600">{permission.description}</span></span></label>)}</div></section></div>;
 }
@@ -147,25 +242,39 @@ function MenuForm({
     permission_id: menu?.permission_id ? String(menu.permission_id) : "",
     is_active: menu?.is_active ?? true,
   });
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const parentOptions = menus.filter((item) => item.id !== menu?.id && item.is_active);
   const isSaving = create.isPending || update.isPending;
 
   async function submit(event: FormEvent) {
     event.preventDefault();
+    setSubmitError(null);
+    const parsedSort = form.sort_order.trim() === "" ? Number.NaN : Number(form.sort_order);
+    const parsed = validateZodSchema(menuFormSchema, {
+      code: form.code,
+      name: form.name,
+      path: form.path,
+      icon: form.icon,
+      sort_order: parsedSort,
+    });
+    if (!parsed.ok) {
+      setFieldErrors(parsed.fieldErrors);
+      setSubmitError(parsed.firstError);
+      return;
+    }
+
+    setFieldErrors({});
     const payload = {
-      code: form.code.trim(),
-      name: form.name.trim(),
-      path: form.path.trim(),
-      icon: form.icon.trim() || null,
+      code: parsed.data.code,
+      name: parsed.data.name,
+      path: parsed.data.path,
+      icon: parsed.data.icon || null,
       parent_id: form.parent_id ? Number(form.parent_id) : null,
-      sort_order: Number(form.sort_order),
+      sort_order: parsed.data.sort_order,
       permission_id: form.permission_id ? Number(form.permission_id) : null,
       is_active: form.is_active,
     };
-    if (!payload.code || !payload.name || !payload.path.startsWith("/") || !Number.isInteger(payload.sort_order)) {
-      toast.error("Periksa kode, nama, path, dan urutan menu.");
-      return;
-    }
     try {
       if (menu) {
         await update.mutateAsync({
@@ -181,12 +290,15 @@ function MenuForm({
       }
       toast.success(menu ? "Menu diperbarui." : "Menu dibuat.");
       onClose();
-    } catch {
-      toast.error("Perubahan menu belum dapat disimpan.");
+    } catch (error) {
+      const mapped = mapApiFormError(error, "Perubahan menu belum dapat disimpan.");
+      setFieldErrors(mapped.fieldErrors);
+      setSubmitError(mapped.formMessage);
+      toast.error(mapped.formMessage);
     }
   }
 
-  return <div className="fixed inset-0 z-50 grid place-items-center bg-ink-950/60 p-4" role="dialog" aria-modal="true" aria-labelledby="admin-menu-form-title"><form className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-[var(--radius-lg)] bg-surface-0 p-5 shadow-[var(--shadow-2)] sm:p-6" onSubmit={(event) => void submit(event)}><h2 className="text-lg font-bold" id="admin-menu-form-title">{menu ? "Ubah menu" : "Tambah menu"}</h2><p className="mt-1 text-sm text-slate-700">Atur identitas, hierarki, permission, dan status menu navigasi.</p><div className="mt-5 grid gap-4 sm:grid-cols-2"><Input label="Kode menu" disabled={Boolean(menu)} value={form.code} onChange={(value) => setForm({ ...form, code: value })} /><Input label="Nama menu" value={form.name} onChange={(value) => setForm({ ...form, name: value })} /><Input label="Path" value={form.path} onChange={(value) => setForm({ ...form, path: value })} /><Input label="Ikon (opsional)" value={form.icon} onChange={(value) => setForm({ ...form, icon: value })} /><label className="text-sm font-semibold">Menu induk<select className="mt-2 h-11 w-full rounded-[var(--radius-md)] border border-line-500 px-3 text-sm font-normal" onChange={(event) => setForm({ ...form, parent_id: event.target.value })} value={form.parent_id}><option value="">Root</option>{parentOptions.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label><label className="text-sm font-semibold">Permission<select className="mt-2 h-11 w-full rounded-[var(--radius-md)] border border-line-500 px-3 text-sm font-normal" disabled={isLoading} onChange={(event) => setForm({ ...form, permission_id: event.target.value })} value={form.permission_id}><option value="">Tanpa permission khusus</option>{permissions.map((permission) => <option key={permission.id} value={permission.id}>{permission.code}</option>)}</select></label><Input label="Urutan" type="number" value={form.sort_order} onChange={(value) => setForm({ ...form, sort_order: value })} /><label className="flex min-h-11 items-center gap-2 text-sm font-semibold"><input checked={form.is_active} className="size-4 accent-teal-600" onChange={(event) => setForm({ ...form, is_active: event.target.checked })} type="checkbox" />Menu aktif</label></div><div className="mt-6 flex justify-end gap-2"><button className="inline-flex min-h-11 items-center justify-center rounded-[var(--radius-md)] border border-line-500 px-4 text-sm font-semibold hover:bg-canvas-50" onClick={onClose} type="button">Batal</button><button className="inline-flex min-h-11 items-center justify-center rounded-[var(--radius-md)] bg-teal-600 px-4 text-sm font-semibold text-surface-0 hover:bg-teal-700 disabled:opacity-50" disabled={isSaving || isLoading} type="submit">{isSaving ? "Menyimpan..." : "Simpan"}</button></div></form></div>;
+  return <div className="fixed inset-0 z-50 grid place-items-center bg-ink-950/60 p-4" role="dialog" aria-modal="true" aria-labelledby="admin-menu-form-title"><form className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-[var(--radius-lg)] bg-surface-0 p-5 shadow-[var(--shadow-2)] sm:p-6" noValidate onSubmit={(event) => void submit(event)}><h2 className="text-lg font-bold" id="admin-menu-form-title">{menu ? "Ubah menu" : "Tambah menu"}</h2><p className="mt-1 text-sm text-slate-700">Atur identitas, hierarki, permission, dan status menu navigasi.</p>{submitError && <div className="mt-4 rounded-[var(--radius-md)] border border-red-600/30 bg-red-100 p-3 text-sm font-medium text-red-700" role="alert">{submitError}</div>}<div className="mt-5 grid gap-4 sm:grid-cols-2"><Input label="Kode menu" disabled={Boolean(menu)} error={fieldErrors.code} value={form.code} onChange={(value) => { setForm({ ...form, code: value }); setFieldErrors((prev) => ({ ...prev, code: "" })); }} /><Input label="Nama menu" error={fieldErrors.name} value={form.name} onChange={(value) => { setForm({ ...form, name: value }); setFieldErrors((prev) => ({ ...prev, name: "" })); }} /><Input label="Path" error={fieldErrors.path} value={form.path} onChange={(value) => { setForm({ ...form, path: value }); setFieldErrors((prev) => ({ ...prev, path: "" })); }} /><Input label="Ikon (opsional)" error={fieldErrors.icon} value={form.icon} onChange={(value) => { setForm({ ...form, icon: value }); setFieldErrors((prev) => ({ ...prev, icon: "" })); }} /><label className="text-sm font-semibold">Menu induk<select className="mt-2 h-11 w-full rounded-[var(--radius-md)] border border-line-500 px-3 text-sm font-normal" onChange={(event) => setForm({ ...form, parent_id: event.target.value })} value={form.parent_id}><option value="">Root</option>{parentOptions.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select>{fieldErrors.parent_id && <span className="mt-1 block text-xs font-medium text-red-700" role="alert">{fieldErrors.parent_id}</span>}</label><label className="text-sm font-semibold">Permission<select className="mt-2 h-11 w-full rounded-[var(--radius-md)] border border-line-500 px-3 text-sm font-normal" disabled={isLoading} onChange={(event) => setForm({ ...form, permission_id: event.target.value })} value={form.permission_id}><option value="">Tanpa permission khusus</option>{permissions.map((permission) => <option key={permission.id} value={permission.id}>{permission.code}</option>)}</select>{fieldErrors.permission_id && <span className="mt-1 block text-xs font-medium text-red-700" role="alert">{fieldErrors.permission_id}</span>}</label><Input label="Urutan" error={fieldErrors.sort_order} type="number" value={form.sort_order} onChange={(value) => { setForm({ ...form, sort_order: value }); setFieldErrors((prev) => ({ ...prev, sort_order: "" })); }} /><label className="flex min-h-11 items-center gap-2 text-sm font-semibold"><input checked={form.is_active} className="size-4 accent-teal-600" onChange={(event) => setForm({ ...form, is_active: event.target.checked })} type="checkbox" />Menu aktif</label></div><div className="mt-6 flex justify-end gap-2"><button className="inline-flex min-h-11 items-center justify-center rounded-[var(--radius-md)] border border-line-500 px-4 text-sm font-semibold hover:bg-canvas-50" onClick={onClose} type="button">Batal</button><button className="inline-flex min-h-11 items-center justify-center rounded-[var(--radius-md)] bg-teal-600 px-4 text-sm font-semibold text-surface-0 hover:bg-teal-700 disabled:opacity-50" disabled={isSaving || isLoading} type="submit">{isSaving ? "Menyimpan..." : "Simpan"}</button></div></form></div>;
 }
 
 function UserForm({
@@ -212,39 +324,89 @@ function UserForm({
   const [form, setForm] = useState({ username: user?.username ?? "", email: user?.email ?? "", password: "", full_name: user?.full_name ?? "", role_id: String(user?.role_id ?? roles[0]?.id ?? ""), is_active: user?.is_active ?? true });
   const [selectedWarehouseIds, setSelectedWarehouseIds] = useState<number[]>(user?.warehouse_ids ?? []);
   const [hasEditedWarehouses, setHasEditedWarehouses] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const assignedWarehouseIds = assignedWarehouses.data?.map((warehouse) => warehouse.warehouse_id);
   const effectiveWarehouseIds = assignedWarehouseIds && !hasEditedWarehouses ? assignedWarehouseIds : selectedWarehouseIds;
 
   function toggleWarehouse(id: number) {
     setHasEditedWarehouses(true);
+    setFieldErrors((prev) => ({ ...prev, warehouse_ids: "" }));
     setSelectedWarehouseIds((current) => current.includes(id) ? current.filter((warehouseId) => warehouseId !== id) : [...current, id]);
   }
 
   async function submit(event: FormEvent) {
     event.preventDefault();
+    setSubmitError(null);
     if (user && assignedWarehouses.isError) {
       toast.error("Penugasan gudang belum dapat dimuat. Coba lagi sebelum menyimpan.");
       return;
     }
+
+    const parsedRoleId = Number(form.role_id);
+    const schema = user ? userUpdateSchema : userCreateSchema;
+    const validationInput = user
+      ? {
+          full_name: form.full_name,
+          email: form.email,
+          role_id: Number.isFinite(parsedRoleId) ? parsedRoleId : 0,
+          password: form.password,
+        }
+      : {
+          username: form.username,
+          full_name: form.full_name,
+          email: form.email,
+          role_id: Number.isFinite(parsedRoleId) ? parsedRoleId : 0,
+          password: form.password,
+        };
+    const parsed = validateZodSchema(schema, validationInput);
+    if (!parsed.ok) {
+      setFieldErrors(parsed.fieldErrors);
+      setSubmitError(parsed.firstError);
+      return;
+    }
+    setFieldErrors({});
+
     try {
-      if (user) await update.mutateAsync({ id: user.id, payload: { email: form.email, full_name: form.full_name, role_id: Number(form.role_id), is_active: form.is_active, ...(form.password ? { password: form.password } : {}) } });
-      else {
-        await create.mutateAsync({ ...form, role_id: Number(form.role_id), warehouse_ids: effectiveWarehouseIds });
-      }
       if (user) {
+        await update.mutateAsync({
+          id: user.id,
+          payload: {
+            email: parsed.data.email,
+            full_name: parsed.data.full_name,
+            role_id: parsed.data.role_id,
+            is_active: form.is_active,
+            ...(form.password ? { password: form.password } : {}),
+          },
+        });
         await updateWarehouses.mutateAsync({ id: user.id, warehouse_ids: effectiveWarehouseIds });
+      } else {
+        await create.mutateAsync({
+          username: form.username.trim(),
+          email: parsed.data.email,
+          full_name: parsed.data.full_name,
+          password: form.password,
+          role_id: parsed.data.role_id,
+          is_active: form.is_active,
+          warehouse_ids: effectiveWarehouseIds,
+        });
       }
       toast.success(user ? "Pengguna diperbarui." : "Pengguna dibuat.");
       onClose();
-    } catch { toast.error("Perubahan pengguna belum dapat disimpan."); }
+    } catch (error) {
+      const mapped = mapApiFormError(error, "Perubahan pengguna belum dapat disimpan.");
+      setFieldErrors(mapped.fieldErrors);
+      setSubmitError(mapped.formMessage);
+      toast.error(mapped.formMessage);
+    }
   }
   const isSaving = create.isPending || update.isPending || updateWarehouses.isPending;
   const cannotSave = isSaving || warehousesLoading || warehousesError || Boolean(user && assignedWarehouses.isError);
-  return <div className="fixed inset-0 z-50 grid place-items-center bg-ink-950/60 p-4" role="dialog" aria-modal="true" aria-labelledby="admin-user-form-title"><form className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-[var(--radius-lg)] bg-surface-0 p-5 shadow-[var(--shadow-2)] sm:p-6" onSubmit={(event) => void submit(event)}><h2 className="text-lg font-bold" id="admin-user-form-title">{user ? "Ubah pengguna" : "Tambah pengguna"}</h2><div className="mt-5 grid gap-4 sm:grid-cols-2"><Input label="Nama lengkap" value={form.full_name} onChange={(value) => setForm({ ...form, full_name: value })} /><Input label="Email" type="email" value={form.email} onChange={(value) => setForm({ ...form, email: value })} /><Input label="Username" disabled={Boolean(user)} value={form.username} onChange={(value) => setForm({ ...form, username: value })} /><Input label={user ? "Kata sandi baru (opsional)" : "Kata sandi"} type="password" value={form.password} onChange={(value) => setForm({ ...form, password: value })} /><label className="text-sm font-semibold">Peran<select className="mt-2 h-11 w-full rounded-[var(--radius-md)] border border-line-500 px-3 text-sm font-normal" onChange={(event) => setForm({ ...form, role_id: event.target.value })} value={form.role_id}>{roles.map((role) => <option key={role.id} value={role.id}>{role.name}</option>)}</select></label><label className="flex min-h-11 items-center gap-2 text-sm font-semibold"><input checked={form.is_active} className="size-4 accent-teal-600" onChange={(event) => setForm({ ...form, is_active: event.target.checked })} type="checkbox" />Akun aktif</label></div><fieldset className="mt-6 rounded-[var(--radius-md)] border border-line-200 p-4"><legend className="px-1 text-sm font-bold">Penugasan gudang</legend>{assignedWarehouses.isLoading || warehousesLoading ? <p className="text-sm text-slate-600">Memuat daftar gudang...</p> : assignedWarehouses.isError ? <p className="text-sm text-red-700">Penugasan gudang belum dapat dimuat.</p> : warehousesError ? <p className="text-sm text-red-700">Daftar gudang aktif belum dapat dimuat.</p> : warehouses.length === 0 ? <p className="text-sm text-slate-600">Belum ada gudang aktif yang tersedia.</p> : <div className="grid gap-2 sm:grid-cols-2">{warehouses.map((warehouse) => <label className="flex min-h-11 items-start gap-3 rounded-[var(--radius-md)] border border-line-200 p-3 text-sm" key={warehouse.id}><input checked={effectiveWarehouseIds.includes(warehouse.id)} className="mt-1 size-4 accent-teal-600" disabled={isSaving} onChange={() => toggleWarehouse(warehouse.id)} type="checkbox" /><span><span className="block font-semibold">{warehouse.name}</span><span className="block text-xs text-slate-600">{warehouse.code}</span></span></label>)}</div>}</fieldset><div className="mt-6 flex justify-end gap-2"><button className="inline-flex min-h-11 items-center justify-center rounded-[var(--radius-md)] border border-line-500 px-4 text-sm font-semibold hover:bg-canvas-50" onClick={onClose} type="button">Batal</button><button className="inline-flex min-h-11 items-center justify-center rounded-[var(--radius-md)] bg-teal-600 px-4 text-sm font-semibold text-surface-0 hover:bg-teal-700 disabled:opacity-50" disabled={cannotSave} type="submit">{isSaving ? "Menyimpan..." : "Simpan"}</button></div></form></div>;
+  return <div className="fixed inset-0 z-50 grid place-items-center bg-ink-950/60 p-4" role="dialog" aria-modal="true" aria-labelledby="admin-user-form-title"><form className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-[var(--radius-lg)] bg-surface-0 p-5 shadow-[var(--shadow-2)] sm:p-6" noValidate onSubmit={(event) => void submit(event)}><h2 className="text-lg font-bold" id="admin-user-form-title">{user ? "Ubah pengguna" : "Tambah pengguna"}</h2>{submitError && <div className="mt-4 rounded-[var(--radius-md)] border border-red-600/30 bg-red-100 p-3 text-sm font-medium text-red-700" role="alert">{submitError}</div>}<div className="mt-5 grid gap-4 sm:grid-cols-2"><Input label="Nama lengkap" error={fieldErrors.full_name} value={form.full_name} onChange={(value) => { setForm({ ...form, full_name: value }); setFieldErrors((prev) => ({ ...prev, full_name: "" })); }} /><Input label="Email" error={fieldErrors.email} type="email" value={form.email} onChange={(value) => { setForm({ ...form, email: value }); setFieldErrors((prev) => ({ ...prev, email: "" })); }} /><Input label="Username" disabled={Boolean(user)} error={fieldErrors.username} value={form.username} onChange={(value) => { setForm({ ...form, username: value }); setFieldErrors((prev) => ({ ...prev, username: "" })); }} /><Input label={user ? "Kata sandi baru (opsional)" : "Kata sandi"} error={fieldErrors.password} type="password" value={form.password} onChange={(value) => { setForm({ ...form, password: value }); setFieldErrors((prev) => ({ ...prev, password: "" })); }} /><label className="text-sm font-semibold">Peran<select className="mt-2 h-11 w-full rounded-[var(--radius-md)] border border-line-500 px-3 text-sm font-normal" onChange={(event) => { setForm({ ...form, role_id: event.target.value }); setFieldErrors((prev) => ({ ...prev, role_id: "" })); }} value={form.role_id}>{roles.map((role) => <option key={role.id} value={role.id}>{role.name}</option>)}</select>{fieldErrors.role_id && <span className="mt-1 block text-xs font-medium text-red-700" role="alert">{fieldErrors.role_id}</span>}</label><label className="flex min-h-11 items-center gap-2 text-sm font-semibold"><input checked={form.is_active} className="size-4 accent-teal-600" onChange={(event) => setForm({ ...form, is_active: event.target.checked })} type="checkbox" />Akun aktif</label></div><fieldset className="mt-6 rounded-[var(--radius-md)] border border-line-200 p-4"><legend className="px-1 text-sm font-bold">Penugasan gudang</legend>{fieldErrors.warehouse_ids && <p className="mb-2 text-xs font-medium text-red-700" role="alert">{fieldErrors.warehouse_ids}</p>}{assignedWarehouses.isLoading || warehousesLoading ? <p className="text-sm text-slate-600">Memuat daftar gudang...</p> : assignedWarehouses.isError ? <p className="text-sm text-red-700">Penugasan gudang belum dapat dimuat.</p> : warehousesError ? <p className="text-sm text-red-700">Daftar gudang aktif belum dapat dimuat.</p> : warehouses.length === 0 ? <p className="text-sm text-slate-600">Belum ada gudang aktif yang tersedia.</p> : <div className="grid gap-2 sm:grid-cols-2">{warehouses.map((warehouse) => <label className="flex min-h-11 items-start gap-3 rounded-[var(--radius-md)] border border-line-200 p-3 text-sm" key={warehouse.id}><input checked={effectiveWarehouseIds.includes(warehouse.id)} className="mt-1 size-4 accent-teal-600" disabled={isSaving} onChange={() => toggleWarehouse(warehouse.id)} type="checkbox" /><span><span className="block font-semibold">{warehouse.name}</span><span className="block text-xs text-slate-600">{warehouse.code}</span></span></label>)}</div>}</fieldset><div className="mt-6 flex justify-end gap-2"><button className="inline-flex min-h-11 items-center justify-center rounded-[var(--radius-md)] border border-line-500 px-4 text-sm font-semibold hover:bg-canvas-50" onClick={onClose} type="button">Batal</button><button className="inline-flex min-h-11 items-center justify-center rounded-[var(--radius-md)] bg-teal-600 px-4 text-sm font-semibold text-surface-0 hover:bg-teal-700 disabled:opacity-50" disabled={cannotSave} type="submit">{isSaving ? "Menyimpan..." : "Simpan"}</button></div></form></div>;
 }
 
-function Input({ label, value, onChange, type = "text", disabled = false }: { label: string; value: string; onChange: (value: string) => void; type?: string; disabled?: boolean }) {
-  return <label className="text-sm font-semibold">{label}<input className="mt-2 h-11 w-full rounded-[var(--radius-md)] border border-line-500 px-3 text-sm font-normal disabled:bg-canvas-50" disabled={disabled} onChange={(event) => onChange(event.target.value)} required={label !== "Kata sandi baru (opsional)"} type={type} value={value} /></label>;
+function Input({ label, value, onChange, type = "text", disabled = false, error }: { label: string; value: string; onChange: (value: string) => void; type?: string; disabled?: boolean; error?: string }) {
+  return <label className="text-sm font-semibold">{label}<input aria-invalid={Boolean(error)} className={`mt-2 h-11 w-full rounded-[var(--radius-md)] border px-3 text-sm font-normal disabled:bg-canvas-50 ${error ? "border-red-600 focus:outline-none focus:ring-2 focus:ring-red-600/20" : "border-line-500"}`} disabled={disabled} onChange={(event) => onChange(event.target.value)} required={label !== "Kata sandi baru (opsional)"} type={type} value={value} />{error && <span className="mt-1 block text-xs font-medium text-red-700" role="alert">{error}</span>}</label>;
 }
 
 function DataFrame({ children, empty, text }: { children: React.ReactNode; empty: boolean; text: string }) {

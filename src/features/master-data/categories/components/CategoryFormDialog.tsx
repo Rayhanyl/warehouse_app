@@ -1,5 +1,6 @@
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { AlertCircle, Save, X } from "lucide-react";
+import { categoryFormSchema, validateZodSchema } from "../../validation";
 import type { Category, CategoryCreatePayload, CategoryUpdatePayload } from "../types";
 
 interface CategoryFormDialogProps {
@@ -68,30 +69,24 @@ export function CategoryFormDialog({
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const trimmedName = name.trim();
-    const trimmedDescription = description.trim();
-    const nextErrors: { name?: string; description?: string } = {};
-
-    if (trimmedName.length === 0) {
-      nextErrors.name = "Nama kategori wajib diisi (1 sampai 120 karakter).";
-    } else if (trimmedName.length > 120) {
-      nextErrors.name = "Nama kategori maksimal terdiri dari 120 karakter.";
-    }
-
-    if (trimmedDescription.length > 1000) {
-      nextErrors.description = "Deskripsi kategori maksimal terdiri dari 1.000 karakter.";
-    }
-
-    if (nextErrors.name || nextErrors.description) {
-      setValidationErrors(nextErrors);
+    const parsed = validateZodSchema(categoryFormSchema, {
+      name,
+      description,
+      is_active: isActive,
+    });
+    if (!parsed.ok) {
+      setValidationErrors({
+        name: parsed.fieldErrors.name,
+        description: parsed.fieldErrors.description,
+      });
       return;
     }
 
     setValidationErrors({});
     await onSubmit({
-      name: trimmedName,
-      description: trimmedDescription.length > 0 ? trimmedDescription : null,
-      is_active: isActive,
+      name: parsed.data.name,
+      description: parsed.data.description.length > 0 ? parsed.data.description : null,
+      is_active: parsed.data.is_active,
     });
   }
 

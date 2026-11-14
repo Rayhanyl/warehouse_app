@@ -1,5 +1,4 @@
 import { FormEvent, useEffect, useState } from "react";
-import Decimal from "decimal.js";
 import {
   ChevronLeft,
   ChevronRight,
@@ -14,6 +13,8 @@ import { toast } from "sonner";
 import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { usePermission } from "@/hooks/usePermission";
+import { mapApiFormError } from "@/lib/errors";
+import { validateDecimalQtyInput } from "@/lib/validation";
 import {
   mapPurchaseOrderError,
   usePurchaseOrder,
@@ -310,6 +311,7 @@ function PurchaseOrderForm({ references, isSubmitting, isReferencesLoading, isRe
   const [notes, setNotes] = useState("");
   const [lines, setLines] = useState<PurchaseOrderLinePayload[]>([]);
   const [error, setError] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const activeItems = references?.items.filter((item) => item.is_active) ?? [];
   const selectedItems = new Set(lines.map((line) => line.item_id));
   const availableItems = activeItems.filter((item) => !selectedItems.has(item.id));
@@ -319,32 +321,73 @@ function PurchaseOrderForm({ references, isSubmitting, isReferencesLoading, isRe
     if (firstItem) setLines((current) => [...current, { item_id: firstItem.id, qty_ordered: "", notes: null }]);
   }
   function updateLine(index: number, patch: Partial<PurchaseOrderLinePayload>) {
+    setFieldErrors((prev) => ({ ...prev, [`lines.${index}.qty_ordered`]: "", [`lines.${index}.item_id`]: "" }));
     setLines((current) => current.map((line, lineIndex) => lineIndex === index ? { ...line, ...patch } : line));
   }
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!supplierId || !warehouseId || !orderDate) { setError("Pemasok, gudang tujuan, dan tanggal pesanan wajib diisi."); return; }
-    if (lines.some((line) => {
+    const nextFieldErrors: Record<string, string> = {};
+    if (!supplierId) nextFieldErrors.supplier_id = "Pilih pemasok aktif.";
+    if (!warehouseId) nextFieldErrors.warehouse_id = "Pilih gudang tujuan aktif.";
+    if (!orderDate) nextFieldErrors.order_date = "Tanggal pesanan wajib diisi.";
+
+    const seenItems = new Set<number>();
+    lines.forEach((line, index) => {
       const item = activeItems.find((option) => option.id === line.item_id);
-      const quantity = line.qty_ordered;
-      if (!item || !/^\d+(\.\d{1,4})?$/.test(quantity)) return true;
-      const parsedQuantity = new Decimal(quantity);
-      if (!parsedQuantity.isPositive() || parsedQuantity.greaterThan("99999999999999.9999")) return true;
-      return item.allow_decimal === false && !parsedQuantity.isInteger();
-    })) { setError("Periksa barang dan kuantitas. Jumlah harus lebih dari nol, maksimal empat angka desimal, dan mengikuti satuan barang."); return; }
-    if (new Set(lines.map((line) => line.item_id)).size !== lines.length) { setError("Barang tidak boleh dipilih lebih dari satu kali."); return; }
+      if (!item) {
+        nextFieldErrors[`lines.${index}.item_id`] = "Pilih barang aktif.";
+      } else if (seenItems.has(line.item_id)) {
+        nextFieldErrors[`lines.${index}.item_id`] = "Barang tidak boleh dipilih lebih dari satu kali.";
+      } else {
+        seenItems.add(line.item_id);
+      }
+
+      const qtyError = validateDecimalQtyInput(line.qty_ordered, {
+        label: `Kuantitas baris ${index + 1}`,
+        allowZero: false,
+        allowDecimal: item?.allow_decimal !== false,
+      });
+      if (qtyError) {
+        nextFieldErrors[`lines.${index}.qty_ordered`] = qtyError;
+      }
+    });
+
+    const firstError = Object.values(nextFieldErrors)[0];
+    if (firstError) {
+      setFieldErrors(nextFieldErrors);
+      setError(firstError);
+      return;
+    }
+
+    setFieldErrors({});
     setError("");
-    await onSubmit({ supplier_id: Number(supplierId), warehouse_id: Number(warehouseId), order_date: orderDate, notes: notes.trim() || null, lines: lines.map((line) => ({ ...line, notes: line.notes?.trim() || null })) });
+    try {
+      await onSubmit({
+        supplier_id: Number(supplierId),
+        warehouse_id: Number(warehouseId),
+        order_date: orderDate,
+        notes: notes.trim() || null,
+        lines: lines.map((line) => ({
+          ...line,
+          qty_ordered: line.qty_ordered.trim(),
+          notes: line.notes?.trim() || null,
+        })),
+      });
+    } catch (submitErr) {
+      const mapped = mapApiFormError(submitErr, "Draft purchase order belum dapat dibuat.");
+      setFieldErrors(mapped.fieldErrors);
+      setError(mapped.formMessage);
+    }
   }
   return <section aria-label="Formulir purchase order" className="rounded-[var(--radius-lg)] border border-line-200 bg-surface-0 p-5 shadow-[var(--shadow-1)]">
       {isReferencesLoading && <p className="mt-4 rounded-[var(--radius-md)] bg-canvas-50 p-3 text-sm text-slate-700" role="status">Memuat daftar pemasok, gudang, dan barang...</p>}
       {isReferencesError && <p className="mt-4 rounded-[var(--radius-md)] border border-red-200 bg-red-50 p-3 text-sm text-red-900" role="alert">Daftar pemasok, gudang, dan barang belum dapat dimuat. <button className="ml-1 font-semibold underline" onClick={onRetryReferences} type="button">Coba lagi</button></p>}
       {error && <p className="mt-4 rounded-[var(--radius-md)] border border-red-600/30 bg-red-100 p-3 text-sm text-red-900" role="alert">{error}</p>}
-      <form className="mt-5 space-y-5" onSubmit={(event) => void submit(event)}>
+      <form className="mt-5 space-y-5" noValidate onSubmit={(event) => void submit(event)}>
         <section aria-label="Informasi pesanan" className="grid gap-4 rounded-[var(--radius-md)] bg-canvas-50 p-4 sm:grid-cols-2 xl:grid-cols-3">
-          <SelectField label="Pemasok" required value={supplierId} options={references?.suppliers ?? []} onChange={setSupplierId} />
-          <SelectField label="Gudang tujuan" required value={warehouseId} options={references?.warehouses ?? []} onChange={setWarehouseId} />
-          <label className="text-sm font-semibold text-ink-950">Tanggal pesanan<input className="mt-2 h-11 w-full rounded-[var(--radius-md)] border border-line-500 bg-surface-0 px-3 text-sm text-ink-950 focus:border-teal-600 focus:outline-none focus:ring-2 focus:ring-teal-600/20" onChange={(event) => setOrderDate(event.target.value)} required type="date" value={orderDate} /></label>
+          <SelectField label="Pemasok" error={fieldErrors.supplier_id} required value={supplierId} options={references?.suppliers ?? []} onChange={(val) => { setSupplierId(val); setFieldErrors((prev) => ({ ...prev, supplier_id: "" })); }} />
+          <SelectField label="Gudang tujuan" error={fieldErrors.warehouse_id} required value={warehouseId} options={references?.warehouses ?? []} onChange={(val) => { setWarehouseId(val); setFieldErrors((prev) => ({ ...prev, warehouse_id: "" })); }} />
+          <label className="text-sm font-semibold text-ink-950">Tanggal pesanan<input aria-invalid={Boolean(fieldErrors.order_date)} className={`mt-2 h-11 w-full rounded-[var(--radius-md)] border bg-surface-0 px-3 text-sm text-ink-950 focus:outline-none focus:ring-2 ${fieldErrors.order_date ? "border-red-600 focus:ring-red-600/20" : "border-line-500 focus:border-teal-600 focus:ring-teal-600/20"}`} onChange={(event) => { setOrderDate(event.target.value); setFieldErrors((prev) => ({ ...prev, order_date: "" })); }} required type="date" value={orderDate} />{fieldErrors.order_date && <span className="mt-1 block text-xs font-medium text-red-700" role="alert">{fieldErrors.order_date}</span>}</label>
         </section>
 
         <section aria-labelledby="po-lines-title" className="space-y-3">
@@ -353,12 +396,15 @@ function PurchaseOrderForm({ references, isSubmitting, isReferencesLoading, isRe
             {lines.map((line, index) => {
               const selectedItem = activeItems.find((item) => item.id === line.item_id);
               const itemOptions = activeItems.filter((item) => item.id === line.item_id || !lines.some((other, otherIndex) => otherIndex !== index && other.item_id === item.id));
+              const lineItemError = fieldErrors[`lines.${index}.item_id`];
+              const lineQtyError = fieldErrors[`lines.${index}.qty_ordered`];
               return <div aria-label={`Barang pesanan ${index + 1}`} className="rounded-[var(--radius-md)] border border-line-200 p-4" key={`${line.item_id}-${index}`} role="group">
                 <div className="grid items-end gap-4 sm:grid-cols-[minmax(0,1fr)_minmax(10rem,0.45fr)_auto]">
-                  <label className="text-sm font-semibold text-ink-950">Barang {index + 1}<select className="mt-2 h-11 w-full rounded-[var(--radius-md)] border border-line-500 bg-surface-0 px-3 text-sm font-normal text-ink-950 focus:border-teal-600 focus:outline-none focus:ring-2 focus:ring-teal-600/20" onChange={(event) => updateLine(index, { item_id: Number(event.target.value) })} value={line.item_id}>{itemOptions.map((item) => <option key={item.id} value={item.id}>{item.sku ?? item.code} · {item.name}</option>)}</select></label>
-                  <label className="text-sm font-semibold text-ink-950">Kuantitas{selectedItem?.uom_code && <span className="font-normal text-slate-600"> ({selectedItem.uom_code})</span>}<input aria-label={`Kuantitas baris ${index + 1}${selectedItem?.uom_code ? ` dalam ${selectedItem.uom_code}` : ""}`} className="mt-2 h-11 w-full rounded-[var(--radius-md)] border border-line-500 bg-surface-0 px-3 text-sm tabular-nums text-ink-950 focus:border-teal-600 focus:outline-none focus:ring-2 focus:ring-teal-600/20" inputMode="decimal" maxLength={20} onChange={(event) => updateLine(index, { qty_ordered: event.target.value.replace(",", ".") })} placeholder={selectedItem?.allow_decimal === false ? "Bilangan bulat" : "0.0000"} type="text" value={line.qty_ordered} /></label>
+                  <label className="text-sm font-semibold text-ink-950">Barang {index + 1}<select aria-invalid={Boolean(lineItemError)} className={`mt-2 h-11 w-full rounded-[var(--radius-md)] border bg-surface-0 px-3 text-sm font-normal text-ink-950 focus:outline-none focus:ring-2 ${lineItemError ? "border-red-600 focus:ring-red-600/20" : "border-line-500 focus:border-teal-600 focus:ring-teal-600/20"}`} onChange={(event) => updateLine(index, { item_id: Number(event.target.value) })} value={line.item_id}>{itemOptions.map((item) => <option key={item.id} value={item.id}>{item.sku ?? item.code} · {item.name}</option>)}</select></label>
+                  <label className="text-sm font-semibold text-ink-950">Kuantitas{selectedItem?.uom_code && <span className="font-normal text-slate-600"> ({selectedItem.uom_code})</span>}<input aria-invalid={Boolean(lineQtyError)} aria-label={`Kuantitas baris ${index + 1}${selectedItem?.uom_code ? ` dalam ${selectedItem.uom_code}` : ""}`} className={`mt-2 h-11 w-full rounded-[var(--radius-md)] border bg-surface-0 px-3 text-sm tabular-nums text-ink-950 focus:outline-none focus:ring-2 ${lineQtyError ? "border-red-600 focus:ring-red-600/20" : "border-line-500 focus:border-teal-600 focus:ring-teal-600/20"}`} inputMode="decimal" maxLength={20} onChange={(event) => updateLine(index, { qty_ordered: event.target.value.replace(",", ".") })} placeholder={selectedItem?.allow_decimal === false ? "Bilangan bulat" : "0.0000"} type="text" value={line.qty_ordered} /></label>
                   <button aria-label={`Hapus barang pesanan ${index + 1}`} className="mb-0 grid min-h-11 min-w-11 place-items-center rounded-[var(--radius-md)] border border-red-300 text-red-700 hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-700" onClick={() => setLines((current) => current.filter((_, lineIndex) => lineIndex !== index))} type="button"><X aria-hidden="true" size={17} /></button>
                 </div>
+                {(lineItemError || lineQtyError) && <p className="mt-2 text-xs font-medium text-red-700" role="alert">{lineItemError || lineQtyError}</p>}
                 {selectedItem && <p className="mt-2 text-xs text-slate-600">{selectedItem.allow_decimal === false ? "Gunakan bilangan bulat." : "Kuantitas dapat memakai hingga empat angka desimal."}</p>}
                 <label className="mt-3 block text-sm font-semibold text-ink-950">Catatan barang <span className="font-normal text-slate-600">(opsional)</span><input className="mt-2 h-11 w-full rounded-[var(--radius-md)] border border-line-500 bg-surface-0 px-3 text-sm font-normal text-ink-950 focus:border-teal-600 focus:outline-none focus:ring-2 focus:ring-teal-600/20" maxLength={500} onChange={(event) => updateLine(index, { notes: event.target.value })} placeholder="Instruksi khusus untuk barang ini" value={line.notes ?? ""} /></label>
               </div>;
@@ -378,8 +424,8 @@ function PurchaseOrderForm({ references, isSubmitting, isReferencesLoading, isRe
   </section>;
 }
 
-function SelectField({ label, value, options, onChange, required }: { label: string; value: string; options: ReferenceOption[]; onChange: (value: string) => void; required?: boolean }) {
-  return <label className="text-sm font-semibold text-ink-950">{label}<select className="mt-2 h-11 w-full rounded-[var(--radius-md)] border border-line-500 px-3 text-sm font-normal text-ink-950 focus:border-teal-600 focus:outline-none focus:ring-2 focus:ring-teal-600/20" onChange={(event) => onChange(event.target.value)} required={required} value={value}><option value="">Pilih {label.toLocaleLowerCase()}</option>{options.filter((option) => option.is_active).map((option) => <option key={option.id} value={option.id}>{option.code} · {option.name}</option>)}</select></label>;
+function SelectField({ label, value, options, onChange, required, error }: { label: string; value: string; options: ReferenceOption[]; onChange: (value: string) => void; required?: boolean; error?: string }) {
+  return <label className="text-sm font-semibold text-ink-950">{label}<select aria-invalid={Boolean(error)} className={`mt-2 h-11 w-full rounded-[var(--radius-md)] border px-3 text-sm font-normal text-ink-950 focus:outline-none focus:ring-2 ${error ? "border-red-600 focus:ring-red-600/20" : "border-line-500 focus:border-teal-600 focus:ring-teal-600/20"}`} onChange={(event) => onChange(event.target.value)} required={required} value={value}><option value="">Pilih {label.toLocaleLowerCase()}</option>{options.filter((option) => option.is_active).map((option) => <option key={option.id} value={option.id}>{option.code} · {option.name}</option>)}</select>{error && <span className="mt-1 block text-xs font-medium text-red-700" role="alert">{error}</span>}</label>;
 }
 
 function PurchaseOrderDetail({ purchaseOrder, isLoading, canIssue, canCancel, canClose, onClose, onAction }: { purchaseOrder?: PurchaseOrder; isLoading: boolean; canIssue: boolean; canCancel: boolean; canClose: boolean; onClose: () => void; onAction: (po: PurchaseOrder, action: "issue" | "cancel" | "close") => void }) {

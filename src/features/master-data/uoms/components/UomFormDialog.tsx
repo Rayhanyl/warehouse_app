@@ -1,7 +1,7 @@
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { AlertCircle, Save, X } from "lucide-react";
 import type { Uom, UomCreatePayload, UomUpdatePayload } from "../types";
-import { CODE_REGEX } from "../../validation";
+import { uomFormSchema, validateZodSchema } from "../../validation";
 
 interface UomFormDialogProps {
   isOpen: boolean;
@@ -67,37 +67,22 @@ export function UomFormDialog({
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const trimmedCode = code.trim();
-    const trimmedName = name.trim();
-    const nextErrors: { code?: string; name?: string } = {};
-
-    if (trimmedCode.length === 0) {
-      nextErrors.code = "Kode satuan ukur wajib diisi (1 sampai 20 karakter).";
-    } else if (!CODE_REGEX.test(trimmedCode)) {
-      nextErrors.code =
-        "Kode hanya boleh berisi huruf, angka, titik, garis bawah, garis miring, atau tanda hubung.";
-    } else if (trimmedCode.length > 20) {
-      nextErrors.code = "Kode satuan ukur maksimal terdiri dari 20 karakter.";
-    }
-
-    if (trimmedName.length === 0) {
-      nextErrors.name = "Nama satuan ukur wajib diisi (1 sampai 60 karakter).";
-    } else if (trimmedName.length > 60) {
-      nextErrors.name = "Nama satuan ukur maksimal terdiri dari 60 karakter.";
-    }
-
-    if (nextErrors.code || nextErrors.name) {
-      setValidationErrors(nextErrors);
+    const parsed = validateZodSchema(uomFormSchema, {
+      code,
+      name,
+      allow_decimal: allowDecimal,
+      is_active: isActive,
+    });
+    if (!parsed.ok) {
+      setValidationErrors({
+        code: parsed.fieldErrors.code,
+        name: parsed.fieldErrors.name,
+      });
       return;
     }
 
     setValidationErrors({});
-    await onSubmit({
-      code: trimmedCode,
-      name: trimmedName,
-      allow_decimal: allowDecimal,
-      is_active: isActive,
-    });
+    await onSubmit(parsed.data);
   }
 
   return (

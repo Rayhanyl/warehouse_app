@@ -5,7 +5,7 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api-client";
-import { extractApiErrorInfo } from "@/lib/errors";
+import { extractApiErrorInfo, extractApiFieldErrors } from "@/lib/errors";
 import type {
   Category,
   CategoryCreatePayload,
@@ -171,11 +171,16 @@ export function mapCategoryApiError(
   }
 
   if (info.status === 422 || info.code === "VALIDATION_ERROR") {
+    const parsedFields = extractApiFieldErrors(info.details, info.message);
     return {
       message:
         info.message ||
         "Data yang dikirim belum valid. Periksa kembali nama dan deskripsi kategori.",
       requestId: info.requestId,
+      fieldErrors: {
+        name: parsedFields.name,
+        description: parsedFields.description,
+      },
     };
   }
 

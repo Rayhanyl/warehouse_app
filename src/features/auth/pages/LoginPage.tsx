@@ -10,8 +10,23 @@ import {
 } from "lucide-react";
 import { FormEvent, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
+import { z } from "zod";
 import { login } from "@/features/auth/api";
-import { extractApiErrorInfo } from "@/lib/errors";
+import { extractApiErrorInfo, mapApiFormError } from "@/lib/errors";
+import { validateZodSchema } from "@/lib/validation";
+
+const loginFormSchema = z.object({
+  username: z
+    .string()
+    .trim()
+    .min(1, "Nama pengguna wajib diisi (1 sampai 64 karakter).")
+    .max(64, "Nama pengguna wajib diisi (1 sampai 64 karakter)."),
+  password: z
+    .string()
+    .min(1, "Kata sandi wajib diisi (1 sampai 255 karakter).")
+    .max(255, "Kata sandi wajib diisi (1 sampai 255 karakter).")
+    .refine((value) => value.trim().length > 0, "Kata sandi tidak boleh hanya berisi spasi."),
+});
 
 interface ApiErrorPayload {
   error?: {
@@ -103,20 +118,12 @@ export function LoginPage() {
     setErrorRequestId(null);
     setFieldErrors({});
 
-    const trimmedUsername = username.trim();
-    const nextFieldErrors: { username?: string; password?: string } = {};
-
-    if (trimmedUsername.length < 1 || trimmedUsername.length > 64) {
-      nextFieldErrors.username =
-        "Nama pengguna wajib diisi (1 sampai 64 karakter).";
-    }
-    if (password.length < 1 || password.length > 255) {
-      nextFieldErrors.password =
-        "Kata sandi wajib diisi (1 sampai 255 karakter).";
-    }
-
-    if (nextFieldErrors.username || nextFieldErrors.password) {
-      setFieldErrors(nextFieldErrors);
+    const parsed = validateZodSchema(loginFormSchema, { username, password });
+    if (!parsed.ok) {
+      setFieldErrors({
+        username: parsed.fieldErrors.username,
+        password: parsed.fieldErrors.password,
+      });
       setErrorMessage("Periksa kembali isian form yang belum sesuai.");
       return;
     }
@@ -124,7 +131,7 @@ export function LoginPage() {
     setIsSubmitting(true);
 
     try {
-      await login({ username: trimmedUsername, password });
+      await login({ username: parsed.data.username, password: parsed.data.password });
       const destination = resolvePostLoginPath(location.state);
       navigate(destination, { replace: true });
     } catch (error) {
@@ -148,8 +155,16 @@ export function LoginPage() {
         } else if (status === 401 || code === "AUTH_INVALID_CREDENTIALS") {
           setErrorMessage("Nama pengguna atau kata sandi salah.");
         } else if (status === 422 || code === "VALIDATION_ERROR") {
-          setErrorMessage(
+          const mapped = mapApiFormError(
+            error,
             "Format nama pengguna atau kata sandi tidak sesuai ketentuan.",
+          );
+          setFieldErrors({
+            username: mapped.fieldErrors.username,
+            password: mapped.fieldErrors.password,
+          });
+          setErrorMessage(
+            mapped.formMessage || "Format nama pengguna atau kata sandi tidak sesuai ketentuan.",
           );
         } else if (info.isTimeout) {
           setErrorMessage(

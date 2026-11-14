@@ -1,7 +1,7 @@
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { Save, X } from "lucide-react";
 import type { Supplier, SupplierFormPayload } from "../types";
-import { CODE_REGEX, EMAIL_REGEX, PHONE_REGEX, hasMinimumDigits } from "../../validation";
+import { supplierFormSchema, validateZodSchema } from "../../validation";
 
 interface SupplierFormDialogProps {
   isOpen: boolean;
@@ -66,17 +66,29 @@ export function SupplierFormDialog({
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const trimmedCode = code.trim();
-    const trimmedName = name.trim();
-    const trimmedEmail = email.trim();
-    const nextErrors: typeof errors = {};
+    const parsed = validateZodSchema(supplierFormSchema, {
+      code,
+      name,
+      contact_person: contactPerson,
+      phone,
+      email,
+      address,
+      is_active: isActive,
+    });
+    const nextErrors: typeof errors = parsed.ok
+      ? {}
+      : {
+          code: parsed.fieldErrors.code,
+          name: parsed.fieldErrors.name,
+          contactPerson: parsed.fieldErrors.contact_person,
+          phone: parsed.fieldErrors.phone,
+          email: parsed.fieldErrors.email,
+          address: parsed.fieldErrors.address,
+        };
 
-    if (!trimmedCode) {
-      nextErrors.code = "Kode pemasok wajib diisi (1 sampai 50 karakter).";
-    } else if (!CODE_REGEX.test(trimmedCode)) {
-      nextErrors.code =
-        "Kode hanya boleh berisi huruf, angka, titik, garis bawah, garis miring, atau tanda hubung.";
-    } else if (
+    const trimmedCode = code.trim();
+    if (
+      !nextErrors.code &&
       existingSuppliers.some(
         (supplier) =>
           supplier.code.toLowerCase() === trimmedCode.toLowerCase() &&
@@ -85,50 +97,21 @@ export function SupplierFormDialog({
     ) {
       nextErrors.code = "Kode pemasok sudah digunakan.";
     }
-    if (!trimmedName) {
-      nextErrors.name = "Nama pemasok wajib diisi (1 sampai 150 karakter).";
-    }
-    if (trimmedName.length > 150) {
-      nextErrors.name = "Nama pemasok maksimal terdiri dari 150 karakter.";
-    }
-    if (contactPerson.trim().length > 120) {
-      nextErrors.contactPerson = "Nama narahubung maksimal terdiri dari 120 karakter.";
-    }
-    const trimmedPhone = phone.trim();
-    if (
-      trimmedPhone &&
-      (!PHONE_REGEX.test(trimmedPhone) || !hasMinimumDigits(trimmedPhone, 6))
-    ) {
-      nextErrors.phone = "Nomor telepon harus berisi 6 sampai 30 karakter dan minimal 6 digit.";
-    }
-    if (trimmedEmail.length > 255 || (trimmedEmail && !EMAIL_REGEX.test(trimmedEmail))) {
-      nextErrors.email = "Format alamat email belum valid.";
-    }
-    if (address.trim().length > 1000) {
-      nextErrors.address = "Alamat maksimal terdiri dari 1.000 karakter.";
-    }
 
-    if (
-      nextErrors.code ||
-      nextErrors.name ||
-      nextErrors.contactPerson ||
-      nextErrors.phone ||
-      nextErrors.email ||
-      nextErrors.address
-    ) {
+    if (!parsed.ok || nextErrors.code) {
       setErrors(nextErrors);
       return;
     }
 
     setErrors({});
     onSubmit({
-      code: trimmedCode,
-      name: trimmedName,
-      contact_person: contactPerson.trim() || null,
-      phone: trimmedPhone || null,
-      email: trimmedEmail ? trimmedEmail.toLowerCase() : null,
-      address: address.trim() || null,
-      is_active: isActive,
+      code: parsed.data.code,
+      name: parsed.data.name,
+      contact_person: parsed.data.contact_person || null,
+      phone: parsed.data.phone || null,
+      email: parsed.data.email ? parsed.data.email.toLowerCase() : null,
+      address: parsed.data.address || null,
+      is_active: parsed.data.is_active,
     });
   }
 

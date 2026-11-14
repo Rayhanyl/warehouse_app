@@ -6,6 +6,8 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { BarcodeScanBar } from "@/components/ui/BarcodeScannerModal";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { usePermission } from "@/hooks/usePermission";
+import { mapApiFormError } from "@/lib/errors";
+import { validateDecimalQtyInput } from "@/lib/validation";
 import { mapOpnameError, useOpname, useOpnameMutation, useOpnameReferences, useOpnames } from "../api";
 import type { StockOpname, StockOpnameCountLinePayload, StockOpnameCreatePayload, StockOpnameStatus, StockOpnameUpdatePayload } from "../types";
 
@@ -112,11 +114,27 @@ function OpnameForm({ initialOpname, references, isSubmitting, onClose, onSubmit
     event.preventDefault();
     if (!warehouse) { setError("Gudang wajib dipilih."); return; }
     setError("");
-    if (initialOpname) await onUpdate(initialOpname.id, { location_id: location ? Number(location) : null, clear_location: !location, notes: notes.trim() || null });
-    else await onSubmit({ warehouse_id: Number(warehouse), location_id: location ? Number(location) : null, notes: notes.trim() || null });
+    try {
+      if (initialOpname) {
+        await onUpdate(initialOpname.id, {
+          location_id: location ? Number(location) : null,
+          clear_location: !location,
+          notes: notes.trim() || null,
+        });
+      } else {
+        await onSubmit({
+          warehouse_id: Number(warehouse),
+          location_id: location ? Number(location) : null,
+          notes: notes.trim() || null,
+        });
+      }
+    } catch (submitErr) {
+      const mapped = mapApiFormError(submitErr, "Sesi stock opname belum dapat disimpan.");
+      setError(mapped.formMessage);
+    }
   }
 
-  return <Dialog title={initialOpname ? "Ubah draft stock opname" : "Buat sesi stock opname"} onClose={onClose}><form className="space-y-4" onSubmit={(event) => void submit(event)}>
+  return <Dialog title={initialOpname ? "Ubah draft stock opname" : "Buat sesi stock opname"} onClose={onClose}><form className="space-y-4" noValidate onSubmit={(event) => void submit(event)}>
     <label className="block text-sm font-semibold text-ink-950">Gudang<select className={fieldClass} disabled={Boolean(initialOpname)} onChange={(event) => { setWarehouse(event.target.value); setLocation(""); }} required value={warehouse}><option value="">Pilih gudang</option>{references?.warehouses.map((entry) => <option key={entry.id} value={entry.id}>{entry.code} · {entry.name}</option>)}</select></label>
     <label className="block text-sm font-semibold text-ink-950">Lokasi (opsional)<select className={fieldClass} onChange={(event) => setLocation(event.target.value)} value={location}><option value="">Seluruh lokasi aktif</option>{locations.map((entry) => <option key={entry.id} value={entry.id}>{entry.code} · {entry.name}</option>)}</select></label>
     <label className="block text-sm font-semibold text-ink-950">Catatan<input className={fieldClass} maxLength={1000} onChange={(event) => setNotes(event.target.value)} value={notes} /></label>
@@ -195,9 +213,7 @@ function OpnameDetail({ opname, isLoading, isError, can, onRetry, onEdit, onClos
   }
 
   function validQuantity(value: string, allowDecimal: boolean) {
-    if (!/^\d+(\.\d{1,4})?$/.test(value)) return false;
-    const quantity = new Decimal(value);
-    return quantity.lte("99999999999999.9999") && (allowDecimal || quantity.isInteger());
+    return validateDecimalQtyInput(value, { allowZero: true, allowDecimal }) === null;
   }
 
   function handleScanOpnameItem(scannedCode: string) {

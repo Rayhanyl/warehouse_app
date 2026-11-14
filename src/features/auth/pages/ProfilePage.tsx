@@ -1,9 +1,11 @@
 import { FormEvent, useState } from "react";
 import { Eye, EyeOff, KeyRound, ShieldCheck, UserRound, Warehouse } from "lucide-react";
+import { z } from "zod";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { changePassword } from "@/features/auth/api";
 import { useAuthStore } from "@/features/auth/store";
-import { extractApiErrorInfo } from "@/lib/errors";
+import { mapApiFormError } from "@/lib/errors";
+import { validateZodSchema } from "@/lib/validation";
 
 type PasswordField = "current" | "next" | "confirmation";
 
@@ -13,6 +15,25 @@ const initialPasswords = {
   confirmation: "",
 };
 
+const changePasswordSchema = z
+  .object({
+    current: z
+      .string()
+      .min(1, "Kata sandi saat ini wajib diisi.")
+      .max(255, "Kata sandi saat ini maksimal 255 karakter.")
+      .refine((v) => v.trim().length > 0, "Kata sandi saat ini tidak boleh hanya berisi spasi."),
+    next: z
+      .string()
+      .min(8, "Kata sandi baru minimal terdiri dari 8 karakter.")
+      .max(255, "Kata sandi baru maksimal 255 karakter.")
+      .refine((v) => v.trim().length > 0, "Kata sandi baru tidak boleh hanya berisi spasi."),
+    confirmation: z.string().min(1, "Konfirmasi kata sandi baru wajib diisi."),
+  })
+  .refine((data) => data.next === data.confirmation, {
+    path: ["confirmation"],
+    message: "Konfirmasi kata sandi belum sama.",
+  });
+
 export function ProfilePage() {
   const user = useAuthStore((state) => state.user);
   const [passwords, setPasswords] = useState(initialPasswords);
@@ -21,6 +42,7 @@ export function ProfilePage() {
     next: false,
     confirmation: false,
   });
+  const [fieldErrors, setFieldErrors] = useState<Partial<Record<PasswordField, string>>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [feedback, setFeedback] = useState<{
     type: "success" | "error";
@@ -30,6 +52,7 @@ export function ProfilePage() {
 
   function updatePassword(field: PasswordField, value: string) {
     setPasswords((current) => ({ ...current, [field]: value }));
+    setFieldErrors((current) => ({ ...current, [field]: undefined }));
     setFeedback(null);
   }
 
@@ -41,27 +64,26 @@ export function ProfilePage() {
     event.preventDefault();
     setFeedback(null);
 
-    if (passwords.next.length < 8) {
+    const parsed = validateZodSchema(changePasswordSchema, passwords);
+    if (!parsed.ok) {
+      setFieldErrors({
+        current: parsed.fieldErrors.current,
+        next: parsed.fieldErrors.next,
+        confirmation: parsed.fieldErrors.confirmation,
+      });
       setFeedback({
         type: "error",
-        message: "Kata sandi baru minimal terdiri dari 8 karakter.",
+        message: parsed.firstError,
       });
       return;
     }
 
-    if (passwords.next !== passwords.confirmation) {
-      setFeedback({
-        type: "error",
-        message: "Konfirmasi kata sandi belum sama.",
-      });
-      return;
-    }
-
+    setFieldErrors({});
     setIsSubmitting(true);
     try {
       await changePassword({
-        current_password: passwords.current,
-        new_password: passwords.next,
+        current_password: parsed.data.current,
+        new_password: parsed.data.next,
       });
       setPasswords(initialPasswords);
       setFeedback({
@@ -69,13 +91,18 @@ export function ProfilePage() {
         message: "Kata sandi berhasil diperbarui. Sesi lain telah dicabut oleh server.",
       });
     } catch (error) {
-      const info = extractApiErrorInfo(error);
+      const mapped = mapApiFormError(
+        error,
+        "Kata sandi belum dapat diperbarui. Periksa koneksi ke server.",
+        { current_password: "current", new_password: "next" },
+      );
+      setFieldErrors({
+        current: mapped.fieldErrors.current,
+        next: mapped.fieldErrors.next,
+      });
       setFeedback({
         type: "error",
-        message:
-          info.message ||
-          "Kata sandi belum dapat diperbarui. Periksa koneksi ke server.",
-        requestId: info.requestId,
+        message: mapped.formMessage,
       });
     } finally {
       setIsSubmitting(false);
@@ -165,7 +192,7 @@ export function ProfilePage() {
               </p>
             </div>
           </div>
-          <form className="mt-6 space-y-4" onSubmit={handleSubmit}>
+          <form className="mt-6 space-y-4" noValidate onSubmit={handleSubmit}>
             {(
               [
                 ["current", "Kata sandi saat ini", "Masukkan kata sandi saat ini"],
@@ -182,8 +209,13 @@ export function ProfilePage() {
                 </label>
                 <div className="relative mt-2">
                   <input
+                    aria-invalid={Boolean(fieldErrors[field])}
                     autoComplete={field === "current" ? "current-password" : "new-password"}
-                    className="h-12 w-full rounded-[var(--radius-md)] border border-line-500 bg-surface-0 px-3.5 pr-12 text-sm text-ink-950 placeholder:text-slate-600 focus:border-teal-600 focus:outline-none focus:ring-2 focus:ring-teal-600/20"
+                    className={`h-12 w-full rounded-[var(--radius-md)] border bg-surface-0 px-3.5 pr-12 text-sm text-ink-950 placeholder:text-slate-600 focus:outline-none focus:ring-2 ${
+                      fieldErrors[field]
+                        ? "border-red-600 focus:border-red-600 focus:ring-red-600/20"
+                        : "border-line-500 focus:border-teal-600 focus:ring-teal-600/20"
+                    }`}
                     id={`profile-password-${field}`}
                     minLength={field === "current" ? 1 : 8}
                     onChange={(event) => updatePassword(field, event.target.value)}
@@ -210,6 +242,11 @@ export function ProfilePage() {
                     )}
                   </button>
                 </div>
+                {fieldErrors[field] && (
+                  <p className="mt-1 text-xs font-medium text-red-700" role="alert">
+                    {fieldErrors[field]}
+                  </p>
+                )}
               </div>
             ))}
             {feedback && (

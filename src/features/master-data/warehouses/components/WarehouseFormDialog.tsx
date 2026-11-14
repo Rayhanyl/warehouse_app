@@ -1,7 +1,7 @@
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { Save, X } from "lucide-react";
 import type { WarehouseFormPayload, WarehouseRecord } from "../types";
-import { CODE_REGEX } from "../../validation";
+import { validateZodSchema, warehouseFormSchema } from "../../validation";
 
 interface WarehouseFormDialogProps {
   isOpen: boolean;
@@ -63,16 +63,24 @@ export function WarehouseFormDialog({
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const trimmedCode = code.trim();
-    const trimmedName = name.trim();
-    const nextErrors: { code?: string; name?: string; address?: string } = {};
+    const parsed = validateZodSchema(warehouseFormSchema, {
+      code,
+      name,
+      address,
+      allow_negative_stock: allowNegativeStock,
+      is_active: isActive,
+    });
+    const nextErrors: { code?: string; name?: string; address?: string } = parsed.ok
+      ? {}
+      : {
+          code: parsed.fieldErrors.code,
+          name: parsed.fieldErrors.name,
+          address: parsed.fieldErrors.address,
+        };
 
-    if (!trimmedCode) {
-      nextErrors.code = "Kode gudang wajib diisi (1 sampai 50 karakter).";
-    } else if (!CODE_REGEX.test(trimmedCode)) {
-      nextErrors.code =
-        "Kode hanya boleh berisi huruf, angka, titik, garis bawah, garis miring, atau tanda hubung.";
-    } else if (
+    const trimmedCode = code.trim();
+    if (
+      !nextErrors.code &&
       existingWarehouses.some(
         (warehouse) =>
           warehouse.code.toLowerCase() === trimmedCode.toLowerCase() &&
@@ -81,27 +89,19 @@ export function WarehouseFormDialog({
     ) {
       nextErrors.code = "Kode gudang sudah digunakan.";
     }
-    if (!trimmedName) {
-      nextErrors.name = "Nama gudang wajib diisi (1 sampai 150 karakter).";
-    } else if (trimmedName.length > 150) {
-      nextErrors.name = "Nama gudang maksimal terdiri dari 150 karakter.";
-    }
-    if (address.trim().length > 1000) {
-      nextErrors.address = "Alamat maksimal terdiri dari 1.000 karakter.";
-    }
 
-    if (nextErrors.code || nextErrors.name || nextErrors.address) {
+    if (!parsed.ok || nextErrors.code) {
       setErrors(nextErrors);
       return;
     }
 
     setErrors({});
     onSubmit({
-      code: trimmedCode,
-      name: trimmedName,
-      address: address.trim() || null,
-      allow_negative_stock: allowNegativeStock,
-      is_active: isActive,
+      code: parsed.data.code,
+      name: parsed.data.name,
+      address: parsed.data.address || null,
+      allow_negative_stock: parsed.data.allow_negative_stock,
+      is_active: parsed.data.is_active,
     });
   }
 

@@ -5,7 +5,7 @@ import type {
   StorageLocationRecord,
   StorageLocationWarehouseOption,
 } from "../types";
-import { CODE_REGEX } from "../../validation";
+import { storageLocationFormSchema, validateZodSchema } from "../../validation";
 
 interface StorageLocationFormDialogProps {
   open: boolean;
@@ -40,22 +40,22 @@ function StorageLocationFormInner({
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
 
   const validate = (): boolean => {
-    const nextErrors: FieldErrors = {};
+    const parsed = validateZodSchema(storageLocationFormSchema, {
+      warehouse_id: warehouseId,
+      code: code.trim().toUpperCase(),
+      name,
+      is_active: isActive,
+    });
+    const nextErrors: FieldErrors = parsed.ok
+      ? {}
+      : {
+          warehouse_id: parsed.fieldErrors.warehouse_id,
+          code: parsed.fieldErrors.code,
+          name: parsed.fieldErrors.name,
+        };
+
     const trimmedCode = code.trim().toUpperCase();
-    const trimmedName = name.trim();
-
-    if (!warehouseId) {
-      nextErrors.warehouse_id = "Pilih gudang induk terlebih dahulu.";
-    }
-
-    if (!trimmedCode) {
-      nextErrors.code = "Kode lokasi wajib diisi.";
-    } else if (!CODE_REGEX.test(trimmedCode)) {
-      nextErrors.code =
-        "Kode hanya boleh berisi huruf, angka, titik, garis bawah, garis miring, atau tanda hubung.";
-    } else if (trimmedCode.length > 50) {
-      nextErrors.code = "Kode lokasi maksimal 50 karakter.";
-    } else {
+    if (!nextErrors.code) {
       const duplicate = existingLocations.some(
         (item) =>
           item.warehouse_id === warehouseId &&
@@ -67,14 +67,8 @@ function StorageLocationFormInner({
       }
     }
 
-    if (!trimmedName) {
-      nextErrors.name = "Nama lokasi wajib diisi.";
-    } else if (trimmedName.length > 120) {
-      nextErrors.name = "Nama lokasi maksimal 120 karakter.";
-    }
-
     setFieldErrors(nextErrors);
-    return Object.keys(nextErrors).length === 0;
+    return !nextErrors.warehouse_id && !nextErrors.code && !nextErrors.name;
   };
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {

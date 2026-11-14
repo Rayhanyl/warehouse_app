@@ -3,7 +3,7 @@ import { Camera, Save, Sparkles, X } from "lucide-react";
 import { BarcodeScannerModal } from "@/components/ui/BarcodeScannerModal";
 import { BarcodeVisual } from "@/components/ui/BarcodeVisual";
 import type { StockFormPayload, StockItem } from "../types";
-import { CODE_REGEX } from "../../validation";
+import { itemFormSchema, validateZodSchema } from "../../validation";
 import { generateInternalBarcode } from "../utils/barcode";
 
 interface CategoryOption {
@@ -99,17 +99,30 @@ export function StockFormDialog({
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const parsed = validateZodSchema(itemFormSchema, {
+      sku,
+      barcode,
+      name,
+      description,
+      category_id: categoryId,
+      uom_id: uomId,
+      is_active: isActive,
+    });
+    const nextErrors: typeof errors = parsed.ok
+      ? {}
+      : {
+          sku: parsed.fieldErrors.sku,
+          barcode: parsed.fieldErrors.barcode,
+          name: parsed.fieldErrors.name,
+          description: parsed.fieldErrors.description,
+          category: parsed.fieldErrors.category_id,
+          uom: parsed.fieldErrors.uom_id,
+        };
+
     const trimmedSku = sku.trim();
     const trimmedBarcode = barcode.trim();
-    const trimmedName = name.trim();
-    const nextErrors: typeof errors = {};
-
-    if (!trimmedSku) {
-      nextErrors.sku = "Kode SKU wajib diisi (1 sampai 64 karakter).";
-    } else if (!CODE_REGEX.test(trimmedSku)) {
-      nextErrors.sku =
-        "SKU hanya boleh berisi huruf, angka, titik, garis bawah, garis miring, atau tanda hubung.";
-    } else if (
+    if (
+      !nextErrors.sku &&
       existingItems.some(
         (item) =>
           item.sku.toLowerCase() === trimmedSku.toLowerCase() &&
@@ -118,28 +131,17 @@ export function StockFormDialog({
     ) {
       nextErrors.sku = "SKU sudah digunakan.";
     }
-    if (trimmedBarcode) {
-      if (trimmedBarcode.length > 64 || !CODE_REGEX.test(trimmedBarcode)) {
-        nextErrors.barcode =
-          "Barcode hanya boleh berisi huruf, angka, titik, garis bawah, garis miring, atau tanda hubung (maks. 64 karakter).";
-      } else if (
-        existingItems.some(
-          (item) =>
-            item.barcode &&
-            item.barcode.toLowerCase() === trimmedBarcode.toLowerCase() &&
-            (mode === "create" || item.id !== initialItem?.id),
-        )
-      ) {
-        nextErrors.barcode = "Barcode sudah digunakan pada barang lain.";
-      }
-    }
-    if (!trimmedName) {
-      nextErrors.name = "Nama barang wajib diisi (1 sampai 200 karakter).";
-    } else if (trimmedName.length > 200) {
-      nextErrors.name = "Nama barang maksimal terdiri dari 200 karakter.";
-    }
-    if (description.trim().length > 1000) {
-      nextErrors.description = "Deskripsi barang maksimal terdiri dari 1.000 karakter.";
+    if (
+      trimmedBarcode &&
+      !nextErrors.barcode &&
+      existingItems.some(
+        (item) =>
+          item.barcode &&
+          item.barcode.toLowerCase() === trimmedBarcode.toLowerCase() &&
+          (mode === "create" || item.id !== initialItem?.id),
+      )
+    ) {
+      nextErrors.barcode = "Barcode sudah digunakan pada barang lain.";
     }
     if (!categoryId || !availableCategoryOptions.some((category) => category.id === categoryId)) {
       nextErrors.category = "Pilih kategori aktif.";
@@ -149,10 +151,9 @@ export function StockFormDialog({
     }
 
     if (
+      !parsed.ok ||
       nextErrors.sku ||
       nextErrors.barcode ||
-      nextErrors.name ||
-      nextErrors.description ||
       nextErrors.category ||
       nextErrors.uom
     ) {
@@ -168,17 +169,17 @@ export function StockFormDialog({
 
     setErrors({});
     onSubmit({
-      sku: trimmedSku,
-      barcode: trimmedBarcode || null,
-      name: trimmedName,
-      description: description.trim() || null,
+      sku: parsed.data.sku,
+      barcode: parsed.data.barcode || null,
+      name: parsed.data.name,
+      description: parsed.data.description || null,
       category_id: selectedCategory.id,
       category_name: selectedCategory.name,
       uom_id: selectedUom.id,
       uom_code: selectedUom.code,
       uom_name: selectedUom.name,
       allow_decimal: selectedUom.allow_decimal,
-      is_active: isActive,
+      is_active: parsed.data.is_active,
     });
   }
 
