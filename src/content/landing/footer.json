@@ -1,11 +1,11 @@
 {
-  "productName": "Jejakstok",
-  "descriptor": "Sistem manajemen gudang",
-  "description": "Stok terkendali, jejak terbuka hingga tingkat lokasi penyimpanan.",
-  "copyright": "Jejakstok. Seluruh hak dilindungi.",
+  "productName": "JejakStok",
+  "descriptor": "Sistem Manajemen Gudang",
+  "description": "Stok terkendali real-time, jejak audit terbuka hingga tingkat rak lorong.",
+  "copyright": "JejakStok. Seluruh hak dilindungi.",
   "loginLabel": "Masuk",
   "image": {
     "src": "/assets/image/banner.jpg",
-    "alt": "Identitas merek Jejakstok"
+    "alt": "Identitas merek JejakStok"
   }
 }

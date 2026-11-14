@@ -1,17 +1,17 @@
 {
   "eyebrow": "Alur kerja operasional",
-  "title": "Dari penerimaan sampai stock opname, dalam satu sistem.",
-  "description": "Pilih tahapan operasi untuk melihat bagaimana setiap langkah mengikat dokumen, pemindaian barcode, lokasi penyimpanan, dan saldo stok secara berurutan.",
+  "title": "Dari pemesanan sampai stock opname, terpandu dalam satu sistem.",
+  "description": "Pilih tahapan operasi untuk melihat bagaimana setiap langkah mengikat dokumen resmi, pemindai barcode/QR, alokasi rak lorong, dan saldo stok real-time.",
   "sampleBadge": "Contoh data",
   "steps": [
     {
       "number": "01",
       "label": "Terima",
-      "moduleLabel": "Purchase Orders & Goods Receipts",
+      "moduleLabel": "Purchase Order & Penerimaan Barang (GRN)",
       "documentExample": "PO-2026-0042 → GR-2026-0019",
       "statusBadge": "POSTED",
-      "outcome": "Validasi kuantitas sisa PO, cegah over-receipt, dan cetak Bukti Penerimaan Barang (GRN) ber-barcode.",
-      "description": "Catat penerimaan barang terhadap purchase order dengan pemindaian barcode cepat, impor katalog via Excel, serta cetak Bukti Penerimaan Barang (GRN) resmi.",
+      "outcome": "Validasi sisa PO otomatis, cegah kelebihan terima (over-receipt), alokasikan ke rak, dan cetak GRN sesuai template perusahaan.",
+      "description": "Catat kedatangan barang terhadap Purchase Order menggunakan pemindai barcode multifungsi, impor katalog pemasok via Excel, dan cetak Bukti Penerimaan Barang resmi.",
       "image": {
         "src": "/assets/image/receive.jpg",
         "alt": "Petugas gudang memeriksa daftar penerimaan barang di dekat tumpukan kardus"
@@ -20,24 +20,24 @@
     {
       "number": "02",
       "label": "Simpan",
-      "moduleLabel": "Warehouses, Locations & Stock",
+      "moduleLabel": "Gudang, Rak Lorong & Monitoring Stok",
       "documentExample": "Gudang Utama · RAK-A-02",
       "statusBadge": "COMPLETED",
-      "outcome": "Saldo tercatat per lokasi rak dengan dukungan cetak stiker barcode barang maupun label bibir rak (50x30 mm).",
-      "description": "Tempatkan barang ke lokasi rak spesifik, cetak label barcode untuk barang curah atau rak gudang, dan cek isi rak kapan saja lewat fitur Pindai Cek Barang / Rak.",
+      "outcome": "Saldo tercatat per rak penyimpanan lengkap dengan cetak label barcode/QR termal (40x20 hingga 100x50 mm) maupun lembar A4.",
+      "description": "Tempatkan barang ke rak lorong spesifik, buat barcode internal EAN-13 atau Code-128 untuk produk curah, cetak stiker rak, dan pantau isi rak kapan saja via Pindai Cek Stok / Rak.",
       "image": {
         "src": "/assets/image/store.jpg",
-        "alt": "Kardus barang yang tertata rapi pada rak lokasi penyimpanan gudang"
+        "alt": "Kardus barang yang tertata rapi pada rak lorong penyimpanan gudang"
       }
     },
     {
       "number": "03",
       "label": "Pindahkan",
-      "moduleLabel": "Stock Transfers",
+      "moduleLabel": "Transfer Stok & Surat Jalan",
       "documentExample": "TRF-2026-0014 · Asal ke Tujuan",
       "statusBadge": "SHIPPED",
-      "outcome": "Stok gudang asal berkurang, ditandai dalam perjalanan (in-transit), dan dilengkapi cetak Surat Jalan ber-barcode.",
-      "description": "Transfer antar-gudang melalui persetujuan, pengiriman berstatus dalam perjalanan lengkap dengan cetak Surat Jalan 3 kolom tanda tangan, dan verifikasi barcode tujuan.",
+      "outcome": "Stok gudang asal berkurang, dipantau dalam perjalanan secara real-time, lengkap dengan cetak Surat Jalan modular ber-barcode.",
+      "description": "Kirim transfer antar-rak atau antar-gudang melalui alur persetujuan dan pengawasan barang dalam perjalanan hingga verifikasi kuantitas serta selisih terima di gudang tujuan.",
       "image": {
         "src": "/assets/image/transfer.jpg",
         "alt": "Pemindahan kardus barang antar-lokasi gudang menggunakan troli palet"
@@ -46,11 +46,11 @@
     {
       "number": "04",
       "label": "Hitung",
-      "moduleLabel": "Stock Opnames",
+      "moduleLabel": "Stock Opname & Penyesuaian",
       "documentExample": "SO-2026-0008 · Lokasi Dibekukan",
       "statusBadge": "IN_PROGRESS",
-      "outcome": "Lokasi dibekukan sementara, hitung fisik dipercepat dengan scan barcode lorong rak, dan selisih diterapkan setelah disetujui.",
-      "description": "Cocokkan stok fisik dengan sistem lewat stock opname yang membekukan lokasi, mendukung scan barcode barang di rak, dan menerapkan selisih setelah disetujui.",
+      "outcome": "Rak target dibekukan sementara agar bebas gangguan mutasi, hitung fisik dipercepat via scanner barcode, dan selisih disahkan manajer.",
+      "description": "Cocokkan jumlah fisik di rak dengan catatan sistem melalui sesi opname yang mengunci lokasi sementara, mendukung pemindaian barcode barang, dan mencatat jurnal penyesuaian otomatis.",
       "image": {
         "src": "/assets/image/count.jpg",
         "alt": "Pemeriksaan dan pencocokan jumlah stok fisik pada rak penyimpanan"

@@ -261,7 +261,7 @@ describe("LandingPage", () => {
     expect(
       screen.getByRole("heading", {
         level: 1,
-        name: "Satu kendali untuk setiap pergerakan stok.",
+        name: "Kendalikan setiap rak lorong, barcode, dan mutasi stok secara real-time.",
       }),
     ).toBeInTheDocument();
 
@@ -269,13 +269,16 @@ describe("LandingPage", () => {
     expect(container.textContent).not.toMatch(/[—–]/);
 
     expect(
-      screen.getByText("Stok & inspeksi rak multi-SKU"),
+      screen.getByText("WMS Berbasis Rak Lorong"),
     ).toBeInTheDocument();
     expect(
-      screen.getByText("Pemindai & cetak label barcode"),
+      screen.getByText("Pemindai Barcode/QR Multifungsi"),
     ).toBeInTheDocument();
     expect(
-      screen.getByText("Barcode Barang & Inspeksi Rak"),
+      screen.getByText("Cetak Label & Dokumen Modular"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("Pemindai Barcode/QR & Rak Lorong"),
     ).toBeInTheDocument();
 
     expect(
@@ -341,7 +344,7 @@ describe("LandingPage", () => {
     ).toHaveAttribute("aria-expanded", "false");
 
     const ctaLoginLink = screen.getByRole("link", {
-      name: "Masuk ke Jejakstok",
+      name: "Masuk ke Ruang Kerja",
     });
     fireEvent.click(ctaLoginLink);
     expect(screen.getByText("Halaman Login Tujuan")).toBeInTheDocument();
