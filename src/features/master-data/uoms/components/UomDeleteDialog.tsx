@@ -38,7 +38,7 @@ export function UomDeleteDialog({
 
   return (
     <div
-      className="fixed inset-0 z-50 grid place-items-center bg-ink-950/55 p-4"
+      className="fixed inset-0 z-50 grid place-items-center bg-ink-950/55 p-2 sm:p-4"
       onMouseDown={() => {
         if (!isSubmitting) {
           onClose();
@@ -49,7 +49,7 @@ export function UomDeleteDialog({
         aria-describedby="uom-confirm-desc"
         aria-labelledby="uom-confirm-title"
         aria-modal="true"
-        className="w-full max-w-lg rounded-[var(--radius-lg)] border border-line-200 bg-surface-0 p-5 shadow-[var(--shadow-2)] sm:p-6"
+        className="max-h-[94dvh] w-full max-w-lg overflow-y-auto rounded-[var(--radius-lg)] border border-line-200 bg-surface-0 p-4 shadow-[var(--shadow-2)] sm:p-6"
         onMouseDown={(event) => event.stopPropagation()}
         role="alertdialog"
       >
@@ -130,9 +130,9 @@ export function UomDeleteDialog({
           </div>
         )}
 
-        <div className="mt-6 flex flex-wrap items-center justify-end gap-2 border-t border-line-200 pt-4">
+        <div className="mt-6 flex flex-col-reverse gap-2 border-t border-line-200 pt-4 sm:flex-row sm:items-center sm:justify-end">
           <button
-            className="inline-flex min-h-11 items-center justify-center rounded-[var(--radius-md)] border border-line-500 bg-surface-0 px-4 text-sm font-semibold text-ink-950 transition hover:bg-canvas-50 disabled:opacity-50"
+            className="inline-flex min-h-11 w-full items-center justify-center rounded-[var(--radius-md)] border border-line-500 bg-surface-0 px-4 text-sm font-semibold text-ink-950 transition hover:bg-canvas-50 disabled:opacity-50 sm:w-auto"
             disabled={isSubmitting}
             onClick={onClose}
             type="button"
@@ -140,7 +140,7 @@ export function UomDeleteDialog({
             Batal
           </button>
           <button
-            className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-[var(--radius-md)] px-4 text-sm font-semibold text-surface-0 transition disabled:cursor-not-allowed disabled:opacity-60 ${
+            className={`inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-[var(--radius-md)] px-4 text-sm font-semibold text-surface-0 transition disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto ${
               isDeactivating
                 ? "bg-red-600 hover:bg-red-700"
                 : "bg-teal-600 hover:bg-teal-700"

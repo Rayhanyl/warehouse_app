@@ -10,6 +10,8 @@ import {
 } from "lucide-react";
 import axios from "axios";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { CollapsibleFilterPanel } from "@/components/ui/CollapsibleFilterPanel";
+import { useIsMobile } from "@/hooks/useIsMobile";
 import { extractApiErrorInfo } from "@/lib/errors";
 import { useAuditLogs } from "../api";
 import { AuditLogDetailModal } from "../components/AuditLogDetailModal";
@@ -113,6 +115,15 @@ export function AuditLogsPage() {
   const isPermissionError =
     axios.isAxiosError(error) && error.response?.status === 403;
   const errorInfo = isError ? extractApiErrorInfo(error) : null;
+  const isMobile = useIsMobile();
+  const activeFilterCount = [
+    filters.search,
+    filters.status,
+    filters.action,
+    filters.entity_type,
+    filters.date_from,
+    filters.date_to,
+  ].filter(Boolean).length;
 
   function applyFilters(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -132,7 +143,11 @@ export function AuditLogsPage() {
         description="Telusuri aktivitas pengguna, status eksekusi, IP address, dan perubahan data sistem secara baca-saja."
         title="Audit log"
       />
-      <section className="mb-6 rounded-[var(--radius-lg)] border border-line-200 bg-surface-0 p-4 shadow-[var(--shadow-1)] sm:p-5">
+      <CollapsibleFilterPanel
+        activeCount={activeFilterCount}
+        ariaLabel="Filter audit log"
+        className="mb-6 rounded-[var(--radius-lg)] border border-line-200 bg-surface-0 p-4 shadow-[var(--shadow-1)] sm:p-5"
+      >
         <form
           className="grid gap-4 md:grid-cols-2 lg:grid-cols-3"
           onSubmit={applyFilters}
@@ -218,15 +233,15 @@ export function AuditLogsPage() {
               value={draftFilters.date_to}
             />
           </label>
-          <div className="flex flex-wrap items-end gap-2 lg:col-span-3">
+          <div className="flex flex-wrap items-end gap-2 md:col-span-2 lg:col-span-3">
             <button
-              className="inline-flex min-h-11 items-center gap-2 rounded-[var(--radius-md)] bg-teal-600 px-4 text-sm font-semibold text-surface-0 transition hover:bg-teal-700"
+              className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-[var(--radius-md)] bg-teal-600 px-4 text-sm font-semibold text-surface-0 transition hover:bg-teal-700 sm:flex-initial"
               type="submit"
             >
               <Filter aria-hidden="true" size={17} /> Terapkan filter
             </button>
             <button
-              className="inline-flex min-h-11 items-center gap-2 rounded-[var(--radius-md)] border border-line-500 bg-surface-0 px-4 text-sm font-semibold text-ink-950 transition hover:bg-canvas-50"
+              className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-[var(--radius-md)] border border-line-500 bg-surface-0 px-4 text-sm font-semibold text-ink-950 transition hover:bg-canvas-50 sm:flex-initial"
               onClick={resetFilters}
               type="button"
             >
@@ -234,7 +249,7 @@ export function AuditLogsPage() {
             </button>
           </div>
         </form>
-      </section>
+      </CollapsibleFilterPanel>
       {isLoading ? (
         <div
           className="rounded-[var(--radius-lg)] border border-line-200 bg-surface-0 p-8 text-sm text-slate-700"
@@ -273,38 +288,102 @@ export function AuditLogsPage() {
         </div>
       ) : (
         <section className="overflow-hidden rounded-[var(--radius-lg)] border border-line-200 bg-surface-0 shadow-[var(--shadow-1)]">
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[920px] text-left text-sm">
-              <caption className="sr-only">Daftar audit log</caption>
-              <thead className="bg-canvas-50 text-xs font-bold uppercase tracking-wider text-slate-700">
-                <tr>
-                  <th className="px-4 py-3">Waktu</th>
-                  <th className="px-4 py-3">Pelaku</th>
-                  <th className="px-4 py-3">IP Address</th>
-                  <th className="px-4 py-3">Aksi</th>
-                  <th className="px-4 py-3">Status</th>
-                  <th className="px-4 py-3">Entitas</th>
-                  <th className="px-4 py-3 text-right">Tindakan</th>
-                </tr>
-              </thead>
-              <tbody>
-                {data?.items.map((log) => (
-                  <AuditLogRow
-                    key={log.id}
-                    log={log}
-                    onSelect={setSelectedLog}
-                  />
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line-200 px-4 py-3 text-xs text-slate-600 tabular-nums">
+          {isMobile ? (
+            <ul aria-label="Daftar audit log" className="divide-y divide-line-200">
+              {data?.items.map((log) => {
+                const isFailed = log.status === "FAILED";
+                return (
+                  <li className="space-y-3 p-4" key={log.id}>
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <span className="inline-block rounded-full bg-canvas-50 px-2.5 py-0.5 font-mono text-xs font-semibold text-ink-950">
+                          {log.action}
+                        </span>
+                        <p className="mt-1 text-xs text-slate-600 tabular-nums">
+                          {formatDate(log.created_at)}
+                        </p>
+                      </div>
+                      <span
+                        className={`inline-flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold ${
+                          isFailed
+                            ? "bg-red-100 text-red-700"
+                            : "bg-teal-100 text-teal-700"
+                        }`}
+                      >
+                        {isFailed ? (
+                          <XCircle aria-hidden="true" size={13} />
+                        ) : (
+                          <CheckCircle2 aria-hidden="true" size={13} />
+                        )}
+                        {isFailed ? "Gagal" : "Berhasil"}
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 rounded-[var(--radius-md)] bg-canvas-50/70 p-3 text-xs">
+                      <div>
+                        <p className="text-slate-600">Pelaku</p>
+                        <p className="mt-0.5 font-semibold text-ink-950">
+                          {log.username || "Sistem"}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-slate-600">IP Address</p>
+                        <p className="mt-0.5 font-mono font-semibold text-ink-950 tabular-nums">
+                          {log.ip_address || "-"}
+                        </p>
+                      </div>
+                      <div className="col-span-2">
+                        <p className="text-slate-600">Entitas</p>
+                        <p className="mt-0.5 font-semibold text-ink-950">
+                          {log.entity_type} · ID: {log.entity_id || "—"}
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      className="inline-flex min-h-11 w-full items-center justify-center gap-1.5 rounded-[var(--radius-md)] border border-line-500 px-3 text-xs font-semibold text-teal-700 transition hover:bg-teal-50"
+                      onClick={() => setSelectedLog(log)}
+                      type="button"
+                    >
+                      <Eye aria-hidden="true" size={15} />
+                      Detail
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[920px] text-left text-sm">
+                <caption className="sr-only">Daftar audit log</caption>
+                <thead className="bg-canvas-50 text-xs font-bold uppercase tracking-wider text-slate-700">
+                  <tr>
+                    <th className="px-4 py-3">Waktu</th>
+                    <th className="px-4 py-3">Pelaku</th>
+                    <th className="px-4 py-3">IP Address</th>
+                    <th className="px-4 py-3">Aksi</th>
+                    <th className="px-4 py-3">Status</th>
+                    <th className="px-4 py-3">Entitas</th>
+                    <th className="px-4 py-3 text-right">Tindakan</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {data?.items.map((log) => (
+                    <AuditLogRow
+                      key={log.id}
+                      log={log}
+                      onSelect={setSelectedLog}
+                    />
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+          <div className="flex flex-col gap-3 border-t border-line-200 px-4 py-3 text-xs text-slate-600 tabular-nums sm:flex-row sm:items-center sm:justify-between">
             <span>
               {isFetching
                 ? "Memperbarui..."
                 : `Menampilkan ${pageStart} sampai ${pageEnd} dari ${total} catatan`}
             </span>
-            <div className="flex gap-2">
+            <div className="flex justify-end gap-2">
               <button
                 aria-label="Halaman sebelumnya"
                 className="grid min-h-11 min-w-11 place-items-center rounded-[var(--radius-md)] border border-line-200 bg-surface-0 text-ink-950 transition hover:bg-canvas-50 disabled:cursor-not-allowed disabled:opacity-45"

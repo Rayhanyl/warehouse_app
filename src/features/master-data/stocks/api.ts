@@ -1,6 +1,13 @@
 import { apiClient } from "@/lib/api-client";
 import type { Paginated } from "@/types/api";
-import type { StockImportResult, StockItem, StockStatusFilter } from "./types";
+import { mapMasterDomainError, type MasterFormSubmitError } from "../errors";
+import type {
+  StockCreatePayload,
+  StockImportResult,
+  StockItem,
+  StockStatusFilter,
+  StockUpdatePayload,
+} from "./types";
 
 export const sampleCategoryOptions = [
   { id: 1, name: "Komponen Elektronik" },
@@ -100,6 +107,68 @@ export async function fetchStockItems(
     params: toStockQueryParams(params),
   });
   return data;
+}
+
+export async function createStockItem(
+  payload: StockCreatePayload,
+): Promise<StockItem> {
+  const { data } = await apiClient.post<StockItem>("/items", {
+    sku: payload.sku.trim(),
+    barcode: payload.barcode?.trim() ? payload.barcode.trim() : null,
+    name: payload.name.trim(),
+    description: payload.description?.trim() ? payload.description.trim() : null,
+    category_id: payload.category_id,
+    uom_id: payload.uom_id,
+    is_active: payload.is_active ?? true,
+  });
+  return data;
+}
+
+export async function updateStockItem(
+  itemId: number,
+  payload: StockUpdatePayload,
+): Promise<StockItem> {
+  const body: StockUpdatePayload = {};
+  if (payload.sku !== undefined) {
+    body.sku = payload.sku.trim();
+  }
+  if (payload.barcode !== undefined) {
+    body.barcode = payload.barcode?.trim() ? payload.barcode.trim() : null;
+  }
+  if (payload.name !== undefined) {
+    body.name = payload.name.trim();
+  }
+  if (payload.description !== undefined) {
+    body.description = payload.description?.trim() ? payload.description.trim() : null;
+  }
+  if (payload.category_id !== undefined) {
+    body.category_id = payload.category_id;
+  }
+  if (payload.uom_id !== undefined) {
+    body.uom_id = payload.uom_id;
+  }
+  if (payload.is_active !== undefined) {
+    body.is_active = payload.is_active;
+  }
+
+  const { data } = await apiClient.patch<StockItem>(`/items/${itemId}`, body);
+  return data;
+}
+
+export function mapStockApiError(
+  error: unknown,
+  fallbackMessage: string,
+): MasterFormSubmitError {
+  return mapMasterDomainError(error, fallbackMessage, {
+    entityLabel: "Barang (SKU)",
+    duplicateField: "sku",
+    fieldAliases: {
+      category_id: "category",
+      uom_id: "uom",
+    },
+    inUseMessage:
+      "Barang (SKU) tidak dapat dinonaktifkan karena masih digunakan pada transaksi atau memiliki saldo stok aktif.",
+  });
 }
 
 export async function downloadStockItemsImportTemplate(): Promise<Blob> {

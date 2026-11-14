@@ -19,3 +19,19 @@ export interface WarehouseFormPayload {
   allow_negative_stock: boolean;
   is_active: boolean;
 }
+
+export interface WarehouseCreatePayload {
+  code: string;
+  name: string;
+  address?: string | null;
+  allow_negative_stock?: boolean;
+  is_active?: boolean;
+}
+
+export interface WarehouseUpdatePayload {
+  code?: string;
+  name?: string;
+  address?: string | null;
+  allow_negative_stock?: boolean;
+  is_active?: boolean;
+}

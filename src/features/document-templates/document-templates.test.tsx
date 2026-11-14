@@ -213,6 +213,10 @@ describe("Modular Document Templates (Tahap 17)", () => {
     );
 
     const poLink = await screen.findByRole("button", { name: "PO-202611-0088" });
+    expect(poLink.closest(".no-print")).not.toBeNull();
+    expect(
+      screen.getByRole("region", { name: /Filter daftar purchase order/i }).closest(".no-print"),
+    ).not.toBeNull();
     fireEvent.click(poLink);
 
     const previewBtn = await screen.findByRole("button", {
@@ -223,6 +227,9 @@ describe("Modular Document Templates (Tahap 17)", () => {
     await waitFor(() => {
       expect(screen.getAllByText(/SURAT PO RESMI TEST/i).length).toBeGreaterThan(0);
     });
+    expect(
+      screen.getAllByText(/SURAT PO RESMI TEST/i).some((node) => node.closest(".no-print") === null),
+    ).toBe(true);
 
     const printButtons = screen.getAllByRole("button", {
       name: /Cetak Purchase Order/i,

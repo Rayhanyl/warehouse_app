@@ -119,15 +119,15 @@ describe("AC-38 & DSH-F01: Dashboard Summary Integration", () => {
   });
 
   it("merender 4 kartu metrik KPI, antrean pending actions, dan aktivitas mutasi terkini", async () => {
-    vi.mocked(apiClient.get).mockImplementation(async (url: string) => {
+    vi.mocked(apiClient.get).mockImplementation((async (url: string) => {
       if (url === "/dashboard/summary") {
-        return { data: mockSummaryData } as any;
+        return { data: mockSummaryData };
       }
       if (url === "/menus/my-menu") {
-        return { data: [] } as any;
+        return { data: [] };
       }
-      return { data: null } as any;
-    });
+      return { data: null };
+    }) as typeof apiClient.get);
 
     renderDashboard(queryClient);
 
@@ -194,15 +194,15 @@ describe("AC-38 & DSH-F01: Dashboard Summary Integration", () => {
       assigned_warehouses: [],
     };
 
-    vi.mocked(apiClient.get).mockImplementation(async (url: string) => {
+    vi.mocked(apiClient.get).mockImplementation((async (url: string) => {
       if (url === "/dashboard/summary") {
-        return { data: emptySummary } as any;
+        return { data: emptySummary };
       }
       if (url === "/menus/my-menu") {
-        return { data: [] } as any;
+        return { data: [] };
       }
-      return { data: null } as any;
-    });
+      return { data: null };
+    }) as unknown as typeof apiClient.get);
 
     renderDashboard(queryClient);
 
@@ -225,7 +225,7 @@ describe("AC-38 & DSH-F01: Dashboard Summary Integration", () => {
   });
 
   it("tidak melempar DecimalError ketika nilai kuantitas/saldo bernilai undefined atau null", async () => {
-    const undefinedQtySummary: any = {
+    const undefinedQtySummary: Record<string, unknown> = {
       stock_summary: {
         total_active_items: 5,
         total_qty_on_hand: undefined,
@@ -257,15 +257,15 @@ describe("AC-38 & DSH-F01: Dashboard Summary Integration", () => {
       assigned_warehouses: [{ id: 1, code: "WH-A", name: "Gudang A" }],
     };
 
-    vi.mocked(apiClient.get).mockImplementation(async (url: string) => {
+    vi.mocked(apiClient.get).mockImplementation((async (url: string) => {
       if (url === "/dashboard/summary") {
-        return { data: undefinedQtySummary } as any;
+        return { data: undefinedQtySummary };
       }
       if (url === "/menus/my-menu") {
-        return { data: [] } as any;
+        return { data: [] };
       }
-      return { data: null } as any;
-    });
+      return { data: null };
+    }) as unknown as typeof apiClient.get);
 
     // Harus render tanpa melempar DecimalError
     renderDashboard(queryClient);

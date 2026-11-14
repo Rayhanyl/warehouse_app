@@ -2,7 +2,9 @@ import { FormEvent, useState } from "react";
 import { RotateCcw, ScanBarcode, Search } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { CollapsibleFilterPanel } from "@/components/ui/CollapsibleFilterPanel";
 import { StockLookupModal } from "@/components/ui/StockLookupModal";
+import { useIsMobile } from "@/hooks/useIsMobile";
 import { usePermission } from "@/hooks/usePermission";
 import { formatDecimal } from "@/lib/decimal";
 import {
@@ -59,7 +61,20 @@ export function StockPage() {
     pathname === "/stock/by-warehouse" || pathname === "/stock/warehouse";
   const isSummaryView = pathname === "/stock/summary";
   const isTransitView = pathname === "/stock/in-transit";
+  const isMobile = useIsMobile();
   const isLedgerView = pathname === "/stock/ledger";
+  const activeFilterCount = [
+    params.search,
+    params.warehouse_id,
+    params.location_id,
+    params.item_id,
+    params.category_id,
+    params.date_from,
+    params.date_to,
+    params.movement_type,
+    params.reference_type,
+    params.reference_id,
+  ].filter(Boolean).length;
   const title = isLedgerView
     ? "Buku besar stok"
     : isWarehouseView
@@ -103,10 +118,15 @@ export function StockPage() {
         title={title}
       />
       <StockNavigation activePath={pathname} />
-      <form
-        className="mb-6 grid gap-3 rounded-[var(--radius-lg)] border border-line-200 bg-surface-0 p-4 shadow-[var(--shadow-1)] sm:grid-cols-2 lg:grid-cols-4"
-        onSubmit={apply}
+      <CollapsibleFilterPanel
+        activeCount={activeFilterCount}
+        ariaLabel="Filter pemantauan stok"
+        className="mb-6 rounded-[var(--radius-lg)] border border-line-200 bg-surface-0 p-4 shadow-[var(--shadow-1)]"
       >
+        <form
+          className="grid gap-3 md:grid-cols-2 lg:grid-cols-4"
+          onSubmit={apply}
+        >
         {!isLedgerView && (
           <label className="sm:col-span-2">
             <span className="mb-1.5 block text-xs font-semibold text-slate-700">Cari barang atau SKU</span>
@@ -159,7 +179,8 @@ export function StockPage() {
             <span>Cek Rak</span>
           </button>
         </div>
-      </form>
+        </form>
+      </CollapsibleFilterPanel>
       {isLedgerView && !canReadLedger ? (
         <State error={false} text="Anda tidak memiliki izin untuk melihat riwayat buku besar pergerakan stok." />
       ) : query.isLoading ? (
@@ -167,13 +188,13 @@ export function StockPage() {
       ) : query.isError ? (
         <State error onRetry={() => void query.refetch()} text="Data stok belum dapat dimuat. Periksa koneksi lalu coba lagi." />
       ) : isLedgerView ? (
-        <LedgerTable items={movements.data?.items ?? []} />
+        <LedgerTable isMobile={isMobile} items={movements.data?.items ?? []} />
       ) : isSummaryView ? (
-        <SummaryTable items={summary.data?.items ?? []} />
+        <SummaryTable isMobile={isMobile} items={summary.data?.items ?? []} />
       ) : isWarehouseView ? (
-        <WarehouseBalanceTable items={warehouseBalances.data?.items ?? []} />
+        <WarehouseBalanceTable isMobile={isMobile} items={warehouseBalances.data?.items ?? []} />
       ) : (
-        <BalanceTable items={balances.data?.items ?? []} showTransit={isTransitView} />
+        <BalanceTable isMobile={isMobile} items={balances.data?.items ?? []} showTransit={isTransitView} />
       )}
       {query.data && query.data.items.length > 0 && (
         <p className="mt-4 text-xs text-slate-600">
@@ -236,16 +257,59 @@ function SelectField({ label, value, onChange, options }: { label: string; value
   );
 }
 
-function BalanceTable({ items, showTransit }: { items: StockBalance[]; showTransit: boolean }) {
+function BalanceTable({ items, showTransit, isMobile }: { items: StockBalance[]; showTransit: boolean; isMobile: boolean }) {
+  if (isMobile) {
+    return (
+      <CardList empty={items.length === 0}>
+        <ul aria-label="Daftar saldo stok" className="divide-y divide-line-200">
+          {items.map((item) => (
+            <li className="space-y-2.5 p-4" key={`${item.warehouse_id}-${item.location_id}-${item.item_id}`}>
+              <div>
+                <p className="font-semibold text-ink-950">{item.item_name}</p>
+                <p className="text-xs text-slate-600">{item.item_sku} · {item.uom_code}{item.item_barcode ? ` · BC: ${item.item_barcode}` : ""}</p>
+              </div>
+              <div className="grid grid-cols-2 gap-2 rounded-[var(--radius-md)] bg-canvas-50/70 p-3 text-xs">
+                <div><p className="text-slate-600">Gudang</p><p className="mt-0.5 font-semibold text-ink-950">{item.warehouse_code} · {item.warehouse_name}</p></div>
+                <div><p className="text-slate-600">Lokasi</p><p className="mt-0.5 font-semibold text-ink-950">{item.location_code} · {item.location_name}</p></div>
+                <div><p className="text-slate-600">Saldo</p><p className="mt-0.5 font-semibold text-ink-950 tabular-nums">{formatQuantity(item.qty_on_hand)}</p></div>
+                {showTransit && <div><p className="text-slate-600">Dalam perjalanan</p><p className="mt-0.5 font-semibold text-ink-950 tabular-nums">{formatQuantity(item.qty_in_transit)}</p></div>}
+              </div>
+            </li>
+          ))}
+        </ul>
+      </CardList>
+    );
+  }
   return (
     <TableFrame caption="Daftar saldo stok" empty={items.length === 0}>
-      <thead><tr><Th>Barang</Th><Th>Gudang</Th><Th>Lokasi</Th><Th align="right">Saldo</Th><Th align="right">Tersedia</Th>{showTransit && <Th align="right">Dalam perjalanan</Th>}</tr></thead>
+      <thead><tr><Th>Barang</Th><Th>Gudang</Th><Th>Lokasi</Th><Th align="right">Saldo</Th>{showTransit && <Th align="right">Dalam perjalanan</Th>}</tr></thead>
       <tbody className="divide-y divide-line-200">{items.map((item) => <tr key={`${item.warehouse_id}-${item.location_id}-${item.item_id}`}><td className="px-4 py-4"><p className="font-semibold text-ink-950">{item.item_name}</p><p className="text-xs text-slate-600">{item.item_sku} · {item.uom_code}{item.item_barcode ? ` · BC: ${item.item_barcode}` : ""}</p></td><td className="px-4 py-4">{item.warehouse_code} · {item.warehouse_name}</td><td className="px-4 py-4">{item.location_code} · {item.location_name}</td><td className="px-4 py-4 text-right tabular-nums">{formatQuantity(item.qty_on_hand)}</td>{showTransit && <td className="px-4 py-4 text-right tabular-nums">{formatQuantity(item.qty_in_transit)}</td>}</tr>)}</tbody>
     </TableFrame>
   );
 }
 
-function WarehouseBalanceTable({ items }: { items: WarehouseStockBalance[] }) {
+function WarehouseBalanceTable({ items, isMobile }: { items: WarehouseStockBalance[]; isMobile: boolean }) {
+  if (isMobile) {
+    return (
+      <CardList empty={items.length === 0}>
+        <ul aria-label="Saldo stok per gudang" className="divide-y divide-line-200">
+          {items.map((item) => (
+            <li className="space-y-2.5 p-4" key={`${item.warehouse_id}-${item.item_id}`}>
+              <div>
+                <p className="font-semibold text-ink-950">{item.item_name}</p>
+                <p className="text-xs text-slate-600">{item.item_sku} · {item.uom_code}{item.item_barcode ? ` · BC: ${item.item_barcode}` : ""}</p>
+              </div>
+              <div className="grid grid-cols-2 gap-2 rounded-[var(--radius-md)] bg-canvas-50/70 p-3 text-xs">
+                <div className="col-span-2"><p className="text-slate-600">Gudang</p><p className="mt-0.5 font-semibold text-ink-950">{item.warehouse_code} · {item.warehouse_name}</p></div>
+                <div><p className="text-slate-600">Saldo</p><p className="mt-0.5 font-semibold text-ink-950 tabular-nums">{formatQuantity(item.qty_on_hand)}</p></div>
+                <div><p className="text-slate-600">Dalam perjalanan</p><p className="mt-0.5 font-semibold text-ink-950 tabular-nums">{formatQuantity(item.qty_in_transit)}</p></div>
+              </div>
+            </li>
+          ))}
+        </ul>
+      </CardList>
+    );
+  }
   return (
     <TableFrame caption="Saldo stok per gudang" empty={items.length === 0}>
       <thead><tr><Th>Barang</Th><Th>Gudang</Th><Th align="right">Saldo</Th><Th align="right">Dalam perjalanan</Th></tr></thead>
@@ -254,12 +318,61 @@ function WarehouseBalanceTable({ items }: { items: WarehouseStockBalance[] }) {
   );
 }
 
-function SummaryTable({ items }: { items: StockSummary[] }) {
+function SummaryTable({ items, isMobile }: { items: StockSummary[]; isMobile: boolean }) {
+  if (isMobile) {
+    return (
+      <CardList empty={items.length === 0}>
+        <ul aria-label="Ringkasan stok" className="divide-y divide-line-200">
+          {items.map((item) => (
+            <li className="space-y-2.5 p-4" key={item.item_id}>
+              <div>
+                <p className="font-semibold text-ink-950">{item.item_name}</p>
+                <p className="text-xs text-slate-600">{item.item_sku} · {item.uom_code}{item.item_barcode ? ` · BC: ${item.item_barcode}` : ""}</p>
+              </div>
+              <div className="grid grid-cols-2 gap-2 rounded-[var(--radius-md)] bg-canvas-50/70 p-3 text-xs">
+                <div><p className="text-slate-600">Saldo</p><p className="mt-0.5 font-semibold text-ink-950 tabular-nums">{formatQuantity(item.qty_on_hand)}</p></div>
+                <div><p className="text-slate-600">Dalam perjalanan</p><p className="mt-0.5 font-semibold text-ink-950 tabular-nums">{formatQuantity(item.qty_in_transit)}</p></div>
+              </div>
+            </li>
+          ))}
+        </ul>
+      </CardList>
+    );
+  }
   return <TableFrame caption="Ringkasan stok" empty={items.length === 0}><thead><tr><Th>Barang</Th><Th align="right">Saldo</Th><Th align="right">Dalam perjalanan</Th></tr></thead><tbody className="divide-y divide-line-200">{items.map((item) => <tr key={item.item_id}><td className="px-4 py-4"><p className="font-semibold text-ink-950">{item.item_name}</p><p className="text-xs text-slate-600">{item.item_sku} · {item.uom_code}{item.item_barcode ? ` · BC: ${item.item_barcode}` : ""}</p></td><td className="px-4 py-4 text-right tabular-nums">{formatQuantity(item.qty_on_hand)}</td><td className="px-4 py-4 text-right tabular-nums">{formatQuantity(item.qty_in_transit)}</td></tr>)}</tbody></TableFrame>;
 }
 
-function LedgerTable({ items }: { items: StockMovement[] }) {
+function LedgerTable({ items, isMobile }: { items: StockMovement[]; isMobile: boolean }) {
+  if (isMobile) {
+    return (
+      <CardList empty={items.length === 0}>
+        <ul aria-label="Buku besar stok" className="divide-y divide-line-200">
+          {items.map((item) => (
+            <li className="space-y-2.5 p-4" key={item.id}>
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="font-semibold text-ink-950">{item.item_name}</p>
+                  <p className="text-xs text-slate-600">{item.item_sku} · {item.uom_code}</p>
+                </div>
+                <span className="shrink-0 rounded-full bg-canvas-100 px-2.5 py-0.5 text-[11px] font-semibold text-slate-700">{item.movement_type}</span>
+              </div>
+              <p className="text-xs text-slate-600">{formatDate(item.created_at)} · {item.reference_type ?? "Tidak tersedia"} (ID {item.reference_id ?? "-"})</p>
+              <div className="grid grid-cols-3 gap-2 rounded-[var(--radius-md)] bg-canvas-50/70 p-3 text-xs">
+                <div><p className="text-slate-600">Sebelum</p><p className="mt-0.5 font-semibold text-ink-950 tabular-nums">{formatQuantity(item.qty_before)}</p></div>
+                <div><p className="text-slate-600">Perubahan</p><p className="mt-0.5 font-semibold text-ink-950 tabular-nums">{formatQuantity(item.qty_change)}</p></div>
+                <div><p className="text-slate-600">Sesudah</p><p className="mt-0.5 font-semibold text-ink-950 tabular-nums">{formatQuantity(item.qty_after)}</p></div>
+              </div>
+            </li>
+          ))}
+        </ul>
+      </CardList>
+    );
+  }
   return <TableFrame caption="Buku besar stok" empty={items.length === 0}><thead><tr><Th>Waktu</Th><Th>Barang</Th><Th>Jenis</Th><Th>Referensi</Th><Th align="right">Sebelum</Th><Th align="right">Perubahan</Th><Th align="right">Sesudah</Th></tr></thead><tbody className="divide-y divide-line-200">{items.map((item) => <tr key={item.id}><td className="whitespace-nowrap px-4 py-4 text-xs text-slate-700">{formatDate(item.created_at)}</td><td className="px-4 py-4"><p className="font-semibold text-ink-950">{item.item_name}</p><p className="text-xs text-slate-600">{item.item_sku} · {item.uom_code}</p></td><td className="px-4 py-4">{item.movement_type}</td><td className="px-4 py-4">{item.reference_type ?? "Tidak tersedia"}<p className="text-xs text-slate-600">ID {item.reference_id ?? "-"}</p></td><td className="px-4 py-4 text-right tabular-nums">{formatQuantity(item.qty_before)}</td><td className="px-4 py-4 text-right tabular-nums">{formatQuantity(item.qty_change)}</td><td className="px-4 py-4 text-right tabular-nums">{formatQuantity(item.qty_after)}</td></tr>)}</tbody></TableFrame>;
+}
+
+function CardList({ children, empty }: { children: React.ReactNode; empty: boolean }) {
+  return <section className="overflow-hidden rounded-[var(--radius-lg)] border border-line-200 bg-surface-0 shadow-[var(--shadow-1)]">{empty ? <State text="Belum ada data untuk filter ini." /> : children}</section>;
 }
 
 function TableFrame({ caption, children, empty }: { caption: string; children: React.ReactNode; empty: boolean }) {

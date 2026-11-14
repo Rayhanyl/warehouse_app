@@ -32,6 +32,26 @@ export interface StockFormPayload {
   is_active: boolean;
 }
 
+export interface StockCreatePayload {
+  sku: string;
+  barcode?: string | null;
+  name: string;
+  description?: string | null;
+  category_id: number;
+  uom_id: number;
+  is_active?: boolean;
+}
+
+export interface StockUpdatePayload {
+  sku?: string;
+  barcode?: string | null;
+  name?: string;
+  description?: string | null;
+  category_id?: number;
+  uom_id?: number;
+  is_active?: boolean;
+}
+
 export interface StockImportError {
   row: number;
   field: string;

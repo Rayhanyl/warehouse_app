@@ -1,5 +1,13 @@
 import { apiClient } from "@/lib/api-client";
-import type { Supplier, SupplierListParams, SupplierPage } from "./types";
+import { mapMasterDomainError, type MasterFormSubmitError } from "../errors";
+import type {
+  Supplier,
+  SupplierCreatePayload,
+  SupplierImportResult,
+  SupplierListParams,
+  SupplierPage,
+  SupplierUpdatePayload,
+} from "./types";
 
 export const initialSampleSuppliers: Supplier[] = [
   {
@@ -60,6 +68,82 @@ export async function fetchSuppliers(params: SupplierListParams): Promise<Suppli
     params: toSupplierQueryParams(params),
   });
   return data;
+}
+
+export async function createSupplier(
+  payload: SupplierCreatePayload,
+): Promise<Supplier> {
+  const { data } = await apiClient.post<Supplier>("/suppliers", {
+    code: payload.code.trim(),
+    name: payload.name.trim(),
+    contact_person: payload.contact_person?.trim() ? payload.contact_person.trim() : null,
+    phone: payload.phone?.trim() ? payload.phone.trim() : null,
+    email: payload.email?.trim() ? payload.email.trim().toLowerCase() : null,
+    address: payload.address?.trim() ? payload.address.trim() : null,
+    is_active: payload.is_active ?? true,
+  });
+  return data;
+}
+
+export async function updateSupplier(
+  supplierId: number,
+  payload: SupplierUpdatePayload,
+): Promise<Supplier> {
+  const body: SupplierUpdatePayload = {};
+  if (payload.code !== undefined) {
+    body.code = payload.code.trim();
+  }
+  if (payload.name !== undefined) {
+    body.name = payload.name.trim();
+  }
+  if (payload.contact_person !== undefined) {
+    body.contact_person = payload.contact_person?.trim()
+      ? payload.contact_person.trim()
+      : null;
+  }
+  if (payload.phone !== undefined) {
+    body.phone = payload.phone?.trim() ? payload.phone.trim() : null;
+  }
+  if (payload.email !== undefined) {
+    body.email = payload.email?.trim() ? payload.email.trim().toLowerCase() : null;
+  }
+  if (payload.address !== undefined) {
+    body.address = payload.address?.trim() ? payload.address.trim() : null;
+  }
+  if (payload.is_active !== undefined) {
+    body.is_active = payload.is_active;
+  }
+
+  const { data } = await apiClient.patch<Supplier>(`/suppliers/${supplierId}`, body);
+  return data;
+}
+
+export async function downloadSupplierImportTemplate(): Promise<Blob> {
+  const { data } = await apiClient.get<Blob>("/suppliers/import-template", {
+    responseType: "blob",
+  });
+  return data;
+}
+
+export async function importSuppliers(file: File): Promise<SupplierImportResult> {
+  const formData = new FormData();
+  formData.append("file", file);
+  const { data } = await apiClient.post<SupplierImportResult>("/suppliers/import", formData, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
+  return data;
+}
+
+export function mapSupplierApiError(
+  error: unknown,
+  fallbackMessage: string,
+): MasterFormSubmitError {
+  return mapMasterDomainError(error, fallbackMessage, {
+    entityLabel: "Pemasok",
+    duplicateField: "code",
+    inUseMessage:
+      "Pemasok tidak dapat dinonaktifkan karena masih digunakan pada purchase order aktif.",
+  });
 }
 
 function escapeCsvCell(value: string | number | null | undefined): string {

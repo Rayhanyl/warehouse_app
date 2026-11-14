@@ -38,3 +38,21 @@ export interface SupplierFormPayload {
   address: string | null;
   is_active: boolean;
 }
+
+export type SupplierCreatePayload = SupplierFormPayload;
+
+export type SupplierUpdatePayload = Partial<SupplierFormPayload>;
+
+export interface SupplierImportError {
+  row: number;
+  field: string;
+  code: string;
+  message: string;
+}
+
+export interface SupplierImportResult {
+  total_rows: number;
+  imported_count: number;
+  failed_count: number;
+  errors: SupplierImportError[];
+}

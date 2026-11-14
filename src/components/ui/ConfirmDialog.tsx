@@ -34,11 +34,11 @@ export function ConfirmDialog({
   }, [isPending, onClose]);
 
   return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-ink-950/60 p-4" onMouseDown={onClose}>
+    <div className="no-print fixed inset-0 z-50 grid place-items-center bg-ink-950/60 p-2 sm:p-4" onMouseDown={onClose}>
       <div
         aria-labelledby="confirm-dialog-title"
         aria-modal="true"
-        className="w-full max-w-lg rounded-[var(--radius-lg)] border border-line-200 bg-surface-0 p-6 shadow-[var(--shadow-2)]"
+        className="max-h-[94dvh] w-full max-w-lg overflow-y-auto rounded-[var(--radius-lg)] border border-line-200 bg-surface-0 p-4 shadow-[var(--shadow-2)] sm:max-h-[92vh] sm:p-6"
         onMouseDown={(event) => event.stopPropagation()}
         role="dialog"
       >

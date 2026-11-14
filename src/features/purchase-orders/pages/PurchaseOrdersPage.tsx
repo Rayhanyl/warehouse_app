@@ -13,6 +13,8 @@ import {
 import { toast } from "sonner";
 import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { CollapsibleFilterPanel } from "@/components/ui/CollapsibleFilterPanel";
+import { useIsMobile } from "@/hooks/useIsMobile";
 import { usePermission } from "@/hooks/usePermission";
 import { mapApiFormError } from "@/lib/errors";
 import { validateDecimalQtyInput } from "@/lib/validation";
@@ -89,7 +91,12 @@ export function PurchaseOrdersPage() {
   const canClose = can("po:close");
   const [params, setParams] = useState(initialParams);
   const [draftParams, setDraftParams] = useState(initialParams);
-  const [detailId, setDetailId] = useState<number | null>(null);
+  const openPoIdFromState =
+    typeof (location.state as { openPurchaseOrderId?: unknown } | null)
+      ?.openPurchaseOrderId === "number"
+      ? (location.state as { openPurchaseOrderId: number }).openPurchaseOrderId
+      : null;
+  const [detailId, setDetailId] = useState<number | null>(openPoIdFromState);
   const [actionTarget, setActionTarget] = useState<PurchaseOrder | null>(null);
   const [actionType, setActionType] = useState<"issue" | "cancel" | "close" | null>(null);
   const [closedReason, setClosedReason] = useState("");
@@ -99,11 +106,9 @@ export function PurchaseOrdersPage() {
   const actionMutation = usePurchaseOrderMutation(actionType ?? "issue");
 
   useEffect(() => {
-    const state = location.state as { openPurchaseOrderId?: unknown } | null;
-    if (typeof state?.openPurchaseOrderId !== "number") return;
-    setDetailId(state.openPurchaseOrderId);
+    if (openPoIdFromState === null) return;
     navigate(`${location.pathname}${location.search}`, { replace: true, state: null });
-  }, [location.pathname, location.search, location.state, navigate]);
+  }, [location.pathname, location.search, navigate, openPoIdFromState]);
 
   const items = data?.items ?? [];
   const total = data?.total ?? 0;
@@ -149,8 +154,19 @@ export function PurchaseOrdersPage() {
     }
   }
 
+  const isMobile = useIsMobile();
+  const activeFilterCount = [
+    params.search,
+    params.status !== "all",
+    params.supplier_id,
+    params.warehouse_id,
+    params.date_from,
+    params.date_to,
+  ].filter(Boolean).length;
+
   return (
     <>
+      <div className="no-print">
       <PageHeader
         title="Purchase order"
         description="Catat pesanan barang ke pemasok dan pantau status penerimaannya per gudang."
@@ -171,8 +187,9 @@ export function PurchaseOrdersPage() {
         }
       />
 
-      <section
-        aria-label="Filter daftar purchase order"
+      <CollapsibleFilterPanel
+        activeCount={activeFilterCount}
+        ariaLabel="Filter daftar purchase order"
         className="mb-6 rounded-[var(--radius-lg)] border border-line-200 bg-surface-0 p-4 shadow-[var(--shadow-1)] sm:p-5"
       >
         <form className="grid gap-4 md:grid-cols-2 lg:grid-cols-4" onSubmit={applyFilters}>
@@ -222,12 +239,12 @@ export function PurchaseOrdersPage() {
               <option value="desc">Terbaru</option><option value="asc">Terlama</option>
             </select>
           </label>
-          <div className="flex flex-wrap items-center gap-2 lg:col-span-4">
-            <button className="inline-flex min-h-11 items-center gap-2 rounded-[var(--radius-md)] bg-teal-600 px-4 text-sm font-semibold text-surface-0 transition hover:bg-teal-700" type="submit"><Filter aria-hidden="true" size={16} />Terapkan filter</button>
-            <button className="inline-flex min-h-11 items-center gap-2 rounded-[var(--radius-md)] border border-line-500 bg-surface-0 px-4 text-sm font-semibold text-ink-950 transition hover:bg-canvas-50" onClick={resetFilters} type="button"><RotateCcw aria-hidden="true" size={16} />Atur ulang filter</button>
+          <div className="flex flex-wrap items-center gap-2 md:col-span-2 lg:col-span-4">
+            <button className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-[var(--radius-md)] bg-teal-600 px-4 text-sm font-semibold text-surface-0 transition hover:bg-teal-700 sm:flex-initial" type="submit"><Filter aria-hidden="true" size={16} />Terapkan filter</button>
+            <button className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-[var(--radius-md)] border border-line-500 bg-surface-0 px-4 text-sm font-semibold text-ink-950 transition hover:bg-canvas-50 sm:flex-initial" onClick={resetFilters} type="button"><RotateCcw aria-hidden="true" size={16} />Atur ulang filter</button>
           </div>
         </form>
-      </section>
+      </CollapsibleFilterPanel>
 
       {isLoading ? (
         <div className="rounded-[var(--radius-lg)] border border-line-200 bg-surface-0 p-8 text-sm text-slate-700 shadow-[var(--shadow-1)]" role="status">Memuat daftar purchase order...</div>
@@ -245,18 +262,46 @@ export function PurchaseOrdersPage() {
         </div>
       ) : (
         <section className="overflow-hidden rounded-[var(--radius-lg)] border border-line-200 bg-surface-0 shadow-[var(--shadow-1)]">
-          <div className="overflow-x-auto">
-            <table className="min-w-[900px] w-full border-collapse text-left text-sm">
-              <caption className="sr-only">Daftar purchase order</caption>
-              <thead className="bg-canvas-50 text-xs font-semibold text-slate-700"><tr><th className="px-4 py-3">Nomor dokumen</th><th className="px-4 py-3">Pemasok</th><th className="px-4 py-3">Gudang tujuan</th><th className="px-4 py-3">Tanggal pesanan</th><th className="px-4 py-3">Baris</th><th className="px-4 py-3">Status</th><th className="px-4 py-3 text-right">Aksi</th></tr></thead>
-              <tbody className="divide-y divide-line-200">
-                {items.map((po) => <tr key={po.id} className="hover:bg-canvas-50/60"><td className="px-4 py-4"><button className="font-semibold text-teal-700 underline-offset-2 hover:underline focus:outline-none focus:ring-2 focus:ring-teal-600" onClick={() => setDetailId(po.id)} type="button">{po.po_number}</button><p className="mt-1 text-xs text-slate-600 tabular-nums">ID #{po.id}</p></td><td className="px-4 py-4"><p className="font-semibold text-ink-950">{po.supplier_name}</p><p className="mt-1 text-xs text-slate-600">{po.supplier_code}</p></td><td className="px-4 py-4"><p className="text-ink-950">{po.warehouse_name}</p><p className="mt-1 text-xs text-slate-600">{po.warehouse_code}</p></td><td className="px-4 py-4 text-slate-700 tabular-nums">{formatDate(po.order_date)}</td><td className="px-4 py-4 text-slate-700 tabular-nums">{po.line_count}</td><td className="px-4 py-4"><span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${statusClasses[po.status]}`}>{statusLabels[po.status]}</span></td><td className="px-4 py-4 text-right"><button aria-label={`Lihat detail purchase order ${po.po_number}`} className="inline-flex min-h-11 items-center gap-2 rounded-[var(--radius-md)] border border-line-500 px-3 text-sm font-semibold text-ink-950 hover:bg-canvas-50" onClick={() => setDetailId(po.id)} type="button"><Eye size={16} />Detail</button></td></tr>)}
-              </tbody>
-            </table>
-          </div>
-          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line-200 px-4 py-3 text-sm text-slate-700"><span className="tabular-nums">Menampilkan {params.offset + 1} sampai {pageEnd} dari {total} purchase order</span><div className="flex gap-2"><button aria-label="Halaman sebelumnya" className="grid min-h-11 min-w-11 place-items-center rounded-[var(--radius-md)] border border-line-500 disabled:opacity-40" disabled={params.offset === 0} onClick={() => setParams((current) => ({ ...current, offset: Math.max(0, current.offset - current.limit) }))} type="button"><ChevronLeft size={17} /></button><button aria-label="Halaman berikutnya" className="grid min-h-11 min-w-11 place-items-center rounded-[var(--radius-md)] border border-line-500 disabled:opacity-40" disabled={pageEnd >= total} onClick={() => setParams((current) => ({ ...current, offset: current.offset + current.limit }))} type="button"><ChevronRight size={17} /></button></div></div>
+          {isMobile ? (
+            <ul aria-label="Daftar purchase order" className="divide-y divide-line-200">
+              {items.map((po) => (
+                <li className="space-y-3 p-4" key={po.id}>
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <button className="font-semibold text-teal-700 underline-offset-2 hover:underline focus:outline-none focus:ring-2 focus:ring-teal-600" onClick={() => setDetailId(po.id)} type="button">{po.po_number}</button>
+                      <p className="mt-0.5 text-xs text-slate-600 tabular-nums">ID #{po.id} · {formatDate(po.order_date)}</p>
+                    </div>
+                    <span className={`inline-flex shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold ${statusClasses[po.status]}`}>{statusLabels[po.status]}</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 rounded-[var(--radius-md)] bg-canvas-50/70 p-3 text-xs">
+                    <div>
+                      <p className="text-slate-600">Pemasok</p>
+                      <p className="mt-0.5 font-semibold text-ink-950">{po.supplier_name}</p>
+                    </div>
+                    <div>
+                      <p className="text-slate-600">Gudang ({po.line_count} baris)</p>
+                      <p className="mt-0.5 font-semibold text-ink-950">{po.warehouse_name}</p>
+                    </div>
+                  </div>
+                  <button aria-label={`Lihat detail purchase order ${po.po_number}`} className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-[var(--radius-md)] border border-line-500 px-3 text-sm font-semibold text-ink-950 hover:bg-canvas-50" onClick={() => setDetailId(po.id)} type="button"><Eye size={16} />Detail</button>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="min-w-[900px] w-full border-collapse text-left text-sm">
+                <caption className="sr-only">Daftar purchase order</caption>
+                <thead className="bg-canvas-50 text-xs font-semibold text-slate-700"><tr><th className="px-4 py-3">Nomor dokumen</th><th className="px-4 py-3">Pemasok</th><th className="px-4 py-3">Gudang tujuan</th><th className="px-4 py-3">Tanggal pesanan</th><th className="px-4 py-3">Baris</th><th className="px-4 py-3">Status</th><th className="px-4 py-3 text-right">Aksi</th></tr></thead>
+                <tbody className="divide-y divide-line-200">
+                  {items.map((po) => <tr key={po.id} className="hover:bg-canvas-50/60"><td className="px-4 py-4"><button className="font-semibold text-teal-700 underline-offset-2 hover:underline focus:outline-none focus:ring-2 focus:ring-teal-600" onClick={() => setDetailId(po.id)} type="button">{po.po_number}</button><p className="mt-1 text-xs text-slate-600 tabular-nums">ID #{po.id}</p></td><td className="px-4 py-4"><p className="font-semibold text-ink-950">{po.supplier_name}</p><p className="mt-1 text-xs text-slate-600">{po.supplier_code}</p></td><td className="px-4 py-4"><p className="text-ink-950">{po.warehouse_name}</p><p className="mt-1 text-xs text-slate-600">{po.warehouse_code}</p></td><td className="px-4 py-4 text-slate-700 tabular-nums">{formatDate(po.order_date)}</td><td className="px-4 py-4 text-slate-700 tabular-nums">{po.line_count}</td><td className="px-4 py-4"><span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${statusClasses[po.status]}`}>{statusLabels[po.status]}</span></td><td className="px-4 py-4 text-right"><button aria-label={`Lihat detail purchase order ${po.po_number}`} className="inline-flex min-h-11 items-center gap-2 rounded-[var(--radius-md)] border border-line-500 px-3 text-sm font-semibold text-ink-950 hover:bg-canvas-50" onClick={() => setDetailId(po.id)} type="button"><Eye size={16} />Detail</button></td></tr>)}
+                </tbody>
+              </table>
+            </div>
+          )}
+          <div className="flex flex-col gap-3 border-t border-line-200 px-4 py-3 text-sm text-slate-700 sm:flex-row sm:items-center sm:justify-between"><span className="tabular-nums">Menampilkan {params.offset + 1} sampai {pageEnd} dari {total} purchase order</span><div className="flex justify-end gap-2"><button aria-label="Halaman sebelumnya" className="grid min-h-11 min-w-11 place-items-center rounded-[var(--radius-md)] border border-line-500 disabled:opacity-40" disabled={params.offset === 0} onClick={() => setParams((current) => ({ ...current, offset: Math.max(0, current.offset - current.limit) }))} type="button"><ChevronLeft size={17} /></button><button aria-label="Halaman berikutnya" className="grid min-h-11 min-w-11 place-items-center rounded-[var(--radius-md)] border border-line-500 disabled:opacity-40" disabled={pageEnd >= total} onClick={() => setParams((current) => ({ ...current, offset: current.offset + current.limit }))} type="button"><ChevronRight size={17} /></button></div></div>
         </section>
       )}
+      </div>
 
       {detailId !== null && <PurchaseOrderDetail purchaseOrder={detail.data} isLoading={detail.isLoading} canIssue={canIssue} canCancel={canCancel || canCreate} canClose={canClose} onClose={() => setDetailId(null)} onAction={openAction} />}
       {actionTarget && actionType && <ActionDialog purchaseOrder={actionTarget} action={actionType} closedReason={closedReason} isSubmitting={actionMutation.isPending} onReasonChange={setClosedReason} onClose={() => { setActionTarget(null); setActionType(null); }} onSubmit={() => void submitAction()} />}
@@ -401,10 +446,10 @@ function PurchaseOrderForm({ references, isSubmitting, isReferencesLoading, isRe
               const lineItemError = fieldErrors[`lines.${index}.item_id`];
               const lineQtyError = fieldErrors[`lines.${index}.qty_ordered`];
               return <div aria-label={`Barang pesanan ${index + 1}`} className="rounded-[var(--radius-md)] border border-line-200 p-4" key={`${line.item_id}-${index}`} role="group">
-                <div className="grid items-end gap-4 sm:grid-cols-[minmax(0,1fr)_minmax(10rem,0.45fr)_auto]">
+                <div className="grid items-end gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(10rem,0.45fr)_auto]">
                   <label className="text-sm font-semibold text-ink-950">Barang {index + 1}<select aria-invalid={Boolean(lineItemError)} className={`mt-2 h-11 w-full rounded-[var(--radius-md)] border bg-surface-0 px-3 text-sm font-normal text-ink-950 focus:outline-none focus:ring-2 ${lineItemError ? "border-red-600 focus:ring-red-600/20" : "border-line-500 focus:border-teal-600 focus:ring-teal-600/20"}`} onChange={(event) => updateLine(index, { item_id: Number(event.target.value) })} value={line.item_id}>{itemOptions.map((item) => <option key={item.id} value={item.id}>{item.sku ?? item.code} · {item.name}</option>)}</select></label>
                   <label className="text-sm font-semibold text-ink-950">Kuantitas{selectedItem?.uom_code && <span className="font-normal text-slate-600"> ({selectedItem.uom_code})</span>}<input aria-invalid={Boolean(lineQtyError)} aria-label={`Kuantitas baris ${index + 1}${selectedItem?.uom_code ? ` dalam ${selectedItem.uom_code}` : ""}`} className={`mt-2 h-11 w-full rounded-[var(--radius-md)] border bg-surface-0 px-3 text-sm tabular-nums text-ink-950 focus:outline-none focus:ring-2 ${lineQtyError ? "border-red-600 focus:ring-red-600/20" : "border-line-500 focus:border-teal-600 focus:ring-teal-600/20"}`} inputMode="decimal" maxLength={20} onChange={(event) => updateLine(index, { qty_ordered: event.target.value.replace(",", ".") })} placeholder={selectedItem?.allow_decimal === false ? "Bilangan bulat" : "0.0000"} type="text" value={line.qty_ordered} /></label>
-                  <button aria-label={`Hapus barang pesanan ${index + 1}`} className="mb-0 grid min-h-11 min-w-11 place-items-center rounded-[var(--radius-md)] border border-red-300 text-red-700 hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-700" onClick={() => setLines((current) => current.filter((_, lineIndex) => lineIndex !== index))} type="button"><X aria-hidden="true" size={17} /></button>
+                  <button aria-label={`Hapus barang pesanan ${index + 1}`} className="inline-flex min-h-11 w-full items-center justify-center gap-1.5 rounded-[var(--radius-md)] border border-red-300 px-3 text-xs font-semibold text-red-700 hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-700 sm:w-11 sm:px-0" onClick={() => setLines((current) => current.filter((_, lineIndex) => lineIndex !== index))} type="button"><X aria-hidden="true" size={17} /><span className="sm:hidden">Hapus baris</span></button>
                 </div>
                 {(lineItemError || lineQtyError) && <p className="mt-2 text-xs font-medium text-red-700" role="alert">{lineItemError || lineQtyError}</p>}
                 {selectedItem && <p className="mt-2 text-xs text-slate-600">{selectedItem.allow_decimal === false ? "Gunakan bilangan bulat." : "Kuantitas dapat memakai hingga empat angka desimal."}</p>}
@@ -418,7 +463,7 @@ function PurchaseOrderForm({ references, isSubmitting, isReferencesLoading, isRe
 
         <label className="block text-sm font-semibold text-ink-950">Catatan umum <span className="font-normal text-slate-600">(opsional)</span><textarea className="mt-2 min-h-20 w-full rounded-[var(--radius-md)] border border-line-500 bg-surface-0 p-3 text-sm text-ink-950 focus:border-teal-600 focus:outline-none focus:ring-2 focus:ring-teal-600/20" maxLength={1000} onChange={(event) => setNotes(event.target.value)} placeholder="Contoh: jadwal pengiriman atau instruksi untuk pemasok" value={notes} /></label>
 
-        <div className="flex flex-wrap justify-end gap-2 border-t border-line-200 pt-4">
+        <div className="flex flex-col-reverse gap-2 border-t border-line-200 pt-4 sm:flex-row sm:justify-end">
           <button className="inline-flex min-h-11 items-center justify-center rounded-[var(--radius-md)] border border-line-500 px-4 text-sm font-semibold text-ink-950 hover:bg-canvas-50 focus:outline-none focus:ring-2 focus:ring-teal-600" disabled={isSubmitting} onClick={onClose} type="button">Kembali ke daftar</button>
           <button className="inline-flex min-h-11 items-center justify-center rounded-[var(--radius-md)] bg-teal-600 px-4 text-sm font-semibold text-surface-0 hover:bg-teal-700 focus:outline-none focus:ring-2 focus:ring-teal-600 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" disabled={isSubmitting || isReferencesLoading || isReferencesError} type="submit">{isSubmitting ? "Menyimpan draft PO..." : "Simpan draft PO"}</button>
         </div>
@@ -451,10 +496,10 @@ function PurchaseOrderDetail({ purchaseOrder, isLoading, canIssue, canCancel, ca
 
   const canPrint = Boolean(purchaseOrder && purchaseOrder.status !== "CANCELLED");
 
-  return <div className="print-dialog-backdrop fixed inset-0 z-40 grid place-items-center bg-ink-950/55 p-4" onMouseDown={onClose}><div aria-labelledby="po-detail-title" aria-modal="true" className="print-dialog-panel max-h-[90vh] w-full max-w-5xl overflow-y-auto rounded-[var(--radius-lg)] border border-line-200 bg-surface-0 p-5 shadow-[var(--shadow-2)] sm:p-6" onMouseDown={(event) => event.stopPropagation()} role="dialog">{isLoading || !purchaseOrder ? <div className="p-8 text-sm text-slate-700" role="status">Memuat detail purchase order...</div> : <><div className="no-print flex items-start justify-between gap-3 border-b border-line-200 pb-4"><div><div className="flex flex-wrap items-center gap-2"><h2 className="text-lg font-bold text-ink-950" id="po-detail-title">{purchaseOrder.po_number}</h2><span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${statusClasses[purchaseOrder.status]}`}>{statusLabels[purchaseOrder.status]}</span></div><p className="mt-1 text-sm text-slate-700">Dibuat pada {formatDateTime(purchaseOrder.created_at)}</p></div><button aria-label="Tutup detail purchase order" className="grid min-h-11 min-w-11 place-items-center rounded-[var(--radius-md)] text-slate-700 transition-colors hover:bg-canvas-50 hover:text-ink-950" onClick={onClose} type="button"><X aria-hidden="true" size={18} /></button></div><div className="no-print"><dl className="grid gap-4 py-5 text-sm sm:grid-cols-3"><div><dt className="text-xs text-slate-600">Pemasok</dt><dd className="mt-1 font-semibold text-ink-950">{purchaseOrder.supplier_code} · {purchaseOrder.supplier_name}</dd></div><div><dt className="text-xs text-slate-600">Gudang tujuan</dt><dd className="mt-1 font-semibold text-ink-950">{purchaseOrder.warehouse_code} · {purchaseOrder.warehouse_name}</dd></div><div><dt className="text-xs text-slate-600">Tanggal pesanan</dt><dd className="mt-1 font-semibold text-ink-950">{formatDate(purchaseOrder.order_date)}</dd></div></dl><div className="overflow-x-auto rounded-[var(--radius-md)] border border-line-200"><table className="min-w-[620px] w-full text-left text-sm"><caption className="sr-only">Baris barang {purchaseOrder.po_number}</caption><thead className="bg-canvas-50 text-xs text-slate-700"><tr><th className="px-3 py-3">Barang</th><th className="px-3 py-3">Pesanan</th><th className="px-3 py-3">Diterima</th><th className="px-3 py-3">Catatan</th></tr></thead><tbody className="divide-y divide-line-200">{(purchaseOrder.lines ?? []).length === 0 ? <tr><td className="px-3 py-5 text-slate-700" colSpan={4}>Belum ada baris barang.</td></tr> : (purchaseOrder.lines ?? []).map((line) => <tr key={line.id}><td className="px-3 py-3"><p className="font-semibold text-ink-950">{line.item_sku} · {line.item_name}</p><p className="text-xs text-slate-600">{line.uom_code}</p></td><td className="px-3 py-3 tabular-nums">{line.qty_ordered}</td><td className="px-3 py-3 tabular-nums">{line.qty_received}</td><td className="px-3 py-3 text-slate-700">{line.notes || "-"}</td></tr>)}</tbody></table></div>{purchaseOrder.notes && <p className="mt-4 rounded-[var(--radius-md)] bg-canvas-50 p-3 text-sm text-slate-700">{purchaseOrder.notes}</p>}</div>{canPrint && <PurchaseOrderPrintSheet purchaseOrder={purchaseOrder} visibleOnScreen={showPrintPreview} />}<div className="no-print mt-5 flex flex-wrap justify-end gap-2 border-t border-line-200 pt-4">{canPrint && <><button className="inline-flex min-h-11 items-center justify-center rounded-[var(--radius-md)] border border-line-500 px-4 text-sm font-semibold text-ink-950 hover:bg-canvas-50" onClick={() => setPreviewPoId((prev) => (prev === purchaseOrder.id ? null : purchaseOrder.id))} type="button">{showPrintPreview ? "Sembunyikan pratinjau cetak" : "Pratinjau PO cetak"}</button><button className="inline-flex min-h-11 items-center justify-center gap-2 rounded-[var(--radius-md)] bg-ink-950 px-4 text-sm font-semibold text-surface-0 hover:bg-ink-800" onClick={handlePrint} type="button"><Printer aria-hidden="true" size={16} />Cetak Purchase Order</button></>}{purchaseOrder.status === "DRAFT" && canIssue && <button className="inline-flex min-h-11 items-center justify-center rounded-[var(--radius-md)] bg-teal-600 px-4 text-sm font-semibold text-surface-0 hover:bg-teal-700" onClick={() => onAction(purchaseOrder, "issue")} type="button">Terbitkan purchase order</button>}{(purchaseOrder.status === "DRAFT" || purchaseOrder.status === "ISSUED") && canCancel && <button className="inline-flex min-h-11 items-center justify-center rounded-[var(--radius-md)] border border-red-600/40 px-4 text-sm font-semibold text-red-700 hover:bg-red-100" onClick={() => onAction(purchaseOrder, "cancel")} type="button">Batalkan purchase order</button>}{(purchaseOrder.status === "ISSUED" || purchaseOrder.status === "PARTIALLY_RECEIVED") && canClose && <button className="inline-flex min-h-11 items-center justify-center rounded-[var(--radius-md)] border border-amber-700/40 px-4 text-sm font-semibold text-amber-700 hover:bg-amber-100" onClick={() => onAction(purchaseOrder, "close")} type="button">Tutup purchase order</button>}<button className="inline-flex min-h-11 min-w-20 items-center justify-center gap-2 rounded-[var(--radius-md)] border border-line-500 bg-canvas-50 px-4 text-sm font-semibold text-ink-950 transition-colors hover:border-ink-800 hover:bg-surface-0" onClick={onClose} type="button"><X aria-hidden="true" size={16} />Tutup</button></div></>}</div></div>;
+  return <div className="print-dialog-backdrop fixed inset-0 z-40 grid place-items-center bg-ink-950/55 p-2 sm:p-4" onMouseDown={onClose}><div aria-labelledby="po-detail-title" aria-modal="true" className="print-dialog-panel flex max-h-[94dvh] w-full max-w-5xl flex-col overflow-hidden rounded-[var(--radius-lg)] border border-line-200 bg-surface-0 shadow-[var(--shadow-2)] sm:max-h-[92vh] print:max-h-none print:overflow-visible print:border-0 print:shadow-none" onMouseDown={(event) => event.stopPropagation()} role="dialog">{isLoading || !purchaseOrder ? <div className="p-8 text-sm text-slate-700" role="status">Memuat detail purchase order...</div> : <><div className="no-print flex shrink-0 items-start justify-between gap-3 border-b border-line-200 px-4 py-4 sm:px-6"><div><div className="flex flex-wrap items-center gap-2"><h2 className="text-lg font-bold text-ink-950" id="po-detail-title">{purchaseOrder.po_number}</h2><span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${statusClasses[purchaseOrder.status]}`}>{statusLabels[purchaseOrder.status]}</span></div><p className="mt-1 text-sm text-slate-700">Dibuat pada {formatDateTime(purchaseOrder.created_at)}</p></div><button aria-label="Tutup detail purchase order" className="grid min-h-11 min-w-11 place-items-center rounded-[var(--radius-md)] text-slate-700 transition-colors hover:bg-canvas-50 hover:text-ink-950" onClick={onClose} type="button"><X aria-hidden="true" size={18} /></button></div><div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-6 print:overflow-visible print:p-0"><div className="no-print"><dl className="grid gap-4 pb-5 text-sm sm:grid-cols-3"><div><dt className="text-xs text-slate-600">Pemasok</dt><dd className="mt-1 font-semibold text-ink-950">{purchaseOrder.supplier_code} · {purchaseOrder.supplier_name}</dd></div><div><dt className="text-xs text-slate-600">Gudang tujuan</dt><dd className="mt-1 font-semibold text-ink-950">{purchaseOrder.warehouse_code} · {purchaseOrder.warehouse_name}</dd></div><div><dt className="text-xs text-slate-600">Tanggal pesanan</dt><dd className="mt-1 font-semibold text-ink-950">{formatDate(purchaseOrder.order_date)}</dd></div></dl><div className="overflow-x-auto rounded-[var(--radius-md)] border border-line-200"><table className="min-w-[620px] w-full text-left text-sm"><caption className="sr-only">Baris barang {purchaseOrder.po_number}</caption><thead className="bg-canvas-50 text-xs text-slate-700"><tr><th className="px-3 py-3">Barang</th><th className="px-3 py-3">Pesanan</th><th className="px-3 py-3">Diterima</th><th className="px-3 py-3">Catatan</th></tr></thead><tbody className="divide-y divide-line-200">{(purchaseOrder.lines ?? []).length === 0 ? <tr><td className="px-3 py-5 text-slate-700" colSpan={4}>Belum ada baris barang.</td></tr> : (purchaseOrder.lines ?? []).map((line) => <tr key={line.id}><td className="px-3 py-3"><p className="font-semibold text-ink-950">{line.item_sku} · {line.item_name}</p><p className="text-xs text-slate-600">{line.uom_code}</p></td><td className="px-3 py-3 tabular-nums">{line.qty_ordered}</td><td className="px-3 py-3 tabular-nums">{line.qty_received}</td><td className="px-3 py-3 text-slate-700">{line.notes || "-"}</td></tr>)}</tbody></table></div>{purchaseOrder.notes && <p className="mt-4 rounded-[var(--radius-md)] bg-canvas-50 p-3 text-sm text-slate-700">{purchaseOrder.notes}</p>}</div>{canPrint && <PurchaseOrderPrintSheet purchaseOrder={purchaseOrder} visibleOnScreen={showPrintPreview} />}</div><div className="no-print flex shrink-0 flex-wrap justify-end gap-2 border-t border-line-200 bg-canvas-50/50 px-4 py-3 sm:px-6">{canPrint && <><button className="inline-flex min-h-11 items-center justify-center rounded-[var(--radius-md)] border border-line-500 bg-surface-0 px-4 text-sm font-semibold text-ink-950 hover:bg-canvas-50" onClick={() => setPreviewPoId((prev) => (prev === purchaseOrder.id ? null : purchaseOrder.id))} type="button">{showPrintPreview ? "Sembunyikan pratinjau cetak" : "Pratinjau PO cetak"}</button><button className="inline-flex min-h-11 items-center justify-center gap-2 rounded-[var(--radius-md)] bg-ink-950 px-4 text-sm font-semibold text-surface-0 hover:bg-ink-800" onClick={handlePrint} type="button"><Printer aria-hidden="true" size={16} />Cetak Purchase Order</button></>}{purchaseOrder.status === "DRAFT" && canIssue && <button className="inline-flex min-h-11 items-center justify-center rounded-[var(--radius-md)] bg-teal-600 px-4 text-sm font-semibold text-surface-0 hover:bg-teal-700" onClick={() => onAction(purchaseOrder, "issue")} type="button">Terbitkan purchase order</button>}{(purchaseOrder.status === "DRAFT" || purchaseOrder.status === "ISSUED") && canCancel && <button className="inline-flex min-h-11 items-center justify-center rounded-[var(--radius-md)] border border-red-600/40 bg-surface-0 px-4 text-sm font-semibold text-red-700 hover:bg-red-100" onClick={() => onAction(purchaseOrder, "cancel")} type="button">Batalkan purchase order</button>}{(purchaseOrder.status === "ISSUED" || purchaseOrder.status === "PARTIALLY_RECEIVED") && canClose && <button className="inline-flex min-h-11 items-center justify-center rounded-[var(--radius-md)] border border-amber-700/40 bg-surface-0 px-4 text-sm font-semibold text-amber-700 hover:bg-amber-100" onClick={() => onAction(purchaseOrder, "close")} type="button">Tutup purchase order</button>}<button className="inline-flex min-h-11 min-w-20 items-center justify-center gap-2 rounded-[var(--radius-md)] border border-line-500 bg-canvas-50 px-4 text-sm font-semibold text-ink-950 transition-colors hover:border-ink-800 hover:bg-surface-0" onClick={onClose} type="button"><X aria-hidden="true" size={16} />Tutup</button></div></>}</div></div>;
 }
 
 function ActionDialog({ purchaseOrder, action, closedReason, isSubmitting, onReasonChange, onClose, onSubmit }: { purchaseOrder: PurchaseOrder; action: "issue" | "cancel" | "close"; closedReason: string; isSubmitting: boolean; onReasonChange: (value: string) => void; onClose: () => void; onSubmit: () => void }) {
   const actionLabels = { issue: "Terbitkan purchase order", cancel: "Batalkan purchase order", close: "Tutup purchase order" };
-  return <div className="fixed inset-0 z-[60] grid place-items-center bg-ink-950/55 p-4" onMouseDown={onClose}><div aria-labelledby="po-action-title" aria-modal="true" className="w-full max-w-lg rounded-[var(--radius-lg)] border border-line-200 bg-surface-0 p-5 shadow-[var(--shadow-2)] sm:p-6" onMouseDown={(event) => event.stopPropagation()} role="dialog"><h2 className="text-lg font-bold text-ink-950" id="po-action-title">{actionLabels[action]}</h2><p className="mt-2 text-sm leading-6 text-slate-700">Aksi ini akan mengubah status {purchaseOrder.po_number}. Pastikan isi dokumen sudah diperiksa.</p>{action === "close" && <label className="mt-4 block text-sm font-semibold text-ink-950">Alasan penutupan<textarea className="mt-2 min-h-24 w-full rounded-[var(--radius-md)] border border-line-500 p-3 text-sm text-ink-950 focus:border-teal-600 focus:outline-none focus:ring-2 focus:ring-teal-600/20" onChange={(event) => onReasonChange(event.target.value)} value={closedReason} /></label>}<div className="mt-5 flex justify-end gap-2"><button className="inline-flex min-h-11 items-center justify-center rounded-[var(--radius-md)] border border-line-500 px-4 text-sm font-semibold text-ink-950 hover:bg-canvas-50" disabled={isSubmitting} onClick={onClose} type="button">Kembali periksa</button><button className={`inline-flex min-h-11 items-center justify-center rounded-[var(--radius-md)] px-4 text-sm font-semibold text-surface-0 ${action === "cancel" ? "bg-red-600 hover:bg-red-700" : "bg-teal-600 hover:bg-teal-700"}`} disabled={isSubmitting} onClick={onSubmit} type="button">{isSubmitting ? "Memproses..." : actionLabels[action]}</button></div></div></div>;
+  return <div className="no-print fixed inset-0 z-[60] grid place-items-center bg-ink-950/55 p-2 sm:p-4" onMouseDown={onClose}><div aria-labelledby="po-action-title" aria-modal="true" className="max-h-[94dvh] w-full max-w-lg overflow-y-auto rounded-[var(--radius-lg)] border border-line-200 bg-surface-0 p-4 shadow-[var(--shadow-2)] sm:p-6" onMouseDown={(event) => event.stopPropagation()} role="dialog"><h2 className="text-lg font-bold text-ink-950" id="po-action-title">{actionLabels[action]}</h2><p className="mt-2 text-sm leading-6 text-slate-700">Aksi ini akan mengubah status {purchaseOrder.po_number}. Pastikan isi dokumen sudah diperiksa.</p>{action === "close" && <label className="mt-4 block text-sm font-semibold text-ink-950">Alasan penutupan<textarea className="mt-2 min-h-24 w-full rounded-[var(--radius-md)] border border-line-500 p-3 text-sm text-ink-950 focus:border-teal-600 focus:outline-none focus:ring-2 focus:ring-teal-600/20" onChange={(event) => onReasonChange(event.target.value)} value={closedReason} /></label>}<div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end"><button className="inline-flex min-h-11 items-center justify-center rounded-[var(--radius-md)] border border-line-500 px-4 text-sm font-semibold text-ink-950 hover:bg-canvas-50" disabled={isSubmitting} onClick={onClose} type="button">Kembali periksa</button><button className={`inline-flex min-h-11 items-center justify-center rounded-[var(--radius-md)] px-4 text-sm font-semibold text-surface-0 ${action === "cancel" ? "bg-red-600 hover:bg-red-700" : "bg-teal-600 hover:bg-teal-700"}`} disabled={isSubmitting} onClick={onSubmit} type="button">{isSubmitting ? "Memproses..." : actionLabels[action]}</button></div></div></div>;
 }

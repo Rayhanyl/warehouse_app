@@ -20,6 +20,19 @@ export interface StorageLocationFormPayload {
   is_active: boolean;
 }
 
+export interface StorageLocationCreatePayload {
+  warehouse_id: number | string;
+  code: string;
+  name: string;
+  is_active?: boolean;
+}
+
+export interface StorageLocationUpdatePayload {
+  code?: string;
+  name?: string;
+  is_active?: boolean;
+}
+
 export interface StorageLocationWarehouseOption {
   id: string;
   code: string;

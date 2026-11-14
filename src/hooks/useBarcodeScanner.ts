@@ -30,7 +30,10 @@ export function useBarcodeScanner({
   minLength = 3,
 }: UseBarcodeScannerOptions) {
   const onScanRef = useRef(onScan);
-  onScanRef.current = onScan;
+
+  useEffect(() => {
+    onScanRef.current = onScan;
+  }, [onScan]);
 
   useEffect(() => {
     if (!enabled) {

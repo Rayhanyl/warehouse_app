@@ -42,15 +42,200 @@ interface LocationSummary {
   warehouse_name: string;
 }
 
+interface LookupResolution {
+  balances: StockBalance[];
+  itemInfo: ItemSummary | null;
+  locationInfo: LocationSummary | null;
+}
+
+async function fetchStockLookupResult(trimmed: string): Promise<LookupResolution> {
+  const lower = trimmed.toLowerCase();
+  const { data: balanceData } = await apiClient.get<Paginated<StockBalance>>(
+    "/stock/by-location",
+    {
+      params: {
+        search: trimmed,
+        limit: 100,
+      },
+    },
+  );
+
+  const items = balanceData?.items || [];
+  if (items.length > 0) {
+    const first = items[0];
+    const exactLocationMatch = items.some(
+      (row) =>
+        row.location_code.toLowerCase() === lower ||
+        row.location_name.toLowerCase() === lower,
+    );
+    const exactWarehouseMatch =
+      !exactLocationMatch &&
+      items.some(
+        (row) =>
+          row.warehouse_code.toLowerCase() === lower ||
+          row.warehouse_name.toLowerCase() === lower,
+      );
+    const anyItemFieldMatch = items.some(
+      (row) =>
+        row.item_sku.toLowerCase().includes(lower) ||
+        Boolean(row.item_barcode && row.item_barcode.toLowerCase().includes(lower)) ||
+        row.item_name.toLowerCase().includes(lower),
+    );
+
+    if (exactLocationMatch || exactWarehouseMatch || !anyItemFieldMatch) {
+      return {
+        balances: items,
+        itemInfo: null,
+        locationInfo: exactWarehouseMatch
+          ? {
+              scope: "warehouse",
+              code: first.warehouse_code,
+              name: first.warehouse_name,
+              warehouse_code: first.warehouse_code,
+              warehouse_name: first.warehouse_name,
+            }
+          : {
+              scope: "location",
+              code: first.location_code,
+              name: first.location_name,
+              warehouse_code: first.warehouse_code,
+              warehouse_name: first.warehouse_name,
+            },
+      };
+    }
+
+    return {
+      balances: items,
+      locationInfo: null,
+      itemInfo: {
+        id: first.item_id,
+        sku: first.item_sku,
+        barcode: first.item_barcode || null,
+        name: first.item_name,
+        category_name: first.category_name,
+        uom_code: first.uom_code,
+      },
+    };
+  }
+
+  let resolvedItemInfo: ItemSummary | null = null;
+  try {
+    const { data: itemData } = await apiClient.get<
+      Paginated<{
+        id: number;
+        sku: string;
+        barcode: string | null;
+        name: string;
+        category_name: string;
+        uom_code: string;
+      }>
+    >("/items", {
+      params: {
+        search: trimmed,
+        limit: 5,
+      },
+    });
+
+    const matched =
+      itemData?.items?.find(
+        (it) =>
+          it.sku.toLowerCase() === lower ||
+          (it.barcode && it.barcode.toLowerCase() === lower),
+      ) || itemData?.items?.[0];
+
+    if (matched) {
+      resolvedItemInfo = {
+        id: matched.id,
+        sku: matched.sku,
+        barcode: matched.barcode,
+        name: matched.name,
+        category_name: matched.category_name,
+        uom_code: matched.uom_code,
+      };
+    }
+  } catch {
+    // Abaikan dan lanjutkan cek lokasi rak bila perlu
+  }
+
+  if (resolvedItemInfo) {
+    return {
+      balances: [],
+      itemInfo: resolvedItemInfo,
+      locationInfo: null,
+    };
+  }
+
+  let resolvedLocationInfo: LocationSummary | null = null;
+  try {
+    const { data: locationData } = await apiClient.get<
+      Paginated<{
+        id: number;
+        code: string;
+        name: string;
+        warehouse_code: string;
+        warehouse_name: string;
+      }>
+    >("/locations", {
+      params: {
+        search: trimmed,
+        limit: 5,
+      },
+    });
+
+    const matchedLoc =
+      locationData?.items?.find(
+        (loc) =>
+          loc.code.toLowerCase() === lower ||
+          loc.name.toLowerCase() === lower,
+      ) || locationData?.items?.[0];
+
+    if (matchedLoc) {
+      resolvedLocationInfo = {
+        scope: "location",
+        code: matchedLoc.code,
+        name: matchedLoc.name,
+        warehouse_code: matchedLoc.warehouse_code,
+        warehouse_name: matchedLoc.warehouse_name,
+      };
+    }
+  } catch {
+    // Biarkan kosong jika tidak ditemukan di items maupun locations
+  }
+
+  return {
+    balances: [],
+    itemInfo: null,
+    locationInfo: resolvedLocationInfo,
+  };
+}
+
 export function StockLookupModal({
   isOpen,
   onClose,
   initialQuery = "",
 }: StockLookupModalProps) {
-  const [query, setQuery] = useState(initialQuery);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const [hasSearched, setHasSearched] = useState(false);
+  if (!isOpen) {
+    return null;
+  }
+
+  return (
+    <StockLookupModalInner
+      initialQuery={initialQuery}
+      key={initialQuery}
+      onClose={onClose}
+    />
+  );
+}
+
+function StockLookupModalInner({
+  onClose,
+  initialQuery = "",
+}: Omit<StockLookupModalProps, "isOpen">) {
+  const trimmedInitial = initialQuery.trim();
+  const [query, setQuery] = useState(trimmedInitial);
+  const [searchTerm, setSearchTerm] = useState(trimmedInitial);
+  const [isLoading, setIsLoading] = useState(Boolean(trimmedInitial));
+  const [hasSearched, setHasSearched] = useState(Boolean(trimmedInitial));
   const [isCameraOpen, setIsCameraOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -60,52 +245,60 @@ export function StockLookupModal({
 
   const inputRef = useRef<HTMLInputElement | null>(null);
 
-  // Focus input when modal opens
   useEffect(() => {
-    if (!isOpen) {
-      setQuery("");
-      setSearchTerm("");
-      setBalances([]);
-      setItemInfo(null);
-      setLocationInfo(null);
-      setHasSearched(false);
-      setError(null);
-      setIsCameraOpen(false);
-      return;
-    }
-
     const timer = window.setTimeout(() => {
       inputRef.current?.focus();
       inputRef.current?.select();
     }, 50);
 
     return () => window.clearTimeout(timer);
-  }, [isOpen]);
+  }, []);
 
-  // If initialQuery is passed when opening
   useEffect(() => {
-    if (isOpen && initialQuery.trim()) {
-      setQuery(initialQuery.trim());
-      executeLookup(initialQuery.trim());
+    if (!trimmedInitial) {
+      return;
     }
-  }, [isOpen, initialQuery]);
+
+    let active = true;
+    void fetchStockLookupResult(trimmedInitial)
+      .then((result) => {
+        if (!active) return;
+        setBalances(result.balances);
+        setItemInfo(result.itemInfo);
+        setLocationInfo(result.locationInfo);
+        setError(null);
+      })
+      .catch((err: unknown) => {
+        if (!active) return;
+        const message =
+          err instanceof Error ? err.message : "Gagal memuat informasi stok barang.";
+        setError(message);
+      })
+      .finally(() => {
+        if (active) {
+          setIsLoading(false);
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [trimmedInitial]);
 
   // Hardware barcode scanner support (USB / Bluetooth HID)
   useBarcodeScanner({
-    enabled: isOpen && !isCameraOpen,
+    enabled: !isCameraOpen,
     onScan: (scannedCode) => {
       const trimmed = scannedCode.trim();
       if (trimmed) {
         setQuery(trimmed);
-        executeLookup(trimmed);
+        void executeLookup(trimmed);
       }
     },
   });
 
   // Handle ESC key to close
   useEffect(() => {
-    if (!isOpen) return;
-
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape" && !isCameraOpen) {
         onClose();
@@ -114,7 +307,7 @@ export function StockLookupModal({
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isOpen, isCameraOpen, onClose]);
+  }, [isCameraOpen, onClose]);
 
   async function executeLookup(keyword: string) {
     const trimmed = keyword.trim();
@@ -126,155 +319,10 @@ export function StockLookupModal({
     setHasSearched(true);
 
     try {
-      const lower = trimmed.toLowerCase();
-      // 1. Cari saldo lokasi berdasarkan barcode barang / SKU / kode lokasi rak / kode gudang
-      const { data: balanceData } = await apiClient.get<Paginated<StockBalance>>(
-        "/stock/by-location",
-        {
-          params: {
-            search: trimmed,
-            limit: 100,
-          },
-        },
-      );
-
-      const items = balanceData?.items || [];
-      setBalances(items);
-
-      if (items.length > 0) {
-        const first = items[0];
-        const exactLocationMatch = items.some(
-          (row) =>
-            row.location_code.toLowerCase() === lower ||
-            row.location_name.toLowerCase() === lower,
-        );
-        const exactWarehouseMatch =
-          !exactLocationMatch &&
-          items.some(
-            (row) =>
-              row.warehouse_code.toLowerCase() === lower ||
-              row.warehouse_name.toLowerCase() === lower,
-          );
-        const anyItemFieldMatch = items.some(
-          (row) =>
-            row.item_sku.toLowerCase().includes(lower) ||
-            Boolean(row.item_barcode && row.item_barcode.toLowerCase().includes(lower)) ||
-            row.item_name.toLowerCase().includes(lower),
-        );
-
-        if (exactLocationMatch || exactWarehouseMatch || !anyItemFieldMatch) {
-          setItemInfo(null);
-          if (exactWarehouseMatch) {
-            setLocationInfo({
-              scope: "warehouse",
-              code: first.warehouse_code,
-              name: first.warehouse_name,
-              warehouse_code: first.warehouse_code,
-              warehouse_name: first.warehouse_name,
-            });
-          } else {
-            setLocationInfo({
-              scope: "location",
-              code: first.location_code,
-              name: first.location_name,
-              warehouse_code: first.warehouse_code,
-              warehouse_name: first.warehouse_name,
-            });
-          }
-        } else {
-          setLocationInfo(null);
-          setItemInfo({
-            id: first.item_id,
-            sku: first.item_sku,
-            barcode: first.item_barcode || null,
-            name: first.item_name,
-            category_name: first.category_name,
-            uom_code: first.uom_code,
-          });
-        }
-      } else {
-        // 2. Jika saldo kosong, cek apakah merupakan Barang di master data atau Lokasi Rak kosong
-        setLocationInfo(null);
-        setItemInfo(null);
-
-        let foundMasterItem = false;
-        try {
-          const { data: itemData } = await apiClient.get<
-            Paginated<{
-              id: number;
-              sku: string;
-              barcode: string | null;
-              name: string;
-              category_name: string;
-              uom_code: string;
-            }>
-          >("/items", {
-            params: {
-              search: trimmed,
-              limit: 5,
-            },
-          });
-
-          const matched =
-            itemData?.items?.find(
-              (it) =>
-                it.sku.toLowerCase() === lower ||
-                (it.barcode && it.barcode.toLowerCase() === lower),
-            ) || itemData?.items?.[0];
-
-          if (matched) {
-            foundMasterItem = true;
-            setItemInfo({
-              id: matched.id,
-              sku: matched.sku,
-              barcode: matched.barcode,
-              name: matched.name,
-              category_name: matched.category_name,
-              uom_code: matched.uom_code,
-            });
-          }
-        } catch {
-          // Abaikan dan lanjutkan cek lokasi rak bila perlu
-        }
-
-        if (!foundMasterItem) {
-          try {
-            const { data: locationData } = await apiClient.get<
-              Paginated<{
-                id: number;
-                code: string;
-                name: string;
-                warehouse_code: string;
-                warehouse_name: string;
-              }>
-            >("/locations", {
-              params: {
-                search: trimmed,
-                limit: 5,
-              },
-            });
-
-            const matchedLoc =
-              locationData?.items?.find(
-                (loc) =>
-                  loc.code.toLowerCase() === lower ||
-                  loc.name.toLowerCase() === lower,
-              ) || locationData?.items?.[0];
-
-            if (matchedLoc) {
-              setLocationInfo({
-                scope: "location",
-                code: matchedLoc.code,
-                name: matchedLoc.name,
-                warehouse_code: matchedLoc.warehouse_code,
-                warehouse_name: matchedLoc.warehouse_name,
-              });
-            }
-          } catch {
-            // Biarkan kosong jika tidak ditemukan di items maupun locations
-          }
-        }
-      }
+      const result = await fetchStockLookupResult(trimmed);
+      setBalances(result.balances);
+      setItemInfo(result.itemInfo);
+      setLocationInfo(result.locationInfo);
     } catch (err: unknown) {
       const message =
         err instanceof Error ? err.message : "Gagal memuat informasi stok barang.";
@@ -322,20 +370,16 @@ export function StockLookupModal({
     };
   }, [balances]);
 
-  if (!isOpen) {
-    return null;
-  }
-
   return (
     <div
       aria-labelledby="stock-lookup-title"
       aria-modal="true"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-2 backdrop-blur-xs sm:p-4"
       role="dialog"
     >
-      <div className="flex max-h-[92vh] w-full max-w-5xl flex-col rounded-[var(--radius-lg)] border border-line-500 bg-surface-0 shadow-2xl">
+      <div className="flex max-h-[94dvh] w-full max-w-5xl flex-col overflow-hidden rounded-[var(--radius-lg)] border border-line-500 bg-surface-0 shadow-2xl sm:max-h-[92vh]">
         {/* Modal Header */}
-        <div className="flex items-start justify-between gap-3 border-b border-line-500 px-4 py-3.5 sm:items-center sm:px-6 sm:py-4">
+        <div className="flex shrink-0 items-start justify-between gap-3 border-b border-line-500 px-4 py-3.5 sm:items-center sm:px-6 sm:py-4">
           <div className="flex min-w-0 items-start gap-3 sm:items-center">
             <div className="grid size-10 shrink-0 place-items-center rounded-lg bg-teal-50 text-teal-700">
               <ScanBarcode aria-hidden="true" size={22} />
@@ -354,7 +398,7 @@ export function StockLookupModal({
           </div>
           <button
             aria-label="Tutup pencarian stok"
-            className="grid size-9 shrink-0 place-items-center rounded-[var(--radius-md)] text-slate-600 transition hover:bg-canvas-100 hover:text-ink-950"
+            className="grid min-h-11 min-w-11 shrink-0 place-items-center rounded-[var(--radius-md)] text-slate-600 transition hover:bg-canvas-100 hover:text-ink-950"
             onClick={onClose}
             type="button"
           >
@@ -363,7 +407,7 @@ export function StockLookupModal({
         </div>
 
         {/* Search & Scan Toolbar */}
-        <div className="border-b border-line-300 bg-canvas-50/50 px-4 py-3.5 sm:px-6">
+        <div className="shrink-0 border-b border-line-300 bg-canvas-50/50 px-4 py-3 sm:px-6 sm:py-3.5">
           <form className="flex flex-wrap items-center gap-2 sm:flex-nowrap" onSubmit={handleSubmit}>
             <div className="relative min-w-[180px] flex-1">
               <Search
@@ -720,12 +764,12 @@ export function StockLookupModal({
         </div>
 
         {/* Modal Footer */}
-        <div className="flex flex-wrap items-center justify-between gap-2 border-t border-line-500 bg-canvas-50/50 px-4 py-3 sm:px-6">
+        <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-t border-line-500 bg-canvas-50/50 px-4 py-3 sm:px-6">
           <p className="text-[11px] text-slate-600">
             Tekan <kbd className="rounded border border-line-300 bg-surface-0 px-1 py-0.5 font-mono text-[10px]">Esc</kbd> untuk menutup jendela pencarian.
           </p>
           <button
-            className="inline-flex min-h-10 items-center justify-center rounded-[var(--radius-md)] border border-line-500 bg-surface-0 px-4 py-2 text-xs font-semibold text-ink-950 hover:bg-canvas-100"
+            className="inline-flex min-h-11 w-full items-center justify-center rounded-[var(--radius-md)] border border-line-500 bg-surface-0 px-4 py-2 text-xs font-semibold text-ink-950 hover:bg-canvas-100 sm:w-auto"
             onClick={onClose}
             type="button"
           >

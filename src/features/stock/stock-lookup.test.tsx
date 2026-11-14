@@ -125,7 +125,7 @@ describe("AC-34 & MST-F09: Barcode Generation & Stock Location Quick Lookup", ()
         },
       ];
 
-      vi.spyOn(apiClient, "get").mockImplementation(async (url: string) => {
+      vi.spyOn(apiClient, "get").mockImplementation((async (url: string) => {
         if (url === "/stock/by-location") {
           return {
             data: {
@@ -134,10 +134,10 @@ describe("AC-34 & MST-F09: Barcode Generation & Stock Location Quick Lookup", ()
               limit: 100,
               offset: 0,
             },
-          } as any;
+          };
         }
-        return { data: { items: [], total: 0, limit: 10, offset: 0 } } as any;
-      });
+        return { data: { items: [], total: 0, limit: 10, offset: 0 } };
+      }) as typeof apiClient.get);
 
       const onClose = vi.fn();
       const { container } = render(
@@ -177,9 +177,9 @@ describe("AC-34 & MST-F09: Barcode Generation & Stock Location Quick Lookup", ()
     });
 
     it("menampilkan penanda khusus jika barang ada di master data namun belum memiliki stok di rak mana pun", async () => {
-      vi.spyOn(apiClient, "get").mockImplementation(async (url: string) => {
+      vi.spyOn(apiClient, "get").mockImplementation((async (url: string) => {
         if (url === "/stock/by-location") {
-          return { data: { items: [], total: 0, limit: 100, offset: 0 } } as any;
+          return { data: { items: [], total: 0, limit: 100, offset: 0 } };
         }
         if (url === "/items") {
           return {
@@ -198,10 +198,10 @@ describe("AC-34 & MST-F09: Barcode Generation & Stock Location Quick Lookup", ()
               limit: 5,
               offset: 0,
             },
-          } as any;
+          };
         }
-        return { data: { items: [], total: 0 } } as any;
-      });
+        return { data: { items: [], total: 0 } };
+      }) as unknown as typeof apiClient.get);
 
       const { container } = render(
         <MemoryRouter>
@@ -226,7 +226,7 @@ describe("AC-34 & MST-F09: Barcode Generation & Stock Location Quick Lookup", ()
     it("menampilkan pesan jika barang sama sekali tidak ditemukan", async () => {
       vi.spyOn(apiClient, "get").mockResolvedValue({
         data: { items: [], total: 0, limit: 100, offset: 0 },
-      } as any);
+      } as Awaited<ReturnType<typeof apiClient.get>>);
 
       render(
         <MemoryRouter>
@@ -285,7 +285,7 @@ describe("AC-34 & MST-F09: Barcode Generation & Stock Location Quick Lookup", ()
         },
       ];
 
-      vi.spyOn(apiClient, "get").mockImplementation(async (url: string) => {
+      vi.spyOn(apiClient, "get").mockImplementation((async (url: string) => {
         if (url === "/stock/by-location") {
           return {
             data: {
@@ -294,10 +294,10 @@ describe("AC-34 & MST-F09: Barcode Generation & Stock Location Quick Lookup", ()
               limit: 100,
               offset: 0,
             },
-          } as any;
+          };
         }
-        return { data: { items: [], total: 0, limit: 10, offset: 0 } } as any;
-      });
+        return { data: { items: [], total: 0, limit: 10, offset: 0 } };
+      }) as unknown as typeof apiClient.get);
 
       const { container } = render(
         <MemoryRouter>

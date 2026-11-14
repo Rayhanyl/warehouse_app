@@ -75,13 +75,13 @@ function StorageLocationDetailDialogContent({
 
   return (
     <div
-      className="print-dialog-backdrop fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 p-4"
+      className="print-dialog-backdrop fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 p-2 sm:p-4 print:p-0"
       role="dialog"
       aria-modal="true"
       aria-labelledby="storage-location-detail-title"
     >
-      <div className="print-dialog-panel max-h-[90vh] w-full max-w-4xl overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-xl">
-        <div className="no-print flex items-start justify-between gap-3 border-b border-slate-200 px-4 py-4 sm:px-6">
+      <div className="print-dialog-panel flex max-h-[94dvh] w-full max-w-4xl flex-col overflow-hidden rounded-lg border border-slate-200 bg-white shadow-xl sm:max-h-[92vh] print:max-h-none print:overflow-visible print:border-0 print:shadow-none">
+        <div className="no-print flex shrink-0 items-start justify-between gap-3 border-b border-slate-200 px-4 py-4 sm:px-6">
           <div>
             <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">
               Detail lokasi penyimpanan
@@ -103,6 +103,7 @@ function StorageLocationDetailDialogContent({
           </button>
         </div>
 
+        <div className="min-h-0 flex-1 overflow-y-auto print:overflow-visible print:p-0">
         <dl className="no-print divide-y divide-slate-200 px-4 py-2 text-sm sm:px-6">
           <div className="flex flex-col items-start justify-between gap-3 py-3 sm:flex-row sm:items-center">
             <div>
@@ -206,7 +207,7 @@ function StorageLocationDetailDialogContent({
           </div>
         </dl>
 
-        <div className="px-4 sm:px-6">
+        <div className="px-4 pb-4 sm:px-6 print:p-0">
           <BarcodePrintConfigurator
             badgeText="LABEL LOKASI RAK"
             code={location.code}
@@ -222,12 +223,13 @@ function StorageLocationDetailDialogContent({
             visibleOnScreen={showStickerPreview}
           />
         </div>
+        </div>
 
-        <div className="no-print flex flex-wrap items-center justify-end gap-2 border-t border-slate-200 bg-slate-50 px-4 py-4 sm:px-6">
+        <div className="no-print flex shrink-0 flex-col-reverse gap-2 border-t border-slate-200 bg-slate-50 px-4 py-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end sm:px-6 sm:py-4">
           <button
             type="button"
             onClick={() => setShowStickerPreview((prev) => !prev)}
-            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-md border border-slate-300 bg-slate-100 px-3.5 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-700"
+            className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-md border border-slate-300 bg-slate-100 px-3.5 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-700 sm:w-auto"
           >
             <SlidersHorizontal className="h-4 w-4" aria-hidden="true" />
             {showStickerPreview ? "Tutup Pratinjau Ukuran" : "Atur Ukuran & Pratinjau"}
@@ -235,7 +237,7 @@ function StorageLocationDetailDialogContent({
           <button
             type="button"
             onClick={handlePrintRackSticker}
-            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-700"
+            className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-700 sm:w-auto"
           >
             <Printer className="h-4 w-4" aria-hidden="true" />
             Cetak Label Rak
@@ -243,7 +245,7 @@ function StorageLocationDetailDialogContent({
           <button
             type="button"
             onClick={onClose}
-            className="inline-flex min-h-11 items-center justify-center rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-700"
+            className="inline-flex min-h-11 w-full items-center justify-center rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-700 sm:w-auto"
           >
             Tutup
           </button>
@@ -254,7 +256,7 @@ function StorageLocationDetailDialogContent({
                 onClose();
                 onEdit(location);
               }}
-              className="inline-flex min-h-11 items-center justify-center rounded-md bg-emerald-800 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-900 focus:outline-none focus:ring-2 focus:ring-emerald-700 focus:ring-offset-2"
+              className="inline-flex min-h-11 w-full items-center justify-center rounded-md bg-emerald-800 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-900 focus:outline-none focus:ring-2 focus:ring-emerald-700 focus:ring-offset-2 sm:w-auto"
             >
               Edit lokasi
             </button>

@@ -305,7 +305,20 @@ describe("LandingPage", () => {
     }
 
     expect(container.querySelector("#workflow")).not.toBeNull();
-    expect(container.querySelector("#pain-points")).not.toBeNull();
+    const painPointsSection = container.querySelector("#pain-points");
+    expect(painPointsSection).not.toBeNull();
+    expect(
+      screen.getByText("Prinsip ketertelusuran stok"),
+    ).toBeInTheDocument();
+    const painPointsGrid = painPointsSection?.querySelector(".md\\:grid-cols-2");
+    expect(painPointsGrid).not.toBeNull();
+    const painPointCards = painPointsGrid?.querySelectorAll("article");
+    expect(painPointCards?.length).toBe(4);
+    for (const card of painPointCards ?? []) {
+      expect(card.className).toContain("h-full");
+    }
+    expect(screen.getByText("Kasus 01")).toBeInTheDocument();
+    expect(screen.getByText("Kasus 04")).toBeInTheDocument();
     expect(container.querySelector("#security")).not.toBeNull();
 
     const menuButton = screen.getByRole("button", {

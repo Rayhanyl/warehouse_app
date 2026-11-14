@@ -153,7 +153,7 @@ export function LandingPage() {
       </header>
 
       <main id="main-content">
-        <section className="relative bg-ink-950 pb-16 text-canvas-50 sm:pb-24 lg:pb-28">
+        <section className="relative bg-ink-950 pb-20 text-canvas-50 sm:pb-24 lg:pb-28">
           <div
             aria-hidden="true"
             className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_82%_28%,rgb(38_104_87_/_0.24),transparent_55%)]"
@@ -161,8 +161,8 @@ export function LandingPage() {
 
           <div className="relative mx-auto grid max-w-[1200px] gap-12 px-4 pt-12 sm:px-6 sm:pt-16 lg:grid-cols-[1.04fr_0.96fr] lg:items-center lg:gap-14 lg:px-8 lg:pt-20">
             <div className="min-w-0">
-              <div className="inline-flex items-center gap-2.5 rounded-[var(--radius-sm)] border border-[#8a9995]/50 bg-ink-800 px-3 py-1.5">
-                <span className="text-xs font-semibold text-amber-400">
+              <div className="inline-flex flex-wrap items-center gap-x-2.5 gap-y-1 rounded-[var(--radius-sm)] border border-[#8a9995]/50 bg-ink-800 px-3.5 py-1.5">
+                <span className="text-xs font-semibold tracking-[0.02em] text-amber-400">
                   {hero.eyebrow}
                 </span>
                 <span aria-hidden="true" className="text-xs text-[#c8d0cd]">
@@ -173,11 +173,11 @@ export function LandingPage() {
                 </span>
               </div>
 
-              <h1 className="mt-5 max-w-2xl text-[clamp(2.25rem,4vw+1rem,3.375rem)] leading-[1.12] font-bold tracking-[-0.025em] text-canvas-50">
+              <h1 className="mt-5 max-w-2xl text-[clamp(2rem,3.6vw+1rem,3.375rem)] leading-[1.15] font-bold tracking-[-0.025em] text-canvas-50">
                 {hero.title}
               </h1>
 
-              <p className="mt-6 max-w-xl text-base leading-[1.7] text-[#e2e6e4] sm:text-lg">
+              <p className="mt-6 max-w-xl text-base leading-[1.75] text-[#e2e6e4] sm:text-lg">
                 {hero.description}
               </p>
 
@@ -198,16 +198,16 @@ export function LandingPage() {
               </div>
 
               <div className="mt-10 border-t border-[#8a9995]/35 pt-6">
-                <p className="text-xs font-medium text-[#c8d0cd]">
+                <p className="text-[13px] font-medium tracking-[0.01em] text-[#d5dcda] sm:text-sm">
                   Urutan siklus operasional gudang:
                 </p>
-                <div className="mt-3 flex flex-wrap items-center gap-2">
+                <div className="mt-3.5 flex flex-wrap items-center gap-2.5">
                   {workflow.steps.map((step, index) => (
                     <div
                       key={step.number}
                       className="inline-flex items-center gap-2"
                     >
-                      <span className="inline-flex items-center gap-1.5 rounded-[var(--radius-sm)] border border-[#8a9995]/40 bg-ink-800 px-2.5 py-1 text-xs font-semibold text-canvas-50">
+                      <span className="inline-flex items-center gap-1.5 rounded-[var(--radius-sm)] border border-[#8a9995]/40 bg-ink-800 px-3 py-1.5 text-xs font-semibold text-canvas-50 sm:text-[13px]">
                         <span className="tabular-nums text-amber-400">
                           {step.number}
                         </span>
@@ -233,16 +233,16 @@ export function LandingPage() {
                   src={hero.image.src}
                   alt={hero.image.alt}
                 />
-                <div className="flex flex-wrap items-center justify-between gap-2 border-t border-[#8a9995]/40 bg-ink-950 px-4 py-3">
-                  <div>
-                    <p className="text-xs font-semibold text-teal-400">
+                <div className="flex flex-wrap items-center justify-between gap-2.5 border-t border-[#8a9995]/40 bg-ink-950 px-4 py-3.5">
+                  <div className="min-w-0">
+                    <p className="text-xs font-semibold tracking-[0.02em] text-teal-400">
                       {hero.visualLabel}
                     </p>
-                    <p className="mt-0.5 text-xs text-[#e2e6e4]">
+                    <p className="mt-1 text-xs leading-snug text-[#e2e6e4] sm:text-[13px]">
                       {hero.visualSubLabel}
                     </p>
                   </div>
-                  <span className="inline-flex items-center rounded-[var(--radius-sm)] bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-700">
+                  <span className="inline-flex shrink-0 items-center rounded-[var(--radius-sm)] bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-700">
                     {hero.sampleDataBadge}
                   </span>
                 </div>
@@ -252,18 +252,18 @@ export function LandingPage() {
                 {hero.traceRecords.map((record) => (
                   <div
                     key={record.documentCode}
-                    className="flex flex-wrap items-center justify-between gap-2 rounded-[var(--radius-sm)] border border-[#8a9995]/45 bg-ink-950 px-3.5 py-3 transition-colors duration-150 hover:border-teal-400/70"
+                    className="flex flex-wrap items-center justify-between gap-2.5 rounded-[var(--radius-sm)] border border-[#8a9995]/45 bg-ink-950 px-4 py-3 transition-colors duration-150 hover:border-teal-400/70"
                   >
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
-                        <span className="rounded bg-ink-800 px-2 py-0.5 text-xs font-medium text-[#c8d0cd]">
+                        <span className="rounded bg-ink-800 px-2 py-0.5 text-xs font-medium text-[#d5dcda]">
                           {record.module}
                         </span>
-                        <span className="tabular-nums text-xs font-bold text-canvas-50">
+                        <span className="tabular-nums text-xs font-bold text-canvas-50 sm:text-[13px]">
                           {record.documentCode}
                         </span>
                       </div>
-                      <p className="tabular-nums mt-1 text-xs text-[#e2e6e4]">
+                      <p className="tabular-nums mt-1 text-xs leading-snug text-[#e2e6e4] sm:text-[13px]">
                         {record.detail}
                       </p>
                     </div>
@@ -276,11 +276,11 @@ export function LandingPage() {
                 ))}
               </div>
 
-              <div className="mt-4 rounded-[var(--radius-sm)] border border-teal-400/40 bg-ink-950 px-4 py-3">
-                <p className="text-xs font-semibold text-teal-400">
+              <div className="mt-4 rounded-[var(--radius-sm)] border border-teal-400/40 bg-ink-950 px-4 py-3.5">
+                <p className="text-xs font-semibold tracking-[0.02em] text-teal-400 sm:text-[13px]">
                   {hero.traceSummaryTitle}
                 </p>
-                <p className="mt-1 text-xs leading-relaxed text-[#e2e6e4]">
+                <p className="mt-1.5 text-[13px] leading-[1.6] text-[#e2e6e4] sm:text-sm">
                   {hero.visualCaption}
                 </p>
               </div>
@@ -289,20 +289,16 @@ export function LandingPage() {
         </section>
 
         <section
-          className="relative z-10 -mt-8 px-4 sm:-mt-12 sm:px-6 lg:px-8"
+          className="relative z-10 -mt-10 px-4 sm:-mt-12 sm:px-6 lg:px-8"
           aria-label="Bukti kendali operasional"
         >
-          <div className="mx-auto grid max-w-[1200px] gap-0 overflow-hidden rounded-[var(--radius-lg)] border border-line-200 bg-surface-0 shadow-[var(--shadow-2)] sm:grid-cols-2 lg:grid-cols-4">
+          <div className="mx-auto grid max-w-[1200px] gap-px overflow-hidden rounded-[var(--radius-lg)] border border-line-200 bg-line-200 shadow-[var(--shadow-2)] sm:grid-cols-2 lg:grid-cols-4">
             {proofPoints.map((point, index) => {
               const Icon = proofIcons[point.icon];
               return (
                 <div
                   key={point.label}
-                  className={`flex min-w-0 flex-col justify-between p-5 sm:p-7 ${
-                    index > 0
-                      ? "border-t border-line-200 sm:border-l lg:border-t-0"
-                      : ""
-                  }`}
+                  className="flex h-full min-w-0 flex-col justify-between bg-surface-0 p-6 sm:p-7"
                 >
                   <div className="flex items-center justify-between gap-3">
                     <span className="inline-flex size-10 shrink-0 items-center justify-center rounded-[var(--radius-sm)] bg-teal-100 text-teal-700">
@@ -312,11 +308,11 @@ export function LandingPage() {
                       0{index + 1}
                     </span>
                   </div>
-                  <div className="mt-4 min-w-0">
-                    <h2 className="text-base font-bold text-ink-950">
+                  <div className="mt-5 min-w-0">
+                    <h2 className="text-base leading-snug font-bold text-ink-950 sm:text-[17px]">
                       {point.label}
                     </h2>
-                    <p className="mt-1.5 text-sm leading-relaxed text-slate-700">
+                    <p className="mt-2 text-sm leading-[1.68] text-slate-700">
                       {point.description}
                     </p>
                   </div>
@@ -330,21 +326,21 @@ export function LandingPage() {
           id="workflow"
           className="mx-auto max-w-[1200px] px-4 py-16 sm:px-6 sm:py-20 lg:px-8 lg:py-24"
         >
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between lg:gap-10">
             <div className="max-w-2xl">
-              <p className="text-xs font-semibold text-teal-600">
+              <p className="text-xs font-bold uppercase tracking-[0.06em] text-teal-700">
                 {workflow.eyebrow}
               </p>
-              <h2 className="mt-2 text-[clamp(1.75rem,2.8vw+1rem,2.5rem)] leading-[1.2] font-bold tracking-[-0.02em] text-ink-950">
+              <h2 className="mt-2.5 text-[clamp(1.75rem,2.6vw+1rem,2.5rem)] leading-[1.2] font-bold tracking-[-0.02em] text-ink-950">
                 {workflow.title}
               </h2>
             </div>
-            <p className="max-w-md text-sm leading-[1.65] text-slate-700">
+            <p className="max-w-lg text-base leading-[1.7] text-slate-700">
               {workflow.description}
             </p>
           </div>
 
-          <div className="mt-10 overflow-hidden rounded-[var(--radius-lg)] border border-line-200 bg-surface-0 shadow-[var(--shadow-2)] lg:grid lg:grid-cols-[1.1fr_0.9fr]">
+          <div className="mt-10 overflow-hidden rounded-[var(--radius-lg)] border border-line-200 bg-surface-0 shadow-[var(--shadow-2)] sm:mt-12 lg:grid lg:grid-cols-[1.1fr_0.9fr]">
             <div className="relative bg-ink-950">
               <img
                 className="aspect-[16/10] h-full w-full object-cover"
@@ -355,7 +351,7 @@ export function LandingPage() {
 
             <div className="flex flex-col justify-between p-6 sm:p-8 lg:p-10">
               <div>
-                <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex flex-wrap items-center justify-between gap-2.5">
                   <span className="inline-flex items-center gap-2 rounded-[var(--radius-sm)] bg-amber-100 px-3 py-1 text-xs font-bold text-amber-700">
                     <span className="tabular-nums">
                       Tahap {activeStep.number}
@@ -371,29 +367,32 @@ export function LandingPage() {
                 <h3 className="mt-5 text-2xl leading-[1.3] font-bold text-ink-950 sm:text-3xl">
                   {activeStep.label}
                 </h3>
-                <p className="mt-3 text-base leading-[1.65] text-slate-700">
+                <p className="mt-3.5 text-base leading-[1.7] text-slate-700">
                   {activeStep.description}
                 </p>
               </div>
 
               <div className="mt-6 rounded-[var(--radius-md)] border border-line-200 bg-canvas-50 p-4 sm:p-5">
                 <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line-200 pb-3">
-                  <span className="tabular-nums text-xs font-bold text-ink-950">
+                  <span className="tabular-nums text-xs font-bold text-ink-950 sm:text-[13px]">
                     {activeStep.documentExample}
                   </span>
                   <span className="inline-flex rounded-[var(--radius-sm)] bg-teal-100 px-2.5 py-0.5 text-xs font-semibold text-teal-700">
                     {activeStep.statusBadge}
                   </span>
                 </div>
-                <p className="mt-3 text-xs leading-relaxed font-medium text-slate-700">
-                  Dampak stok: {activeStep.outcome}
+                <p className="mt-3.5 text-sm leading-[1.65] text-slate-700">
+                  <span className="font-semibold text-ink-950">
+                    Dampak stok:
+                  </span>{" "}
+                  {activeStep.outcome}
                 </p>
               </div>
             </div>
           </div>
 
           <div
-            className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4"
+            className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4 lg:gap-5"
             role="group"
             aria-label="Pilih tahapan alur kerja gudang"
           >
@@ -402,7 +401,7 @@ export function LandingPage() {
               return (
                 <article
                   key={step.number}
-                  className={`flex min-w-0 flex-col justify-between rounded-[var(--radius-md)] border transition-all duration-150 ${
+                  className={`flex h-full min-w-0 flex-col justify-between rounded-[var(--radius-md)] border transition-all duration-150 ${
                     isSelected
                       ? "border-teal-600 bg-surface-0 shadow-[var(--shadow-2)]"
                       : "border-line-200 bg-surface-0 shadow-[var(--shadow-1)] hover:-translate-y-0.5 hover:border-line-500"
@@ -412,7 +411,7 @@ export function LandingPage() {
                     type="button"
                     aria-pressed={isSelected}
                     onClick={() => setActiveStepIndex(index)}
-                    className="flex h-full w-full flex-col justify-between p-5 text-left"
+                    className="flex h-full w-full flex-col justify-between p-5 text-left sm:p-6"
                   >
                     <div>
                       <div className="flex items-center justify-between gap-2">
@@ -429,15 +428,15 @@ export function LandingPage() {
                           {step.moduleLabel}
                         </span>
                       </div>
-                      <h4 className="mt-4 text-lg font-bold text-ink-950">
+                      <h4 className="mt-4 text-lg leading-snug font-bold text-ink-950">
                         {step.label}
                       </h4>
-                      <p className="mt-2 text-sm leading-[1.6] text-slate-700">
+                      <p className="mt-2.5 text-sm leading-[1.68] text-slate-700">
                         {step.description}
                       </p>
                     </div>
 
-                    <div className="mt-5 flex items-center justify-between border-t border-line-200 pt-3 text-xs font-semibold text-teal-600">
+                    <div className="mt-5 flex items-center justify-between border-t border-line-200 pt-3.5 text-xs font-semibold text-teal-600">
                       <span>
                         {isSelected ? "Tahap sedang ditampilkan" : "Lihat detail tahap"}
                       </span>
@@ -454,26 +453,28 @@ export function LandingPage() {
           id="pain-points"
           className="border-y border-line-200 bg-teal-100/55 py-16 sm:py-20 lg:py-24"
         >
-          <div className="mx-auto grid max-w-[1200px] gap-10 px-4 sm:px-6 lg:grid-cols-[0.88fr_1.12fr] lg:items-start lg:gap-12 lg:px-8">
-            <div className="min-w-0">
-              <p className="text-xs font-semibold text-amber-700">
-                {painPoints.eyebrow}
-              </p>
-              <h2 className="mt-2 text-[clamp(1.75rem,2.8vw+1rem,2.5rem)] leading-[1.2] font-bold tracking-[-0.02em] text-ink-950">
-                {painPoints.title}
-              </h2>
-              <p className="mt-4 text-base leading-[1.65] text-slate-700">
-                {painPoints.description}
-              </p>
+          <div className="mx-auto max-w-[1200px] px-4 sm:px-6 lg:px-8">
+            <div className="grid gap-8 lg:grid-cols-[1.15fr_0.85fr] lg:items-stretch lg:gap-10">
+              <div className="flex min-w-0 flex-col justify-center">
+                <p className="text-xs font-bold uppercase tracking-[0.06em] text-amber-700">
+                  {painPoints.eyebrow}
+                </p>
+                <h2 className="mt-2.5 max-w-2xl text-[clamp(1.75rem,2.6vw+1rem,2.5rem)] leading-[1.2] font-bold tracking-[-0.02em] text-ink-950">
+                  {painPoints.title}
+                </h2>
+                <p className="mt-4 max-w-2xl text-base leading-[1.7] text-slate-700">
+                  {painPoints.description}
+                </p>
+              </div>
 
-              <div className="mt-8 rounded-[var(--radius-lg)] bg-ink-950 p-6 text-canvas-50 shadow-[var(--shadow-2)]">
-                <p className="text-xs font-semibold text-amber-400">
+              <div className="flex flex-col justify-center rounded-[var(--radius-lg)] border border-[#8a9995]/30 bg-ink-950 p-6 text-canvas-50 shadow-[var(--shadow-2)] sm:p-7">
+                <p className="text-xs font-bold uppercase tracking-[0.06em] text-amber-400">
                   Prinsip ketertelusuran stok
                 </p>
-                <p className="mt-2 text-lg leading-[1.4] font-bold text-canvas-50">
+                <p className="mt-2.5 text-lg leading-[1.45] font-bold text-canvas-50 sm:text-xl">
                   Saldo tidak pernah berubah tanpa dokumen referensi yang sah.
                 </p>
-                <p className="mt-2.5 text-xs leading-relaxed text-[#c8d0cd]">
+                <p className="mt-3 text-sm leading-[1.68] text-[#d5dcda]">
                   Setiap mutasi masuk, pindah lokasi, maupun koreksi opname
                   wajib melewati validasi status dan mencatat ID pengguna di
                   audit log.
@@ -481,21 +482,18 @@ export function LandingPage() {
               </div>
             </div>
 
-            <div className="grid gap-4">
+            <div className="mt-10 grid gap-5 sm:mt-12 md:grid-cols-2 lg:gap-6">
               {painPoints.items.map((item) => (
                 <article
                   key={item.number}
-                  className="overflow-hidden rounded-[var(--radius-md)] border border-line-200 bg-surface-0 shadow-[var(--shadow-1)] transition-transform duration-150 hover:-translate-y-0.5"
+                  className="flex h-full flex-col overflow-hidden rounded-[var(--radius-md)] border border-line-200 bg-surface-0 shadow-[var(--shadow-1)] transition-transform duration-150 hover:-translate-y-0.5"
                 >
-                  <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line-200 bg-canvas-50 px-5 py-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2.5 border-b border-line-200 bg-canvas-50 px-5 py-3.5 sm:px-6">
                     <div className="flex items-center gap-2.5">
-                      <span className="tabular-nums text-xs font-bold text-amber-600">
+                      <span className="tabular-nums inline-flex items-center rounded-[var(--radius-sm)] bg-amber-100 px-2.5 py-0.5 text-xs font-bold text-amber-700">
                         Kasus {item.number}
                       </span>
-                      <span aria-hidden="true" className="text-slate-600">
-                        ·
-                      </span>
-                      <span className="text-xs font-semibold text-slate-700">
+                      <span className="text-xs font-semibold text-slate-600">
                         {painPoints.columnProblemLabel}
                       </span>
                     </div>
@@ -504,21 +502,19 @@ export function LandingPage() {
                     </span>
                   </div>
 
-                  <div className="p-5 sm:p-6">
-                    <h3 className="text-base leading-[1.45] font-bold text-ink-950 sm:text-lg">
+                  <div className="flex flex-1 flex-col justify-between gap-5 p-5 sm:p-6">
+                    <h3 className="text-lg leading-[1.45] font-bold text-ink-950">
                       {item.problem}
                     </h3>
-                    <div className="mt-3.5 flex items-start gap-3 rounded-[var(--radius-sm)] border border-line-200 bg-canvas-50/70 p-3.5">
-                      <Check
-                        className="mt-0.5 shrink-0 text-teal-600"
-                        size={17}
-                        aria-hidden="true"
-                      />
-                      <div>
-                        <p className="text-xs font-semibold text-teal-700">
+                    <div className="mt-auto flex items-start gap-3.5 rounded-[var(--radius-sm)] border border-line-200 bg-canvas-50/85 p-4">
+                      <span className="mt-0.5 inline-flex size-6 shrink-0 items-center justify-center rounded-full bg-teal-100 text-teal-700">
+                        <Check size={14} strokeWidth={2.5} aria-hidden="true" />
+                      </span>
+                      <div className="min-w-0">
+                        <p className="text-xs font-bold tracking-[0.02em] text-teal-700">
                           {painPoints.columnSolutionLabel}
                         </p>
-                        <p className="mt-1 text-sm leading-[1.6] text-slate-700">
+                        <p className="mt-1.5 text-sm leading-[1.68] text-slate-700">
                           {item.answer}
                         </p>
                       </div>
@@ -535,21 +531,21 @@ export function LandingPage() {
           className="mx-auto grid max-w-[1200px] gap-10 px-4 py-16 sm:px-6 sm:py-20 lg:grid-cols-[1.05fr_0.95fr] lg:items-center lg:gap-12 lg:px-8 lg:py-24"
         >
           <div className="min-w-0">
-            <p className="text-xs font-semibold text-teal-600">
+            <p className="text-xs font-bold uppercase tracking-[0.06em] text-teal-700">
               {security.eyebrow}
             </p>
-            <h2 className="mt-2 text-[clamp(1.75rem,2.8vw+1rem,2.5rem)] leading-[1.2] font-bold tracking-[-0.02em] text-ink-950">
+            <h2 className="mt-2.5 text-[clamp(1.75rem,2.6vw+1rem,2.5rem)] leading-[1.2] font-bold tracking-[-0.02em] text-ink-950">
               {security.title}
             </h2>
-            <p className="mt-3 text-base leading-[1.65] text-slate-700">
+            <p className="mt-4 max-w-2xl text-base leading-[1.7] text-slate-700">
               {security.description}
             </p>
 
-            <dl className="mt-8 grid gap-4 sm:grid-cols-2">
+            <dl className="mt-8 grid gap-4 sm:grid-cols-2 lg:gap-5">
               {security.pillars.map((pillar, index) => (
                 <div
                   key={pillar.title}
-                  className="flex flex-col justify-between rounded-[var(--radius-md)] border border-line-200 bg-surface-0 p-5 shadow-[var(--shadow-1)]"
+                  className="flex h-full flex-col justify-between rounded-[var(--radius-md)] border border-line-200 bg-surface-0 p-5 shadow-[var(--shadow-1)] sm:p-6"
                 >
                   <div className="flex items-center justify-between gap-2">
                     <span className="inline-flex size-8 items-center justify-center rounded-[var(--radius-sm)] bg-teal-100 text-teal-700">
@@ -560,10 +556,10 @@ export function LandingPage() {
                     </span>
                   </div>
                   <div className="mt-4">
-                    <dt className="text-sm font-bold text-ink-950">
+                    <dt className="text-base leading-snug font-bold text-ink-950">
                       {pillar.title}
                     </dt>
-                    <dd className="mt-1.5 text-xs leading-[1.6] text-slate-700">
+                    <dd className="mt-2 text-sm leading-[1.65] text-slate-700">
                       {pillar.description}
                     </dd>
                   </div>
@@ -581,7 +577,7 @@ export function LandingPage() {
               />
             </div>
 
-            <div className="mt-5 flex flex-wrap items-center justify-between gap-2 border-b border-[#8a9995]/40 pb-4">
+            <div className="mt-5 flex flex-wrap items-center justify-between gap-2.5 border-b border-[#8a9995]/40 pb-4">
               <div className="flex items-center gap-2.5">
                 <ShieldCheck
                   className="shrink-0 text-teal-400"
@@ -597,7 +593,7 @@ export function LandingPage() {
               </span>
             </div>
 
-            <p className="mt-3 text-xs leading-relaxed text-[#c8d0cd]">
+            <p className="mt-3.5 text-sm leading-[1.65] text-[#d5dcda]">
               {security.controlPanel.caption}
             </p>
 
@@ -605,13 +601,13 @@ export function LandingPage() {
               {security.controlPanel.items.map((item) => (
                 <div
                   key={item.label}
-                  className="flex flex-wrap items-center justify-between gap-2 rounded-[var(--radius-sm)] border border-[#8a9995]/40 bg-ink-800 px-4 py-3"
+                  className="flex flex-wrap items-center justify-between gap-2.5 rounded-[var(--radius-sm)] border border-[#8a9995]/40 bg-ink-800 px-4 py-3"
                 >
                   <div className="min-w-0">
                     <p className="text-sm font-semibold text-canvas-50">
                       {item.label}
                     </p>
-                    <p className="tabular-nums mt-0.5 text-xs text-[#c8d0cd]">
+                    <p className="tabular-nums mt-1 text-xs leading-snug text-[#d5dcda] sm:text-[13px]">
                       {item.detail}
                     </p>
                   </div>
@@ -633,17 +629,17 @@ export function LandingPage() {
               className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_90%_50%,rgb(38_104_87_/_0.28),transparent_55%)]"
             />
             <div className="relative min-w-0">
-              <p className="text-xs font-semibold text-amber-400">
+              <p className="text-xs font-bold uppercase tracking-[0.06em] text-amber-400">
                 {cta.eyebrow}
               </p>
-              <h2 className="mt-2 max-w-2xl text-[clamp(1.75rem,2.8vw+1rem,2.375rem)] leading-[1.2] font-bold tracking-[-0.02em] text-canvas-50">
+              <h2 className="mt-2.5 max-w-2xl text-[clamp(1.75rem,2.6vw+1rem,2.375rem)] leading-[1.2] font-bold tracking-[-0.02em] text-canvas-50">
                 {cta.title}
               </h2>
-              <p className="mt-3 max-w-xl text-base leading-[1.65] text-[#e2e6e4]">
+              <p className="mt-4 max-w-xl text-base leading-[1.7] text-[#e2e6e4]">
                 {cta.description}
               </p>
             </div>
-            <div className="relative mt-7 flex flex-col gap-3 sm:flex-row sm:items-center lg:mt-0 lg:shrink-0">
+            <div className="relative mt-8 flex flex-col gap-3.5 sm:flex-row sm:items-center lg:mt-0 lg:shrink-0">
               <Link
                 to={cta.button.href}
                 className="inline-flex min-h-12 items-center justify-center gap-2 rounded-[var(--radius-sm)] bg-teal-600 px-6 py-3 text-sm font-semibold text-surface-0 shadow-[0_10px_24px_rgb(0_0_0_/_0.25)] transition-all duration-150 hover:-translate-y-0.5 hover:bg-teal-700"
@@ -663,7 +659,7 @@ export function LandingPage() {
       </main>
 
       <footer className="border-t border-line-200 bg-surface-0">
-        <div className="mx-auto flex max-w-[1200px] flex-col gap-5 px-4 py-8 text-sm text-slate-700 sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-8">
+        <div className="mx-auto flex max-w-[1200px] flex-col gap-6 px-4 py-10 text-sm text-slate-700 sm:flex-row sm:items-center sm:justify-between sm:px-6 sm:py-12 lg:px-8">
           <div className="flex items-center gap-4">
             <img
               className="h-10 w-auto max-w-[160px] rounded-[var(--radius-sm)] border border-line-200 object-cover object-left"
@@ -672,7 +668,7 @@ export function LandingPage() {
             />
             <div className="min-w-0">
               <p className="font-bold text-ink-950">{footer.productName}</p>
-              <p className="mt-0.5 text-xs text-slate-600">
+              <p className="mt-1 text-[13px] leading-relaxed text-slate-600 sm:text-sm">
                 {footer.description}
               </p>
             </div>
@@ -684,7 +680,7 @@ export function LandingPage() {
             >
               {footer.loginLabel}
             </Link>
-            <p className="text-xs text-slate-600">
+            <p className="text-xs text-slate-600 sm:text-[13px]">
               © 2026 {footer.copyright}
             </p>
           </div>

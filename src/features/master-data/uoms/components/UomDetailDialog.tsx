@@ -61,17 +61,17 @@ export function UomDetailDialog({
 
   return (
     <div
-      className="fixed inset-0 z-50 grid place-items-center bg-ink-950/55 p-4"
+      className="fixed inset-0 z-50 grid place-items-center bg-ink-950/55 p-2 sm:p-4"
       onMouseDown={onClose}
     >
       <div
         aria-labelledby="uom-detail-title"
         aria-modal="true"
-        className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-[var(--radius-lg)] border border-line-200 bg-surface-0 p-5 shadow-[var(--shadow-2)] sm:p-6"
+        className="flex max-h-[94dvh] w-full max-w-2xl flex-col overflow-hidden rounded-[var(--radius-lg)] border border-line-200 bg-surface-0 shadow-[var(--shadow-2)] sm:max-h-[92vh]"
         onMouseDown={(event) => event.stopPropagation()}
         role="dialog"
       >
-        <div className="flex items-start justify-between gap-3 border-b border-line-200 pb-4">
+        <div className="flex shrink-0 items-start justify-between gap-3 border-b border-line-200 px-4 py-4 sm:px-6 sm:py-5">
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
               <span className="rounded-full bg-canvas-50 px-2.5 py-0.5 text-xs font-semibold text-slate-700 tabular-nums">
@@ -111,7 +111,8 @@ export function UomDetailDialog({
           </button>
         </div>
 
-        <dl className="mt-5 space-y-4 text-sm">
+        <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-5">
+        <dl className="space-y-4 text-sm">
           <div className="flex items-start gap-3">
             <Ruler
               aria-hidden="true"
@@ -192,12 +193,13 @@ export function UomDetailDialog({
             </div>
           </div>
         </dl>
+        </div>
 
-        <div className="mt-6 flex flex-wrap items-center justify-end gap-2 border-t border-line-200 pt-4">
+        <div className="flex shrink-0 flex-col-reverse gap-2 border-t border-line-200 bg-surface-0 px-4 py-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end sm:px-6 sm:py-4">
           {canManage && (
             <>
               <button
-                className={`inline-flex min-h-11 items-center gap-2 rounded-[var(--radius-md)] border px-3.5 text-sm font-semibold transition ${
+                className={`inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-[var(--radius-md)] border px-3.5 text-sm font-semibold transition sm:w-auto ${
                   activeUom.is_active
                     ? "border-red-600/40 bg-surface-0 text-red-700 hover:bg-red-100"
                     : "border-teal-600/40 bg-surface-0 text-teal-700 hover:bg-teal-100"
@@ -221,7 +223,7 @@ export function UomDetailDialog({
                 )}
               </button>
               <button
-                className="inline-flex min-h-11 items-center gap-2 rounded-[var(--radius-md)] bg-teal-600 px-4 text-sm font-semibold text-surface-0 transition hover:bg-teal-700"
+                className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-[var(--radius-md)] bg-teal-600 px-4 text-sm font-semibold text-surface-0 transition hover:bg-teal-700 sm:w-auto"
                 onClick={() => {
                   onClose();
                   onEdit(activeUom);
@@ -234,7 +236,7 @@ export function UomDetailDialog({
             </>
           )}
           <button
-            className="inline-flex min-h-11 items-center justify-center rounded-[var(--radius-md)] border border-line-500 bg-surface-0 px-4 text-sm font-semibold text-ink-950 transition hover:bg-canvas-50"
+            className="inline-flex min-h-11 w-full items-center justify-center rounded-[var(--radius-md)] border border-line-500 bg-surface-0 px-4 text-sm font-semibold text-ink-950 transition hover:bg-canvas-50 sm:w-auto"
             onClick={onClose}
             type="button"
           >

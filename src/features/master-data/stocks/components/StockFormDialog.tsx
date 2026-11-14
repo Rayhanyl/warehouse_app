@@ -2,6 +2,8 @@ import { FormEvent, useEffect, useRef, useState } from "react";
 import { Camera, Save, Sparkles, X } from "lucide-react";
 import { BarcodeScannerModal } from "@/components/ui/BarcodeScannerModal";
 import { BarcodeVisual } from "@/components/ui/BarcodeVisual";
+import { MasterFormErrorBanner } from "../../components/MasterFormErrorBanner";
+import type { MasterFormSubmitError } from "../../errors";
 import type { StockFormPayload, StockItem } from "../types";
 import { itemFormSchema, validateZodSchema } from "../../validation";
 import { generateInternalBarcode } from "../utils/barcode";
@@ -23,10 +25,12 @@ interface StockFormDialogProps {
   mode: "create" | "edit";
   initialItem: StockItem | null;
   onClose: () => void;
-  onSubmit: (payload: StockFormPayload) => void;
+  onSubmit: (payload: StockFormPayload) => Promise<void> | void;
   categoryOptions?: CategoryOption[];
   uomOptions?: UomOption[];
   existingItems?: StockItem[];
+  isSubmitting?: boolean;
+  submitError?: MasterFormSubmitError | null;
 }
 
 export function StockFormDialog({
@@ -38,6 +42,8 @@ export function StockFormDialog({
   categoryOptions = [],
   uomOptions = [],
   existingItems = [],
+  isSubmitting = false,
+  submitError = null,
 }: StockFormDialogProps) {
   const availableCategoryOptions = categoryOptions;
   const availableUomOptions = uomOptions;
@@ -75,7 +81,7 @@ export function StockFormDialog({
       skuInputRef.current?.focus();
     }, 20);
     function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") {
+      if (event.key === "Escape" && !isSubmitting) {
         onClose();
       }
     }
@@ -84,7 +90,16 @@ export function StockFormDialog({
       window.clearTimeout(timer);
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [isOpen, onClose]);
+  }, [isOpen, isSubmitting, onClose]);
+
+  const mergedErrors = {
+    sku: errors.sku ?? submitError?.fieldErrors?.sku,
+    barcode: errors.barcode ?? submitError?.fieldErrors?.barcode,
+    name: errors.name ?? submitError?.fieldErrors?.name,
+    description: errors.description ?? submitError?.fieldErrors?.description,
+    category: errors.category ?? submitError?.fieldErrors?.category,
+    uom: errors.uom ?? submitError?.fieldErrors?.uom,
+  };
 
   if (!isOpen) {
     return null;
@@ -168,7 +183,7 @@ export function StockFormDialog({
     }
 
     setErrors({});
-    onSubmit({
+    void onSubmit({
       sku: parsed.data.sku,
       barcode: parsed.data.barcode || null,
       name: parsed.data.name,
@@ -185,17 +200,19 @@ export function StockFormDialog({
 
   return (
     <div
-      className="fixed inset-0 z-50 grid place-items-center bg-ink-950/55 p-4"
-      onMouseDown={onClose}
+      className="fixed inset-0 z-50 grid place-items-center bg-ink-950/55 p-2 sm:p-4"
+      onMouseDown={() => {
+        if (!isSubmitting) onClose();
+      }}
     >
       <div
         aria-labelledby="stock-form-title"
         aria-modal="true"
-        className="max-h-[90vh] w-full max-w-4xl overflow-y-auto rounded-[var(--radius-lg)] border border-line-200 bg-surface-0 p-5 shadow-[var(--shadow-2)] sm:p-6"
+        className="flex max-h-[94dvh] w-full max-w-4xl flex-col overflow-hidden rounded-[var(--radius-lg)] border border-line-200 bg-surface-0 shadow-[var(--shadow-2)] sm:max-h-[92vh]"
         onMouseDown={(event) => event.stopPropagation()}
         role="dialog"
       >
-        <div className="flex items-start justify-between gap-3 border-b border-line-200 pb-4">
+        <div className="flex shrink-0 items-start justify-between gap-3 border-b border-line-200 px-4 py-4 sm:px-6 sm:py-5">
           <div>
             <h2 className="text-lg font-bold text-ink-950" id="stock-form-title">
               {mode === "create"
@@ -208,7 +225,8 @@ export function StockFormDialog({
           </div>
           <button
             aria-label="Tutup formulir barang"
-            className="grid min-h-11 min-w-11 shrink-0 place-items-center rounded-[var(--radius-md)] text-slate-700 transition hover:bg-canvas-50 hover:text-ink-950"
+            className="grid min-h-11 min-w-11 shrink-0 place-items-center rounded-[var(--radius-md)] text-slate-700 transition hover:bg-canvas-50 hover:text-ink-950 disabled:opacity-50"
+            disabled={isSubmitting}
             onClick={onClose}
             type="button"
           >
@@ -216,7 +234,9 @@ export function StockFormDialog({
           </button>
         </div>
 
-        <form className="mt-5 space-y-4" noValidate onSubmit={handleSubmit}>
+        <form className="flex min-h-0 flex-1 flex-col overflow-hidden" noValidate onSubmit={handleSubmit}>
+          <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 py-4 sm:px-6 sm:py-5">
+          <MasterFormErrorBanner error={submitError} />
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
               <label
@@ -226,8 +246,9 @@ export function StockFormDialog({
                 Kode SKU <span className="text-red-700">*</span>
               </label>
               <input
-                aria-invalid={Boolean(errors.sku)}
-                className="mt-2 h-12 w-full rounded-[var(--radius-md)] border border-line-500 bg-surface-0 px-3.5 text-sm font-semibold text-ink-950 tabular-nums focus:border-teal-600 focus:outline-none focus:ring-2 focus:ring-teal-600/20"
+                aria-invalid={Boolean(mergedErrors.sku)}
+                className="mt-2 h-12 w-full rounded-[var(--radius-md)] border border-line-500 bg-surface-0 px-3.5 text-sm font-semibold text-ink-950 tabular-nums focus:border-teal-600 focus:outline-none focus:ring-2 focus:ring-teal-600/20 disabled:opacity-60"
+                disabled={isSubmitting}
                 id="stock-sku-input"
                 maxLength={64}
                 onChange={(event) => setSku(event.target.value)}
@@ -236,9 +257,9 @@ export function StockFormDialog({
                 type="text"
                 value={sku}
               />
-              {errors.sku && (
+              {mergedErrors.sku && (
                 <p className="mt-1.5 text-xs font-medium text-red-700">
-                  {errors.sku}
+                  {mergedErrors.sku}
                 </p>
               )}
             </div>
@@ -251,8 +272,9 @@ export function StockFormDialog({
                 Nama barang <span className="text-red-700">*</span>
               </label>
               <input
-                aria-invalid={Boolean(errors.name)}
-                className="mt-2 h-12 w-full rounded-[var(--radius-md)] border border-line-500 bg-surface-0 px-3.5 text-sm text-ink-950 focus:border-teal-600 focus:outline-none focus:ring-2 focus:ring-teal-600/20"
+                aria-invalid={Boolean(mergedErrors.name)}
+                className="mt-2 h-12 w-full rounded-[var(--radius-md)] border border-line-500 bg-surface-0 px-3.5 text-sm text-ink-950 focus:border-teal-600 focus:outline-none focus:ring-2 focus:ring-teal-600/20 disabled:opacity-60"
+                disabled={isSubmitting}
                 id="stock-name-input"
                 maxLength={200}
                 onChange={(event) => setName(event.target.value)}
@@ -260,9 +282,9 @@ export function StockFormDialog({
                 type="text"
                 value={name}
               />
-              {errors.name && (
+              {mergedErrors.name && (
                 <p className="mt-1.5 text-xs font-medium text-red-700">
-                  {errors.name}
+                  {mergedErrors.name}
                 </p>
               )}
             </div>
@@ -277,8 +299,9 @@ export function StockFormDialog({
             </label>
             <div className="mt-2 flex flex-wrap gap-2">
               <input
-                aria-invalid={Boolean(errors.barcode)}
-                className="h-12 min-w-[180px] flex-1 rounded-[var(--radius-md)] border border-line-500 bg-surface-0 px-3.5 text-sm font-semibold text-ink-950 tabular-nums focus:border-teal-600 focus:outline-none focus:ring-2 focus:ring-teal-600/20"
+                aria-invalid={Boolean(mergedErrors.barcode)}
+                className="h-12 min-w-[180px] flex-1 rounded-[var(--radius-md)] border border-line-500 bg-surface-0 px-3.5 text-sm font-semibold text-ink-950 tabular-nums focus:border-teal-600 focus:outline-none focus:ring-2 focus:ring-teal-600/20 disabled:opacity-60"
+                disabled={isSubmitting}
                 id="stock-barcode-input"
                 maxLength={64}
                 onChange={(event) => setBarcode(event.target.value)}
@@ -288,7 +311,8 @@ export function StockFormDialog({
               />
               <button
                 aria-label="Pindai barcode dengan kamera atau scanner"
-                className="inline-flex min-h-12 items-center gap-1.5 rounded-[var(--radius-md)] border border-line-500 bg-surface-0 px-3.5 text-xs font-semibold text-ink-950 hover:bg-canvas-50"
+                className="inline-flex min-h-12 items-center gap-1.5 rounded-[var(--radius-md)] border border-line-500 bg-surface-0 px-3.5 text-xs font-semibold text-ink-950 hover:bg-canvas-50 disabled:opacity-50"
+                disabled={isSubmitting}
                 onClick={() => setScannerOpen(true)}
                 type="button"
               >
@@ -297,7 +321,8 @@ export function StockFormDialog({
               </button>
               <button
                 aria-label="Generate barcode internal otomatis"
-                className="inline-flex min-h-12 items-center gap-1.5 rounded-[var(--radius-md)] border border-teal-600/40 bg-teal-50/60 px-3 text-xs font-semibold text-teal-800 transition hover:bg-teal-100 hover:text-teal-950"
+                className="inline-flex min-h-12 items-center gap-1.5 rounded-[var(--radius-md)] border border-teal-600/40 bg-teal-50/60 px-3 text-xs font-semibold text-teal-800 transition hover:bg-teal-100 hover:text-teal-950 disabled:opacity-50"
+                disabled={isSubmitting}
                 onClick={handleGenerateBarcode}
                 type="button"
               >
@@ -305,9 +330,9 @@ export function StockFormDialog({
                 Generate
               </button>
             </div>
-            {errors.barcode && (
+            {mergedErrors.barcode && (
               <p className="mt-1.5 text-xs font-medium text-red-700">
-                {errors.barcode}
+                {mergedErrors.barcode}
               </p>
             )}
             {(barcode.trim() || sku.trim()) && (
@@ -353,7 +378,7 @@ export function StockFormDialog({
                   </option>
                 ))}
               </select>
-              {errors.category && <p className="mt-1.5 text-xs font-medium text-red-700">{errors.category}</p>}
+              {mergedErrors.category && <p className="mt-1.5 text-xs font-medium text-red-700">{mergedErrors.category}</p>}
             </div>
 
             <div>
@@ -364,7 +389,8 @@ export function StockFormDialog({
                 Satuan ukur dasar (UoM)
               </label>
               <select
-                className="mt-2 h-12 w-full rounded-[var(--radius-md)] border border-line-500 bg-surface-0 px-3.5 text-sm font-medium text-ink-950 focus:border-teal-600 focus:outline-none focus:ring-2 focus:ring-teal-600/20"
+                className="mt-2 h-12 w-full rounded-[var(--radius-md)] border border-line-500 bg-surface-0 px-3.5 text-sm font-medium text-ink-950 focus:border-teal-600 focus:outline-none focus:ring-2 focus:ring-teal-600/20 disabled:opacity-60"
+                disabled={isSubmitting}
                 id="stock-uom-select"
                 onChange={(event) => setUomId(Number(event.target.value))}
                 value={uomId}
@@ -377,7 +403,7 @@ export function StockFormDialog({
                   </option>
                 ))}
               </select>
-              {errors.uom && <p className="mt-1.5 text-xs font-medium text-red-700">{errors.uom}</p>}
+              {mergedErrors.uom && <p className="mt-1.5 text-xs font-medium text-red-700">{mergedErrors.uom}</p>}
             </div>
           </div>
 
@@ -389,7 +415,8 @@ export function StockFormDialog({
               Deskripsi barang
             </label>
             <textarea
-              className="mt-2 w-full rounded-[var(--radius-md)] border border-line-500 bg-surface-0 p-3.5 text-sm leading-6 text-ink-950 focus:border-teal-600 focus:outline-none focus:ring-2 focus:ring-teal-600/20"
+              className="mt-2 w-full rounded-[var(--radius-md)] border border-line-500 bg-surface-0 p-3.5 text-sm leading-6 text-ink-950 focus:border-teal-600 focus:outline-none focus:ring-2 focus:ring-teal-600/20 disabled:opacity-60"
+              disabled={isSubmitting}
               id="stock-desc-input"
               maxLength={1000}
               onChange={(event) => setDescription(event.target.value)}
@@ -397,7 +424,7 @@ export function StockFormDialog({
               rows={2}
               value={description}
             />
-            {errors.description && <p className="mt-1.5 text-xs font-medium text-red-700">{errors.description}</p>}
+            {mergedErrors.description && <p className="mt-1.5 text-xs font-medium text-red-700">{mergedErrors.description}</p>}
           </div>
 
           <div>
@@ -408,7 +435,8 @@ export function StockFormDialog({
               Status barang
             </label>
             <select
-              className="mt-2 h-12 w-full rounded-[var(--radius-md)] border border-line-500 bg-surface-0 px-3.5 text-sm font-medium text-ink-950 focus:border-teal-600 focus:outline-none focus:ring-2 focus:ring-teal-600/20"
+              className="mt-2 h-12 w-full rounded-[var(--radius-md)] border border-line-500 bg-surface-0 px-3.5 text-sm font-medium text-ink-950 focus:border-teal-600 focus:outline-none focus:ring-2 focus:ring-teal-600/20 disabled:opacity-60"
+              disabled={isSubmitting}
               id="stock-status-select"
               onChange={(event) =>
                 setIsActive(event.target.value === "active")
@@ -420,20 +448,28 @@ export function StockFormDialog({
             </select>
           </div>
 
-          <div className="flex flex-wrap items-center justify-end gap-2 border-t border-line-200 pt-4">
+          </div>
+
+          <div className="flex shrink-0 flex-col-reverse gap-2 border-t border-line-200 bg-surface-0 px-4 py-3 sm:flex-row sm:items-center sm:justify-end sm:px-6 sm:py-4">
             <button
-              className="inline-flex min-h-11 items-center justify-center rounded-[var(--radius-md)] border border-line-500 bg-surface-0 px-4 text-sm font-semibold text-ink-950 transition hover:bg-canvas-50"
+              className="inline-flex min-h-11 w-full items-center justify-center rounded-[var(--radius-md)] border border-line-500 bg-surface-0 px-4 text-sm font-semibold text-ink-950 transition hover:bg-canvas-50 disabled:opacity-50 sm:w-auto"
+              disabled={isSubmitting}
               onClick={onClose}
               type="button"
             >
               Batal
             </button>
             <button
-              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-[var(--radius-md)] bg-teal-600 px-4 text-sm font-semibold text-surface-0 transition hover:bg-teal-700"
+              className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-[var(--radius-md)] bg-teal-600 px-4 text-sm font-semibold text-surface-0 transition hover:bg-teal-700 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
+              disabled={isSubmitting}
               type="submit"
             >
               <Save aria-hidden="true" size={16} />
-              {mode === "create" ? "Simpan barang" : "Simpan perubahan"}
+              {isSubmitting
+                ? "Menyimpan..."
+                : mode === "create"
+                  ? "Simpan barang"
+                  : "Simpan perubahan"}
             </button>
           </div>
         </form>

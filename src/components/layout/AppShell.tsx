@@ -97,6 +97,12 @@ function resolveRouteContext(
   if (pathname === "/admin/menus") {
     return { title: "Menu", groupName: "Administrasi dan keamanan" };
   }
+  if (
+    pathname === "/admin/document-templates" ||
+    pathname === "/document-templates"
+  ) {
+    return { title: "Template dokumen", groupName: "Administrasi dan keamanan" };
+  }
   if (pathname === "/purchase-orders/new" || pathname === "/purchasing/purchase-orders/new") {
     return { title: "Buat purchase order", groupName: "Pengadaan dan penerimaan" };
   }
@@ -340,11 +346,11 @@ export function AppShell() {
         onToggleCollapsed={() => setIsCollapsed((value) => !value)}
       />
       <div
-        className={`min-h-screen min-w-0 transition-[padding] duration-200 ${
+        className={`min-h-screen min-w-0 transition-[padding] duration-200 print:pl-0 ${
           isCollapsed ? "md:pl-[72px]" : "md:pl-[248px]"
         }`}
       >
-        <header className="sticky top-0 z-20 flex h-14 items-center gap-3 border-b border-line-200 bg-surface-0 px-4 sm:h-16 sm:px-6 lg:px-8">
+        <header className="sticky top-0 z-20 flex min-h-14 flex-wrap items-center gap-x-2 gap-y-2 border-b border-line-200 bg-surface-0 px-3 py-2 sm:min-h-16 sm:px-6 lg:flex-nowrap lg:gap-3 lg:py-0 lg:px-8 print:hidden">
           <button
             aria-controls="admin-sidebar"
             aria-expanded={isMobileOpen}
@@ -375,44 +381,45 @@ export function AppShell() {
             <span aria-hidden="true">/</span>
             <span className="truncate font-semibold text-ink-950">{title}</span>
           </div>
-          <div className="ml-auto flex items-center gap-2 sm:gap-3">
-            {assignedWarehouses.length > 1 ? (
-              <div className="hidden items-center lg:flex">
-                <label className="sr-only" htmlFor="topbar-warehouse-select">
-                  Pilih gudang aktif
-                </label>
-                <div className="relative flex items-center">
-                  <Warehouse
-                    aria-hidden="true"
-                    className="pointer-events-none absolute left-3 text-teal-700"
-                    size={15}
-                  />
-                  <select
-                    aria-label="Pilih gudang aktif"
-                    className="min-h-11 rounded-[var(--radius-md)] border border-line-500 bg-surface-0 py-1.5 pr-8 pl-8 text-xs font-semibold text-ink-950 transition hover:bg-canvas-50"
-                    id="topbar-warehouse-select"
-                    onChange={(event) =>
-                      setSelectedWarehouseId(Number(event.target.value))
-                    }
-                    value={activeWarehouse ?? ""}
-                  >
-                    {assignedWarehouses.map((warehouseId) => (
-                      <option key={warehouseId} value={warehouseId}>
-                        Gudang #{warehouseId}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+          {assignedWarehouses.length > 1 ? (
+            <div className="order-last flex w-full items-center justify-between gap-2 border-t border-line-200/70 pt-2 lg:order-none lg:ml-auto lg:w-auto lg:border-t-0 lg:pt-0">
+              <span className="text-xs font-semibold text-slate-600 lg:hidden">Gudang aktif</span>
+              <label className="sr-only" htmlFor="topbar-warehouse-select">
+                Pilih gudang aktif
+              </label>
+              <div className="relative flex flex-1 items-center lg:flex-initial">
+                <Warehouse
+                  aria-hidden="true"
+                  className="pointer-events-none absolute left-3 text-teal-700"
+                  size={15}
+                />
+                <select
+                  aria-label="Pilih gudang aktif"
+                  className="min-h-11 w-full rounded-[var(--radius-md)] border border-line-500 bg-surface-0 py-1.5 pr-8 pl-8 text-xs font-semibold text-ink-950 transition hover:bg-canvas-50 lg:w-auto"
+                  id="topbar-warehouse-select"
+                  onChange={(event) =>
+                    setSelectedWarehouseId(Number(event.target.value))
+                  }
+                  value={activeWarehouse ?? ""}
+                >
+                  {assignedWarehouses.map((warehouseId) => (
+                    <option key={warehouseId} value={warehouseId}>
+                      Gudang #{warehouseId}
+                    </option>
+                  ))}
+                </select>
               </div>
-            ) : (
-              <span
-                aria-label="Cakupan gudang aktif"
-                className="hidden items-center gap-1.5 rounded-full bg-teal-100 px-3 py-1.5 text-xs font-semibold text-teal-700 lg:inline-flex"
-              >
-                <Warehouse aria-hidden="true" size={14} />
-                {activeWarehouse ? `Gudang #${activeWarehouse}` : "Semua gudang"}
-              </span>
-            )}
+            </div>
+          ) : (
+            <span
+              aria-label="Cakupan gudang aktif"
+              className="order-last inline-flex w-full items-center justify-center gap-1.5 rounded-full bg-teal-100 px-3 py-1.5 text-xs font-semibold text-teal-700 lg:order-none lg:ml-auto lg:w-auto"
+            >
+              <Warehouse aria-hidden="true" size={14} />
+              {activeWarehouse ? `Gudang #${activeWarehouse}` : "Semua gudang"}
+            </span>
+          )}
+          <div className="ml-auto flex items-center gap-1.5 sm:gap-2 lg:ml-0 lg:gap-3">
             <button
               aria-label="Buka panduan / bantuan aplikasi"
               className="flex min-h-11 items-center gap-1.5 rounded-[var(--radius-md)] border border-line-200 bg-surface-0 px-3 text-xs font-semibold text-slate-700 transition hover:border-teal-600/40 hover:bg-teal-50/70 hover:text-teal-800"
@@ -512,7 +519,7 @@ export function AppShell() {
           </div>
         </header>
         <main
-          className="mx-auto min-w-0 max-w-[1440px] overflow-x-hidden px-4 py-6 sm:px-6 sm:py-8 lg:px-8"
+          className="mx-auto min-w-0 max-w-[1440px] overflow-x-hidden px-4 py-6 sm:px-6 sm:py-8 lg:px-8 print:max-w-none print:overflow-visible print:p-0"
           id="main-content"
         >
           {isLoading ? (

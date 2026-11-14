@@ -85,17 +85,17 @@ export function AuditLogDetailModal({ log, onClose }: AuditLogDetailModalProps) 
 
   return (
     <div
-      className="fixed inset-0 z-50 grid place-items-center bg-ink-950/60 p-4"
+      className="fixed inset-0 z-50 grid place-items-center bg-ink-950/60 p-2 sm:p-4"
       onMouseDown={onClose}
     >
       <div
         aria-labelledby="audit-detail-title"
         aria-modal="true"
-        className="flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-[var(--radius-lg)] border border-line-200 bg-surface-0 shadow-[var(--shadow-2)]"
+        className="flex max-h-[94dvh] w-full max-w-4xl flex-col overflow-hidden rounded-[var(--radius-lg)] border border-line-200 bg-surface-0 shadow-[var(--shadow-2)] sm:max-h-[90vh]"
         onMouseDown={(event) => event.stopPropagation()}
         role="dialog"
       >
-        <div className="flex items-start justify-between gap-4 border-b border-line-200 px-6 py-4">
+        <div className="flex shrink-0 items-start justify-between gap-4 border-b border-line-200 px-4 py-3.5 sm:px-6 sm:py-4">
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
               <span
@@ -304,9 +304,9 @@ export function AuditLogDetailModal({ log, onClose }: AuditLogDetailModalProps) 
           </section>
         </div>
 
-        <div className="flex justify-end border-t border-line-200 px-6 py-3.5">
+        <div className="flex shrink-0 justify-end border-t border-line-200 bg-canvas-50/50 px-4 py-3 sm:px-6 sm:py-3.5">
           <button
-            className="inline-flex min-h-11 items-center justify-center rounded-[var(--radius-md)] border border-line-500 px-4 text-sm font-semibold text-ink-950 transition hover:bg-canvas-50"
+            className="inline-flex min-h-11 w-full items-center justify-center rounded-[var(--radius-md)] border border-line-500 bg-surface-0 px-4 text-sm font-semibold text-ink-950 transition hover:bg-canvas-50 sm:w-auto"
             onClick={onClose}
             type="button"
           >

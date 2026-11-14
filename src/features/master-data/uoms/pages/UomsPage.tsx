@@ -16,6 +16,8 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { CollapsibleFilterPanel } from "@/components/ui/CollapsibleFilterPanel";
+import { useIsMobile } from "@/hooks/useIsMobile";
 import { usePermission } from "@/hooks/usePermission";
 import {
   buildUomsCsv,
@@ -62,6 +64,7 @@ function formatDate(value: string) {
 
 export function UomsPage() {
   const { can } = usePermission();
+  const isMobile = useIsMobile();
   const canManage = can("master:manage");
 
   const [params, setParams] = useState<UomListParams>(initialParams);
@@ -390,9 +393,14 @@ export function UomsPage() {
         </div>
       )}
 
-      <section
-        aria-label="Filter daftar satuan ukur"
-        className="mb-6 rounded-[var(--radius-lg)] border border-line-200 bg-surface-0 p-4 shadow-[var(--shadow-1)] sm:p-5"
+      <CollapsibleFilterPanel
+        activeCount={
+          (params.search.trim() ? 1 : 0) +
+          (params.status !== "all" ? 1 : 0) +
+          (params.sort_by !== "id" || params.sort_dir !== "asc" ? 1 : 0)
+        }
+        ariaLabel="Filter daftar satuan ukur"
+        title="Filter daftar satuan ukur"
       >
         <form
           className="grid gap-4 md:grid-cols-2 lg:grid-cols-4"
@@ -479,7 +487,7 @@ export function UomsPage() {
             </button>
           </div>
         </form>
-      </section>
+      </CollapsibleFilterPanel>
 
       {isLoading ? (
         <div
@@ -549,124 +557,224 @@ export function UomsPage() {
         </div>
       ) : (
         <section className="overflow-hidden rounded-[var(--radius-lg)] border border-line-200 bg-surface-0 shadow-[var(--shadow-1)]">
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[780px] text-left text-sm">
-              <caption className="sr-only">Daftar satuan ukur (UoM)</caption>
-              <thead className="bg-canvas-50 text-xs font-bold uppercase tracking-wider text-slate-700">
-                <tr>
-                  <th className="w-20 px-4 py-3">ID</th>
-                  <th className="w-32 px-4 py-3">Kode</th>
-                  <th className="px-4 py-3">Nama satuan</th>
-                  <th className="w-48 px-4 py-3">Presisi kuantitas</th>
-                  <th className="w-32 px-4 py-3">Status</th>
-                  <th className="w-44 px-4 py-3">Diperbarui pada</th>
-                  <th className="w-64 px-4 py-3 text-right">Tindakan</th>
-                </tr>
-              </thead>
-              <tbody>
-                {items.map((uom) => (
-                  <tr
-                    className="border-t border-line-200 align-top transition hover:bg-canvas-50/50"
-                    key={uom.id}
-                  >
-                    <td className="px-4 py-4 text-xs font-semibold text-slate-600 tabular-nums">
-                      #{uom.id}
-                    </td>
-                    <td className="px-4 py-4">
-                      <span className="inline-flex rounded-[var(--radius-sm)] bg-blue-100 px-2.5 py-1 text-xs font-bold text-blue-700 tabular-nums">
-                        {uom.code}
-                      </span>
-                    </td>
-                    <td className="px-4 py-4">
-                      <p className="font-semibold text-ink-950">{uom.name}</p>
-                    </td>
-                    <td className="px-4 py-4">
-                      <span
-                        className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${
-                          uom.allow_decimal
-                            ? "bg-blue-100 text-blue-700"
-                            : "bg-canvas-50 text-slate-700"
-                        }`}
-                      >
-                        {uom.allow_decimal
-                          ? "Desimal (4 digit)"
-                          : "Bilangan bulat"}
-                      </span>
-                    </td>
-                    <td className="px-4 py-4">
-                      <span
-                        className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${
-                          uom.is_active
-                            ? "bg-teal-100 text-teal-700"
-                            : "bg-amber-100 text-amber-700"
-                        }`}
-                      >
-                        <CheckCircle2 aria-hidden="true" size={13} />
-                        {uom.is_active ? "Aktif" : "Nonaktif"}
-                      </span>
-                    </td>
-                    <td className="px-4 py-4 text-xs text-slate-600 tabular-nums">
+          {isMobile ? (
+            <ul aria-label="Daftar satuan ukur (UoM)" className="divide-y divide-line-200">
+              {items.map((uom) => (
+                <li className="space-y-3 p-4" key={uom.id}>
+                  <div className="flex flex-wrap items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="text-xs font-semibold text-slate-600 tabular-nums">
+                          #{uom.id}
+                        </span>
+                        <span className="inline-flex rounded-[var(--radius-sm)] bg-blue-100 px-2.5 py-0.5 text-xs font-bold text-blue-700 tabular-nums">
+                          {uom.code}
+                        </span>
+                      </div>
+                      <p className="mt-1.5 text-sm font-bold text-ink-950">
+                        {uom.name}
+                      </p>
+                    </div>
+                    <span
+                      className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${
+                        uom.is_active
+                          ? "bg-teal-100 text-teal-700"
+                          : "bg-amber-100 text-amber-700"
+                      }`}
+                    >
+                      <CheckCircle2 aria-hidden="true" size={13} />
+                      {uom.is_active ? "Aktif" : "Nonaktif"}
+                    </span>
+                  </div>
+
+                  <div className="flex flex-wrap items-center justify-between gap-2 rounded-[var(--radius-md)] bg-canvas-50 px-3 py-2 text-xs">
+                    <span
+                      className={`inline-flex rounded-full px-2.5 py-0.5 font-semibold ${
+                        uom.allow_decimal
+                          ? "bg-blue-100 text-blue-700"
+                          : "bg-surface-0 text-slate-700"
+                      }`}
+                    >
+                      {uom.allow_decimal ? "Desimal (4 digit)" : "Bilangan bulat"}
+                    </span>
+                    <span className="text-slate-600 tabular-nums">
                       {formatDate(uom.updated_at)}
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      <div className="inline-flex flex-wrap items-center justify-end gap-1">
+                    </span>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button
+                      aria-label={`Lihat detail satuan ${uom.name}`}
+                      className="inline-flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-[var(--radius-md)] border border-line-500 bg-surface-0 px-3 text-xs font-semibold text-ink-950 transition hover:bg-canvas-50"
+                      onClick={() => setDetailTarget(uom)}
+                      type="button"
+                    >
+                      <Eye aria-hidden="true" size={15} />
+                      Detail
+                    </button>
+                    {canManage && (
+                      <>
                         <button
-                          aria-label={`Lihat detail satuan ${uom.name}`}
-                          className="inline-flex min-h-11 items-center gap-1.5 rounded-[var(--radius-md)] px-2.5 text-xs font-semibold text-ink-950 transition hover:bg-canvas-50"
-                          onClick={() => setDetailTarget(uom)}
+                          aria-label={`Ubah satuan ${uom.name}`}
+                          className="inline-flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-[var(--radius-md)] border border-teal-600/30 bg-teal-100/50 px-3 text-xs font-semibold text-teal-700 transition hover:bg-teal-100"
+                          onClick={() => openEditDialog(uom)}
                           type="button"
                         >
-                          <Eye aria-hidden="true" size={15} />
-                          Detail
+                          <Edit3 aria-hidden="true" size={15} />
+                          Ubah
                         </button>
-                        {canManage && (
-                          <>
-                            <button
-                              aria-label={`Ubah satuan ${uom.name}`}
-                              className="inline-flex min-h-11 items-center gap-1.5 rounded-[var(--radius-md)] px-2.5 text-xs font-semibold text-teal-700 transition hover:bg-teal-100"
-                              onClick={() => openEditDialog(uom)}
-                              type="button"
-                            >
-                              <Edit3 aria-hidden="true" size={15} />
-                              Ubah
-                            </button>
-                            <button
-                              aria-label={
-                                uom.is_active
-                                  ? `Nonaktifkan satuan ${uom.name}`
-                                  : `Aktifkan kembali satuan ${uom.name}`
-                              }
-                              className={`inline-flex min-h-11 items-center gap-1.5 rounded-[var(--radius-md)] px-2.5 text-xs font-semibold transition ${
-                                uom.is_active
-                                  ? "text-red-700 hover:bg-red-100"
-                                  : "text-teal-700 hover:bg-teal-100"
-                              }`}
-                              onClick={() => openConfirmDialog(uom)}
-                              type="button"
-                            >
-                              {uom.is_active ? (
-                                <>
-                                  <PowerOff aria-hidden="true" size={15} />
-                                  Nonaktifkan
-                                </>
-                              ) : (
-                                <>
-                                  <RotateCcw aria-hidden="true" size={15} />
-                                  Aktifkan
-                                </>
-                              )}
-                            </button>
-                          </>
-                        )}
-                      </div>
-                    </td>
+                        <button
+                          aria-label={
+                            uom.is_active
+                              ? `Nonaktifkan satuan ${uom.name}`
+                              : `Aktifkan kembali satuan ${uom.name}`
+                          }
+                          className={`inline-flex min-h-11 items-center justify-center gap-1.5 rounded-[var(--radius-md)] border px-3 text-xs font-semibold transition ${
+                            uom.is_active
+                              ? "border-red-200 text-red-700 hover:bg-red-100"
+                              : "border-teal-200 text-teal-700 hover:bg-teal-100"
+                          }`}
+                          onClick={() => openConfirmDialog(uom)}
+                          type="button"
+                        >
+                          {uom.is_active ? (
+                            <>
+                              <PowerOff aria-hidden="true" size={15} />
+                              Nonaktifkan
+                            </>
+                          ) : (
+                            <>
+                              <RotateCcw aria-hidden="true" size={15} />
+                              Aktifkan
+                            </>
+                          )}
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[780px] text-left text-sm">
+                <caption className="sr-only">Daftar satuan ukur (UoM)</caption>
+                <thead className="bg-canvas-50 text-xs font-bold uppercase tracking-wider text-slate-700">
+                  <tr>
+                    <th className="w-20 px-4 py-3">ID</th>
+                    <th className="w-32 px-4 py-3">Kode</th>
+                    <th className="px-4 py-3">Nama satuan</th>
+                    <th className="w-48 px-4 py-3">Presisi kuantitas</th>
+                    <th className="w-32 px-4 py-3">Status</th>
+                    <th className="w-44 px-4 py-3">Diperbarui pada</th>
+                    <th className="w-64 px-4 py-3 text-right">Tindakan</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {items.map((uom) => (
+                    <tr
+                      className="border-t border-line-200 align-top transition hover:bg-canvas-50/50"
+                      key={uom.id}
+                    >
+                      <td className="px-4 py-4 text-xs font-semibold text-slate-600 tabular-nums">
+                        #{uom.id}
+                      </td>
+                      <td className="px-4 py-4">
+                        <span className="inline-flex rounded-[var(--radius-sm)] bg-blue-100 px-2.5 py-1 text-xs font-bold text-blue-700 tabular-nums">
+                          {uom.code}
+                        </span>
+                      </td>
+                      <td className="px-4 py-4">
+                        <p className="font-semibold text-ink-950">{uom.name}</p>
+                      </td>
+                      <td className="px-4 py-4">
+                        <span
+                          className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${
+                            uom.allow_decimal
+                              ? "bg-blue-100 text-blue-700"
+                              : "bg-canvas-50 text-slate-700"
+                          }`}
+                        >
+                          {uom.allow_decimal
+                            ? "Desimal (4 digit)"
+                            : "Bilangan bulat"}
+                        </span>
+                      </td>
+                      <td className="px-4 py-4">
+                        <span
+                          className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${
+                            uom.is_active
+                              ? "bg-teal-100 text-teal-700"
+                              : "bg-amber-100 text-amber-700"
+                          }`}
+                        >
+                          <CheckCircle2 aria-hidden="true" size={13} />
+                          {uom.is_active ? "Aktif" : "Nonaktif"}
+                        </span>
+                      </td>
+                      <td className="px-4 py-4 text-xs text-slate-600 tabular-nums">
+                        {formatDate(uom.updated_at)}
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <div className="inline-flex flex-wrap items-center justify-end gap-1">
+                          <button
+                            aria-label={`Lihat detail satuan ${uom.name}`}
+                            className="inline-flex min-h-11 items-center gap-1.5 rounded-[var(--radius-md)] px-2.5 text-xs font-semibold text-ink-950 transition hover:bg-canvas-50"
+                            onClick={() => setDetailTarget(uom)}
+                            type="button"
+                          >
+                            <Eye aria-hidden="true" size={15} />
+                            Detail
+                          </button>
+                          {canManage && (
+                            <>
+                              <button
+                                aria-label={`Ubah satuan ${uom.name}`}
+                                className="inline-flex min-h-11 items-center gap-1.5 rounded-[var(--radius-md)] px-2.5 text-xs font-semibold text-teal-700 transition hover:bg-teal-100"
+                                onClick={() => openEditDialog(uom)}
+                                type="button"
+                              >
+                                <Edit3 aria-hidden="true" size={15} />
+                                Ubah
+                              </button>
+                              <button
+                                aria-label={
+                                  uom.is_active
+                                    ? `Nonaktifkan satuan ${uom.name}`
+                                    : `Aktifkan kembali satuan ${uom.name}`
+                                }
+                                className={`inline-flex min-h-11 items-center gap-1.5 rounded-[var(--radius-md)] px-2.5 text-xs font-semibold transition ${
+                                  uom.is_active
+                                    ? "text-red-700 hover:bg-red-100"
+                                    : "text-teal-700 hover:bg-teal-100"
+                                }`}
+                                onClick={() => openConfirmDialog(uom)}
+                                type="button"
+                              >
+                                {uom.is_active ? (
+                                  <>
+                                    <PowerOff aria-hidden="true" size={15} />
+                                    Nonaktifkan
+                                  </>
+                                ) : (
+                                  <>
+                                    <RotateCcw aria-hidden="true" size={15} />
+                                    Aktifkan
+                                  </>
+                                )}
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
 
-          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line-200 px-4 py-3 text-xs text-slate-600 tabular-nums">
+          <div className="flex flex-col items-start justify-between gap-3 border-t border-line-200 px-4 py-3 text-xs text-slate-600 tabular-nums sm:flex-row sm:items-center">
             <span>
               {isFetching
                 ? "Memperbarui..."

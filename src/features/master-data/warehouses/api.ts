@@ -1,6 +1,12 @@
 import { apiClient } from "@/lib/api-client";
+import { mapMasterDomainError, type MasterFormSubmitError } from "../errors";
 import type { Paginated } from "@/types/api";
-import type { WarehouseRecord, WarehouseStatusFilter } from "./types";
+import type {
+  WarehouseCreatePayload,
+  WarehouseRecord,
+  WarehouseStatusFilter,
+  WarehouseUpdatePayload,
+} from "./types";
 
 export const initialSampleWarehouses: WarehouseRecord[] = [
   {
@@ -66,6 +72,57 @@ export async function fetchWarehouses(
     params: toWarehouseQueryParams(params),
   });
   return data;
+}
+
+export async function createWarehouse(
+  payload: WarehouseCreatePayload,
+): Promise<WarehouseRecord> {
+  const { data } = await apiClient.post<WarehouseRecord>("/warehouses", {
+    code: payload.code.trim(),
+    name: payload.name.trim(),
+    address: payload.address?.trim() ? payload.address.trim() : null,
+    allow_negative_stock: payload.allow_negative_stock ?? false,
+    is_active: payload.is_active ?? true,
+  });
+  return data;
+}
+
+export async function updateWarehouse(
+  warehouseId: number,
+  payload: WarehouseUpdatePayload,
+): Promise<WarehouseRecord> {
+  const body: WarehouseUpdatePayload = {};
+  if (payload.code !== undefined) {
+    body.code = payload.code.trim();
+  }
+  if (payload.name !== undefined) {
+    body.name = payload.name.trim();
+  }
+  if (payload.address !== undefined) {
+    body.address = payload.address?.trim() ? payload.address.trim() : null;
+  }
+  if (payload.allow_negative_stock !== undefined) {
+    body.allow_negative_stock = payload.allow_negative_stock;
+  }
+  if (payload.is_active !== undefined) {
+    body.is_active = payload.is_active;
+  }
+
+  const { data } = await apiClient.patch<WarehouseRecord>(
+    `/warehouses/${warehouseId}`,
+    body,
+  );
+  return data;
+}
+
+export function mapWarehouseApiError(
+  error: unknown,
+  fallbackMessage: string,
+): MasterFormSubmitError {
+  return mapMasterDomainError(error, fallbackMessage, {
+    entityLabel: "Gudang",
+    duplicateField: "code",
+  });
 }
 
 function escapeCsvCell(value: string | number | null | undefined): string {
