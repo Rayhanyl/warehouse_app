@@ -109,6 +109,7 @@ import {
 } from "../api";
 import type { MenuParams, UserParams } from "../api";
 import type { AdminMenu, AdminUser, AdminWarehouse, Permission, Role } from "../types";
+import { DocumentTemplateSettingsPanel } from "@/features/document-templates/components/DocumentTemplateSettingsPanel";
 
 const userInitial: UserParams = { limit: 25, offset: 0, search: "", is_active: "" };
 const menuInitial: MenuParams = { limit: 25, offset: 0, search: "", is_active: "" };
@@ -116,7 +117,13 @@ const menuInitial: MenuParams = { limit: 25, offset: 0, search: "", is_active: "
 export function AdministrationPage() {
   const { can } = usePermission();
   const { pathname } = window.location;
-  const activeSection = pathname.includes("/menus") ? "menus" : pathname.includes("/roles") ? "roles" : "users";
+  const activeSection = pathname.includes("/document-templates")
+    ? "document-templates"
+    : pathname.includes("/menus")
+      ? "menus"
+      : pathname.includes("/roles")
+        ? "roles"
+        : "users";
   const canManage = can("user:manage");
   const [userFormOpen, setUserFormOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<AdminUser | null>(null);
@@ -139,14 +146,23 @@ export function AdministrationPage() {
   return (
     <>
       <PageHeader
-        title={activeSection === "menus" ? "Menu" : activeSection === "roles" ? "Peran dan permission" : "Pengguna dan peran"}
-        description="Kelola akun, akses berbasis peran, dan katalog navigasi sistem."
+        title={
+          activeSection === "document-templates"
+            ? "Template dokumen cetak"
+            : activeSection === "menus"
+              ? "Menu"
+              : activeSection === "roles"
+                ? "Peran dan permission"
+                : "Pengguna dan peran"
+        }
+        description="Kelola akun, akses berbasis peran, katalog navigasi, dan format dokumen cetak sistem."
         action={activeSection === "users" ? <button className="inline-flex min-h-11 items-center gap-2 rounded-[var(--radius-md)] bg-teal-600 px-4 text-sm font-semibold text-surface-0 hover:bg-teal-700" onClick={() => { setEditingUser(null); setUserFormOpen(true); }} type="button"><UserPlus size={17} />Tambah pengguna</button> : activeSection === "menus" ? <button className="inline-flex min-h-11 items-center gap-2 rounded-[var(--radius-md)] bg-teal-600 px-4 text-sm font-semibold text-surface-0 hover:bg-teal-700" onClick={() => setMenuFormOpen(true)} type="button"><Plus size={17} />Tambah menu</button> : undefined}
       />
       <AdminNavigation active={activeSection} />
       {activeSection === "users" && <UsersPanel query={users} params={userParams} onParamsChange={setUserParams} onEdit={(user) => { setEditingUser(user); setUserFormOpen(true); }} />}
       {activeSection === "roles" && <RolesPanel roles={roles.data ?? []} permissions={permissions.data ?? []} isLoading={roles.isLoading || permissions.isLoading} />}
       {activeSection === "menus" && <MenusPanel query={menus} params={menuParams} onParamsChange={setMenuParams} onEdit={(menu) => { setEditingMenu(menu); setMenuFormOpen(true); }} />}
+      {activeSection === "document-templates" && <DocumentTemplateSettingsPanel />}
       {userFormOpen && <UserForm user={editingUser} roles={roles.data ?? []} warehouses={warehouses.data ?? []} warehousesError={warehouses.isError} warehousesLoading={warehouses.isLoading} assignedWarehouses={assignedWarehouses} onClose={() => setUserFormOpen(false)} />}
       {menuFormOpen && <MenuForm menu={editingMenu} menus={menus.data?.items ?? []} permissions={menuPermissions.data ?? []} isLoading={menuPermissions.isLoading} onClose={() => { setMenuFormOpen(false); setEditingMenu(null); }} />}
     </>
@@ -154,7 +170,7 @@ export function AdministrationPage() {
 }
 
 function AdminNavigation({ active }: { active: string }) {
-  return <nav aria-label="Administrasi" className="mb-6 flex gap-1 overflow-x-auto border-b border-line-200">{[["/admin/users", "Pengguna"], ["/admin/roles", "Peran dan permission"], ["/admin/menus", "Menu"]].map(([path, label]) => <a className={`min-h-11 shrink-0 border-b-2 px-3 py-2 text-sm font-semibold ${active === path.slice(7).split("/")[0] ? "border-teal-600 text-teal-700" : "border-transparent text-slate-700 hover:border-line-500"}`} href={path} key={path}>{label}</a>)}</nav>;
+  return <nav aria-label="Administrasi" className="mb-6 flex gap-1 overflow-x-auto border-b border-line-200">{[["/admin/users", "Pengguna"], ["/admin/roles", "Peran dan permission"], ["/admin/menus", "Menu"], ["/admin/document-templates", "Template dokumen"]].map(([path, label]) => <a className={`min-h-11 shrink-0 border-b-2 px-3 py-2 text-sm font-semibold ${active === path.slice(7).split("/")[0] ? "border-teal-600 text-teal-700" : "border-transparent text-slate-700 hover:border-line-500"}`} href={path} key={path}>{label}</a>)}</nav>;
 }
 
 function UsersPanel({ query, params, onParamsChange, onEdit }: { query: ReturnType<typeof useAdminUsers>; params: UserParams; onParamsChange: (params: UserParams) => void; onEdit: (user: AdminUser) => void }) {

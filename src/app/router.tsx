@@ -143,6 +143,14 @@ export const router = createBrowserRouter([
             element: <AdministrationPage />,
           },
           {
+            path: "/admin/document-templates",
+            element: <AdministrationPage />,
+          },
+          {
+            path: "/document-templates",
+            element: <AdministrationPage />,
+          },
+          {
             path: "/purchase-orders/new",
             element: <PurchaseOrderCreatePage />,
           },
