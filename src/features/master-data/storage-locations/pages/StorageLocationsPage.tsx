@@ -14,6 +14,7 @@ import { toast } from "sonner";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { useIsMobile } from "@/hooks/useIsMobile";
 import { usePermission } from "@/hooks/usePermission";
+import { useWarehouseScope } from "@/hooks/useWarehouseScope";
 import type { MasterFormSubmitError } from "../../errors";
 import {
   buildStorageLocationsCsv,
@@ -50,6 +51,7 @@ function formatShortDate(iso: string): string {
 
 export function StorageLocationsPage() {
   const { can } = usePermission();
+  const { activeWarehouseId, filterWarehouseChoices, isWarehouseAllowed } = useWarehouseScope();
   const isMobile = useIsMobile();
   const canManage = can("location:manage") || can("master:manage");
 
@@ -86,7 +88,7 @@ export function StorageLocationsPage() {
         limit: 200,
         offset: 0,
         search: "",
-        warehouse_id: null,
+        warehouse_id: activeWarehouseId !== null ? String(activeWarehouseId) : null,
         status: "all",
       }),
       fetchStorageLocationWarehouses(),
@@ -108,11 +110,22 @@ export function StorageLocationsPage() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [activeWarehouseId]);
+
+  const scopedWarehouseOptions = useMemo(
+    () => filterWarehouseChoices(warehouseOptions),
+    [filterWarehouseChoices, warehouseOptions],
+  );
 
   const filteredLocations = useMemo(() => {
     const normalizedQuery = searchQuery.trim().toLowerCase();
     return locations.filter((item) => {
+      if (!isWarehouseAllowed(item.warehouse_id)) {
+        return false;
+      }
+      if (activeWarehouseId !== null && Number(item.warehouse_id) !== activeWarehouseId) {
+        return false;
+      }
       if (warehouseFilter !== "all" && item.warehouse_id !== warehouseFilter) {
         return false;
       }
@@ -132,7 +145,7 @@ export function StorageLocationsPage() {
         item.warehouse_name.toLowerCase().includes(normalizedQuery)
       );
     });
-  }, [locations, searchQuery, warehouseFilter, statusFilter]);
+  }, [activeWarehouseId, isWarehouseAllowed, locations, searchQuery, warehouseFilter, statusFilter]);
 
   const handleOpenCreate = () => {
     setFormError(null);
@@ -378,8 +391,8 @@ export function StorageLocationsPage() {
                 onChange={(event) => setWarehouseFilter(event.target.value)}
                 className="h-11 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-900 focus:border-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-700"
               >
-                <option value="all">Semua gudang ({warehouseOptions.length})</option>
-                {warehouseOptions.map((item) => (
+                <option value="all">Semua gudang ({scopedWarehouseOptions.length})</option>
+                {scopedWarehouseOptions.map((item) => (
                   <option key={item.id} value={item.id}>
                     {item.code} ({item.name})
                   </option>
@@ -661,7 +674,7 @@ export function StorageLocationsPage() {
         open={formState.open}
         mode={formState.mode}
         initialData={formState.record}
-        warehouseOptions={warehouseOptions}
+        warehouseOptions={scopedWarehouseOptions}
         existingLocations={locations}
         isSubmitting={isSavingForm}
         submitError={formError}

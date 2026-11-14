@@ -48,6 +48,7 @@ export interface WarehouseListParams {
   limit: number;
   offset: number;
   search: string;
+  warehouse_id?: number | null;
   status: WarehouseStatusFilter;
   sort_by: "id" | "code" | "name" | "created_at";
   sort_dir: "asc" | "desc";
@@ -61,6 +62,9 @@ export function toWarehouseQueryParams(params: WarehouseListParams): URLSearchPa
     sort_dir: params.sort_dir,
   });
   if (params.search.trim()) query.set("search", params.search.trim());
+  if (params.warehouse_id !== undefined && params.warehouse_id !== null) {
+    query.set("warehouse_id", String(params.warehouse_id));
+  }
   if (params.status !== "all") query.set("is_active", String(params.status === "active"));
   return query;
 }

@@ -17,6 +17,7 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { CollapsibleFilterPanel } from "@/components/ui/CollapsibleFilterPanel";
 import { useIsMobile } from "@/hooks/useIsMobile";
 import { usePermission } from "@/hooks/usePermission";
+import { useWarehouseScope } from "@/hooks/useWarehouseScope";
 import {
   buildWarehousesCsv,
   createWarehouse,
@@ -36,6 +37,7 @@ import type {
 
 export function WarehousesPage() {
   const { can } = usePermission();
+  const { activeWarehouseId, isWarehouseAllowed } = useWarehouseScope();
   const isMobile = useIsMobile();
   const canManage = can("warehouse:manage") || can("master:manage");
 
@@ -76,6 +78,7 @@ export function WarehousesPage() {
       limit: 200,
       offset: 0,
       search: "",
+      ...(activeWarehouseId !== null ? { warehouse_id: activeWarehouseId } : {}),
       status: "all",
       sort_by: "id",
       sort_dir: "asc",
@@ -91,11 +94,17 @@ export function WarehousesPage() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [activeWarehouseId]);
 
   const filteredWarehouses = useMemo(() => {
     const query = search.trim().toLocaleLowerCase();
     return records.filter((wh) => {
+      if (!isWarehouseAllowed(wh.id)) {
+        return false;
+      }
+      if (activeWarehouseId !== null && Number(wh.id) !== activeWarehouseId) {
+        return false;
+      }
       if (statusFilter === "active" && !wh.is_active) {
         return false;
       }
@@ -111,7 +120,7 @@ export function WarehousesPage() {
         (wh.address ?? "").toLocaleLowerCase().includes(query)
       );
     });
-  }, [records, search, statusFilter]);
+  }, [activeWarehouseId, isWarehouseAllowed, records, search, statusFilter]);
 
   function notifySuccess(message: string) {
     setNotice(message);

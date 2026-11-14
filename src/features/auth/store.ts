@@ -1,4 +1,12 @@
 import { create } from "zustand";
+import { useWarehouseScopeStore } from "@/stores/warehouseScopeStore";
+
+export interface AuthWarehouseRef {
+  id: number;
+  code: string;
+  name: string;
+  is_active?: boolean;
+}
 
 export interface AuthUser {
   id: number;
@@ -10,6 +18,8 @@ export interface AuthUser {
   is_active: boolean;
   permissions: string[];
   warehouse_ids: number[];
+  has_all_warehouse_access?: boolean;
+  warehouses?: AuthWarehouseRef[];
   last_login_at?: string | null;
   created_at?: string;
   updated_at?: string;
@@ -125,7 +135,8 @@ export const useAuthStore = create<AuthState>((set) => ({
       status: "forbidden",
       restoreError,
     }),
-  logout: () =>
+  logout: () => {
+    useWarehouseScopeStore.getState().reset();
     set((state) => {
       if (
         state.accessToken === null &&
@@ -141,5 +152,6 @@ export const useAuthStore = create<AuthState>((set) => ({
         status: "unauthenticated",
         restoreError: null,
       };
-    }),
+    });
+  },
 }));

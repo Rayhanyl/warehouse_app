@@ -22,6 +22,8 @@ import { AppShellGuideHostContext } from "@/features/user-guide/guideContext";
 import { useUserGuideStore } from "@/features/user-guide/store";
 import { extractApiErrorInfo } from "@/lib/errors";
 import { StockLookupModal } from "@/components/ui/StockLookupModal";
+import { Badge } from "@/components/ui/badge";
+import { formatWarehouseScopeLabel, useWarehouseScope } from "@/hooks/useWarehouseScope";
 import { PageHeader } from "./PageHeader";
 import { Sidebar } from "./Sidebar";
 
@@ -167,9 +169,21 @@ export function AppShell() {
   const openUserGuide = useUserGuideStore((state) => state.openGuide);
   const [search, setSearch] = useState("");
   const [activeIndex, setActiveIndex] = useState(0);
-  const [selectedWarehouseId, setSelectedWarehouseId] = useState<number | null>(
-    () => user?.warehouse_ids?.[0] ?? null,
-  );
+  const {
+    canAccessAllWarehouses,
+    warehouseOptions,
+    allowedWarehouseIds,
+    activeWarehouseId,
+    activeWarehouseLabel,
+    showTopbarSelector,
+    setSelectedWarehouseId,
+    syncWithAllowedWarehouses,
+  } = useWarehouseScope();
+
+  useEffect(() => {
+    if (!user) return;
+    syncWithAllowedWarehouses(allowedWarehouseIds, canAccessAllWarehouses);
+  }, [allowedWarehouseIds, canAccessAllWarehouses, syncWithAllowedWarehouses, user]);
 
   const profileRef = useRef<HTMLDivElement>(null);
   const paletteInputRef = useRef<HTMLInputElement>(null);
@@ -323,12 +337,6 @@ export function AppShell() {
     }
   }
 
-  const assignedWarehouses = user?.warehouse_ids ?? [];
-  const activeWarehouse =
-    selectedWarehouseId && assignedWarehouses.includes(selectedWarehouseId)
-      ? selectedWarehouseId
-      : assignedWarehouses[0] ?? null;
-
   return (
     <AppShellGuideHostContext.Provider value={true}>
       <div className="min-h-screen overflow-x-hidden bg-canvas-50 text-ink-950">
@@ -381,7 +389,7 @@ export function AppShell() {
             <span aria-hidden="true">/</span>
             <span className="truncate font-semibold text-ink-950">{title}</span>
           </div>
-          {assignedWarehouses.length > 1 ? (
+          {showTopbarSelector ? (
             <div className="order-last flex w-full items-center justify-between gap-2 border-t border-line-200/70 pt-2 lg:order-none lg:ml-auto lg:w-auto lg:border-t-0 lg:pt-0">
               <span className="text-xs font-semibold text-slate-600 lg:hidden">Gudang aktif</span>
               <label className="sr-only" htmlFor="topbar-warehouse-select">
@@ -395,29 +403,34 @@ export function AppShell() {
                 />
                 <select
                   aria-label="Pilih gudang aktif"
-                  className="min-h-11 w-full rounded-[var(--radius-md)] border border-line-500 bg-surface-0 py-1.5 pr-8 pl-8 text-xs font-semibold text-ink-950 transition hover:bg-canvas-50 lg:w-auto"
+                  className="min-h-11 w-full rounded-md border border-input bg-card py-1.5 pr-8 pl-8 text-xs font-semibold text-foreground shadow-xs transition outline-none hover:bg-accent focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 md:min-h-10 lg:w-auto"
                   id="topbar-warehouse-select"
-                  onChange={(event) =>
-                    setSelectedWarehouseId(Number(event.target.value))
-                  }
-                  value={activeWarehouse ?? ""}
+                  onChange={(event) => {
+                    const nextValue = event.target.value;
+                    setSelectedWarehouseId(nextValue ? Number(nextValue) : null);
+                  }}
+                  value={activeWarehouseId !== null ? String(activeWarehouseId) : ""}
                 >
-                  {assignedWarehouses.map((warehouseId) => (
-                    <option key={warehouseId} value={warehouseId}>
-                      Gudang #{warehouseId}
+                  {canAccessAllWarehouses ? (
+                    <option value="">Semua gudang</option>
+                  ) : null}
+                  {warehouseOptions.map((warehouse) => (
+                    <option key={warehouse.id} value={warehouse.id}>
+                      {formatWarehouseScopeLabel(warehouse)}
                     </option>
                   ))}
                 </select>
               </div>
             </div>
           ) : (
-            <span
+            <Badge
               aria-label="Cakupan gudang aktif"
-              className="order-last inline-flex w-full items-center justify-center gap-1.5 rounded-full bg-teal-100 px-3 py-1.5 text-xs font-semibold text-teal-700 lg:order-none lg:ml-auto lg:w-auto"
+              className="order-last inline-flex min-h-8 w-full items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-semibold lg:order-none lg:ml-auto lg:w-auto"
+              variant="secondary"
             >
               <Warehouse aria-hidden="true" size={14} />
-              {activeWarehouse ? `Gudang #${activeWarehouse}` : "Semua gudang"}
-            </span>
+              <span>{activeWarehouseLabel}</span>
+            </Badge>
           )}
           <div className="ml-auto flex items-center gap-1.5 sm:gap-2 lg:ml-0 lg:gap-3">
             <button

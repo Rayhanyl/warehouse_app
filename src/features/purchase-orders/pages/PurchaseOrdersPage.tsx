@@ -16,6 +16,7 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { CollapsibleFilterPanel } from "@/components/ui/CollapsibleFilterPanel";
 import { useIsMobile } from "@/hooks/useIsMobile";
 import { usePermission } from "@/hooks/usePermission";
+import { useWarehouseScope } from "@/hooks/useWarehouseScope";
 import { mapApiFormError } from "@/lib/errors";
 import { validateDecimalQtyInput } from "@/lib/validation";
 import { PurchaseOrderPrintSheet } from "../components/PurchaseOrderPrintSheet";
@@ -85,6 +86,7 @@ export function PurchaseOrdersPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const { can } = usePermission();
+  const { filterWarehouseChoices, resolveEffectiveWarehouseFilter } = useWarehouseScope();
   const canCreate = can("po:create");
   const canIssue = can("po:issue");
   const canCancel = can("po:cancel");
@@ -100,7 +102,11 @@ export function PurchaseOrdersPage() {
   const [actionTarget, setActionTarget] = useState<PurchaseOrder | null>(null);
   const [actionType, setActionType] = useState<"issue" | "cancel" | "close" | null>(null);
   const [closedReason, setClosedReason] = useState("");
-  const { data, isLoading, isError, error, refetch } = usePurchaseOrders(params);
+  const effectiveWarehouseId = resolveEffectiveWarehouseFilter(params.warehouse_id);
+  const { data, isLoading, isError, error, refetch } = usePurchaseOrders({
+    ...params,
+    warehouse_id: effectiveWarehouseId,
+  });
   const references = usePurchaseOrderReferences();
   const detail = usePurchaseOrder(detailId);
   const actionMutation = usePurchaseOrderMutation(actionType ?? "issue");
@@ -218,7 +224,7 @@ export function PurchaseOrdersPage() {
             </select>
           </label>
           <ReferenceSelect label="Pemasok" value={draftParams.supplier_id} options={references.data?.suppliers ?? []} onChange={(value) => setDraftParams((current) => ({ ...current, supplier_id: value }))} />
-          <ReferenceSelect label="Gudang tujuan" value={draftParams.warehouse_id} options={references.data?.warehouses ?? []} onChange={(value) => setDraftParams((current) => ({ ...current, warehouse_id: value }))} />
+          <ReferenceSelect label="Gudang tujuan" value={draftParams.warehouse_id} options={filterWarehouseChoices(references.data?.warehouses ?? [])} onChange={(value) => setDraftParams((current) => ({ ...current, warehouse_id: value }))} />
           <label className="text-sm font-semibold text-ink-950">
             Tanggal mulai
             <input className="mt-2 h-11 w-full rounded-[var(--radius-md)] border border-line-500 bg-surface-0 px-3 text-sm text-ink-950 focus:border-teal-600 focus:outline-none focus:ring-2 focus:ring-teal-600/20" onChange={(event) => setDraftParams((current) => ({ ...current, date_from: event.target.value }))} type="date" value={draftParams.date_from} />
@@ -352,6 +358,8 @@ function ReferenceSelect({ label, value, options, onChange }: { label: string; v
 }
 
 function PurchaseOrderForm({ references, isSubmitting, isReferencesLoading, isReferencesError, onRetryReferences, onClose, onSubmit }: { references?: { suppliers: ReferenceOption[]; warehouses: ReferenceOption[]; items: ReferenceOption[] }; isSubmitting: boolean; isReferencesLoading: boolean; isReferencesError: boolean; onRetryReferences: () => void; onClose: () => void; onSubmit: (payload: PurchaseOrderCreatePayload) => Promise<void> }) {
+  const { activeWarehouseId, filterWarehouseChoices } = useWarehouseScope();
+  const scopedWarehouses = filterWarehouseChoices(references?.warehouses ?? []).filter((item) => item.is_active);
   const [supplierId, setSupplierId] = useState("");
   const [warehouseId, setWarehouseId] = useState("");
   const [orderDate, setOrderDate] = useState(new Date().toISOString().slice(0, 10));
@@ -362,6 +370,13 @@ function PurchaseOrderForm({ references, isSubmitting, isReferencesLoading, isRe
   const activeItems = references?.items.filter((item) => item.is_active) ?? [];
   const selectedItems = new Set(lines.map((line) => line.item_id));
   const availableItems = activeItems.filter((item) => !selectedItems.has(item.id));
+  const effectiveWarehouseId =
+    warehouseId ||
+    (activeWarehouseId && scopedWarehouses.some((item) => item.id === activeWarehouseId)
+      ? String(activeWarehouseId)
+      : scopedWarehouses.length === 1
+        ? String(scopedWarehouses[0].id)
+        : "");
 
   function addLine() {
     const firstItem = availableItems[0];
@@ -375,7 +390,7 @@ function PurchaseOrderForm({ references, isSubmitting, isReferencesLoading, isRe
     event.preventDefault();
     const nextFieldErrors: Record<string, string> = {};
     if (!supplierId) nextFieldErrors.supplier_id = "Pilih pemasok aktif.";
-    if (!warehouseId) nextFieldErrors.warehouse_id = "Pilih gudang tujuan aktif.";
+    if (!effectiveWarehouseId) nextFieldErrors.warehouse_id = "Pilih gudang tujuan aktif.";
     if (!orderDate) nextFieldErrors.order_date = "Tanggal pesanan wajib diisi.";
 
     const seenItems = new Set<number>();
@@ -411,7 +426,7 @@ function PurchaseOrderForm({ references, isSubmitting, isReferencesLoading, isRe
     try {
       await onSubmit({
         supplier_id: Number(supplierId),
-        warehouse_id: Number(warehouseId),
+        warehouse_id: Number(effectiveWarehouseId),
         order_date: orderDate,
         notes: notes.trim() || null,
         lines: lines.map((line) => ({
@@ -433,7 +448,7 @@ function PurchaseOrderForm({ references, isSubmitting, isReferencesLoading, isRe
       <form className="mt-5 space-y-5" noValidate onSubmit={(event) => void submit(event)}>
         <section aria-label="Informasi pesanan" className="grid gap-4 rounded-[var(--radius-md)] bg-canvas-50 p-4 sm:grid-cols-2 xl:grid-cols-3">
           <SelectField label="Pemasok" error={fieldErrors.supplier_id} required value={supplierId} options={references?.suppliers ?? []} onChange={(val) => { setSupplierId(val); setFieldErrors((prev) => ({ ...prev, supplier_id: "" })); }} />
-          <SelectField label="Gudang tujuan" error={fieldErrors.warehouse_id} required value={warehouseId} options={references?.warehouses ?? []} onChange={(val) => { setWarehouseId(val); setFieldErrors((prev) => ({ ...prev, warehouse_id: "" })); }} />
+          <SelectField label="Gudang tujuan" error={fieldErrors.warehouse_id} required value={effectiveWarehouseId} options={scopedWarehouses} onChange={(val) => { setWarehouseId(val); setFieldErrors((prev) => ({ ...prev, warehouse_id: "" })); }} />
           <label className="text-sm font-semibold text-ink-950">Tanggal pesanan<input aria-invalid={Boolean(fieldErrors.order_date)} className={`mt-2 h-11 w-full rounded-[var(--radius-md)] border bg-surface-0 px-3 text-sm text-ink-950 focus:outline-none focus:ring-2 ${fieldErrors.order_date ? "border-red-600 focus:ring-red-600/20" : "border-line-500 focus:border-teal-600 focus:ring-teal-600/20"}`} onChange={(event) => { setOrderDate(event.target.value); setFieldErrors((prev) => ({ ...prev, order_date: "" })); }} required type="date" value={orderDate} />{fieldErrors.order_date && <span className="mt-1 block text-xs font-medium text-red-700" role="alert">{fieldErrors.order_date}</span>}</label>
         </section>
 

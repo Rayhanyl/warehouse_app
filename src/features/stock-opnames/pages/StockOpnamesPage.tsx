@@ -8,6 +8,7 @@ import { CollapsibleFilterPanel } from "@/components/ui/CollapsibleFilterPanel";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { useIsMobile } from "@/hooks/useIsMobile";
 import { usePermission } from "@/hooks/usePermission";
+import { useWarehouseScope } from "@/hooks/useWarehouseScope";
 import { mapApiFormError } from "@/lib/errors";
 import { validateDecimalQtyInput } from "@/lib/validation";
 import { mapOpnameError, useOpname, useOpnameMutation, useOpnameReferences, useOpnames } from "../api";
@@ -27,14 +28,22 @@ function formatDateTime(value?: string | null) {
 
 export function StockOpnamesPage() {
   const { can } = usePermission();
+  const {
+    canAccessAllWarehouses,
+    resolveEffectiveWarehouseFilter,
+    filterWarehouseChoices,
+  } = useWarehouseScope();
   const [params, setParams] = useState<Filters>(initialFilters);
   const [draft, setDraft] = useState<Filters>(initialFilters);
   const [detailId, setDetailId] = useState<number | null>(null);
   const [formOpen, setFormOpen] = useState(false);
   const [editingOpname, setEditingOpname] = useState<StockOpname | null>(null);
-  const query = useOpnames(params);
+  const effectiveWarehouseId = resolveEffectiveWarehouseFilter(params.warehouse_id);
+  const effectiveParams = { ...params, warehouse_id: effectiveWarehouseId };
+  const query = useOpnames(effectiveParams);
   const detail = useOpname(detailId);
   const refs = useOpnameReferences();
+  const scopedWarehouses = filterWarehouseChoices(refs.data?.warehouses ?? []);
   const isMobile = useIsMobile();
   const activeFilterCount = [
     params.search,
@@ -93,7 +102,7 @@ export function StockOpnamesPage() {
       <form className="grid gap-4 md:grid-cols-2 lg:grid-cols-4" onSubmit={apply}>
         <label className="text-sm font-semibold text-ink-950">Pencarian<div className="relative"><Search aria-hidden="true" className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-slate-600" size={16} /><input className={`${fieldClass} pl-9`} maxLength={100} onChange={(event) => setDraft((current) => ({ ...current, search: event.target.value }))} placeholder="Nomor atau catatan sesi" type="search" value={draft.search} /></div></label>
         <label className="text-sm font-semibold text-ink-950">Status<select className={fieldClass} onChange={(event) => setDraft((current) => ({ ...current, status: event.target.value as Filters["status"] }))} value={draft.status}><option value="all">Semua status</option>{Object.entries(statuses).map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select></label>
-        <label className="text-sm font-semibold text-ink-950">Gudang<select className={fieldClass} onChange={(event) => setDraft((current) => ({ ...current, warehouse_id: event.target.value ? Number(event.target.value) : null }))} value={draft.warehouse_id ?? ""}><option value="">Semua gudang</option>{refs.data?.warehouses.map((warehouse) => <option key={warehouse.id} value={warehouse.id}>{warehouse.code} · {warehouse.name}</option>)}</select></label>
+        <label className="text-sm font-semibold text-ink-950">Gudang<select className={fieldClass} disabled={!canAccessAllWarehouses && scopedWarehouses.length <= 1} onChange={(event) => setDraft((current) => ({ ...current, warehouse_id: event.target.value ? Number(event.target.value) : null }))} value={effectiveWarehouseId ?? ""}><option value="">{canAccessAllWarehouses ? "Semua gudang" : "Gudang ditugaskan"}</option>{scopedWarehouses.map((warehouse) => <option key={warehouse.id} value={warehouse.id}>{warehouse.code} · {warehouse.name}</option>)}</select></label>
         <label className="text-sm font-semibold text-ink-950">Tanggal mulai<input className={fieldClass} max={draft.date_to || undefined} onChange={(event) => setDraft((current) => ({ ...current, date_from: event.target.value }))} type="date" value={draft.date_from} /></label>
         <label className="text-sm font-semibold text-ink-950">Tanggal akhir<input className={fieldClass} min={draft.date_from || undefined} onChange={(event) => setDraft((current) => ({ ...current, date_to: event.target.value }))} type="date" value={draft.date_to} /></label>
         <div className="flex flex-wrap items-end gap-2 md:col-span-2 lg:col-span-3"><button className="inline-flex min-h-11 flex-1 items-center justify-center rounded-[var(--radius-md)] bg-ink-950 px-4 text-sm font-semibold text-surface-0 hover:bg-ink-900 focus:outline-none focus:ring-2 focus:ring-teal-600 sm:flex-initial" type="submit">Terapkan filter</button><button className={`${buttonClass} flex-1 sm:flex-initial`} onClick={reset} type="button"><RotateCcw aria-hidden="true" size={16} />Atur ulang</button></div>
@@ -113,7 +122,9 @@ function State({ text, error = false, empty = false, onRetry, action, actionLabe
 }
 
 function OpnameForm({ initialOpname, references, isSubmitting, onClose, onSubmit, onUpdate }: { initialOpname: StockOpname | null; references?: Awaited<ReturnType<typeof useOpnameReferences>>["data"]; isSubmitting: boolean; onClose: () => void; onSubmit: (payload: StockOpnameCreatePayload) => Promise<void>; onUpdate: (id: number, payload: StockOpnameUpdatePayload) => Promise<void> }) {
-  const [warehouse, setWarehouse] = useState(initialOpname ? String(initialOpname.warehouse_id) : "");
+  const { activeWarehouseId, canAccessAllWarehouses, filterWarehouseChoices } = useWarehouseScope();
+  const scopedWarehouses = filterWarehouseChoices(references?.warehouses ?? []);
+  const [warehouse, setWarehouse] = useState(initialOpname ? String(initialOpname.warehouse_id) : (activeWarehouseId ? String(activeWarehouseId) : ""));
   const [location, setLocation] = useState(initialOpname?.location_id ? String(initialOpname.location_id) : "");
   const [notes, setNotes] = useState(initialOpname?.notes ?? "");
   const [error, setError] = useState("");
@@ -145,7 +156,7 @@ function OpnameForm({ initialOpname, references, isSubmitting, onClose, onSubmit
   }
 
   return <Dialog title={initialOpname ? "Ubah draft stock opname" : "Buat sesi stock opname"} onClose={onClose}><form className="space-y-4" noValidate onSubmit={(event) => void submit(event)}>
-    <label className="block text-sm font-semibold text-ink-950">Gudang<select className={fieldClass} disabled={Boolean(initialOpname)} onChange={(event) => { setWarehouse(event.target.value); setLocation(""); }} required value={warehouse}><option value="">Pilih gudang</option>{references?.warehouses.map((entry) => <option key={entry.id} value={entry.id}>{entry.code} · {entry.name}</option>)}</select></label>
+    <label className="block text-sm font-semibold text-ink-950">Gudang<select className={fieldClass} disabled={Boolean(initialOpname) || (!canAccessAllWarehouses && scopedWarehouses.length <= 1)} onChange={(event) => { setWarehouse(event.target.value); setLocation(""); }} required value={warehouse}><option value="">Pilih gudang</option>{scopedWarehouses.map((entry) => <option key={entry.id} value={entry.id}>{entry.code} · {entry.name}</option>)}</select></label>
     <label className="block text-sm font-semibold text-ink-950">Lokasi (opsional)<select className={fieldClass} onChange={(event) => setLocation(event.target.value)} value={location}><option value="">Seluruh lokasi aktif</option>{locations.map((entry) => <option key={entry.id} value={entry.id}>{entry.code} · {entry.name}</option>)}</select></label>
     <label className="block text-sm font-semibold text-ink-950">Catatan<input className={fieldClass} maxLength={1000} onChange={(event) => setNotes(event.target.value)} value={notes} /></label>
     {references?.warehouses.length === 0 && <p className="text-sm text-amber-800" role="status">Tidak ada gudang aktif yang tersedia.</p>}{error && <p className="rounded-[var(--radius-md)] bg-red-50 p-3 text-sm font-semibold text-red-900" role="alert">{error}</p>}

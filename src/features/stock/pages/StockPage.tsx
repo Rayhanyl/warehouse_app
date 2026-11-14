@@ -6,6 +6,7 @@ import { CollapsibleFilterPanel } from "@/components/ui/CollapsibleFilterPanel";
 import { StockLookupModal } from "@/components/ui/StockLookupModal";
 import { useIsMobile } from "@/hooks/useIsMobile";
 import { usePermission } from "@/hooks/usePermission";
+import { useWarehouseScope } from "@/hooks/useWarehouseScope";
 import { formatDecimal } from "@/lib/decimal";
 import {
   useStockBalances,
@@ -53,6 +54,7 @@ function formatDate(value: string) {
 export function StockPage() {
   const { pathname } = useLocation();
   const { can } = usePermission();
+  const { canAccessAllWarehouses, resolveEffectiveWarehouseFilter, warehouseOptions } = useWarehouseScope();
   const canReadLedger = can("ledger:read");
   const [params, setParams] = useState(initialParams);
   const [draft, setDraft] = useState(initialParams);
@@ -63,9 +65,25 @@ export function StockPage() {
   const isTransitView = pathname === "/stock/in-transit";
   const isMobile = useIsMobile();
   const isLedgerView = pathname === "/stock/ledger";
+  const effectiveWarehouseId = resolveEffectiveWarehouseFilter(
+    params.warehouse_id ? Number(params.warehouse_id) : null,
+  );
+  const effectiveParams: StockListParams = {
+    ...params,
+    warehouse_id: effectiveWarehouseId !== null ? String(effectiveWarehouseId) : "",
+  };
+  const scopedWarehouseSelectOptions: [string, string][] =
+    warehouseOptions.length > 1
+      ? [
+          ["", "Semua gudang saya"],
+          ...warehouseOptions.map((wh): [string, string] => [String(wh.id), `${wh.code} · ${wh.name}`]),
+        ]
+      : warehouseOptions.length === 1
+        ? [[String(warehouseOptions[0].id), `${warehouseOptions[0].code} · ${warehouseOptions[0].name}`]]
+        : [["", "Tidak ada gudang"]];
   const activeFilterCount = [
     params.search,
-    params.warehouse_id,
+    effectiveParams.warehouse_id,
     params.location_id,
     params.item_id,
     params.category_id,
@@ -85,10 +103,10 @@ export function StockPage() {
           ? "Stok dalam perjalanan"
           : "Saldo stok per lokasi";
 
-  const balances = useStockBalances(params, !isWarehouseView && !isSummaryView && !isLedgerView);
-  const warehouseBalances = useWarehouseBalances(params, isWarehouseView);
-  const summary = useStockSummary(params, isSummaryView);
-  const movements = useStockMovements(params, isLedgerView && canReadLedger);
+  const balances = useStockBalances(effectiveParams, !isWarehouseView && !isSummaryView && !isLedgerView);
+  const warehouseBalances = useWarehouseBalances(effectiveParams, isWarehouseView);
+  const summary = useStockSummary(effectiveParams, isSummaryView);
+  const movements = useStockMovements(effectiveParams, isLedgerView && canReadLedger);
   const query = isLedgerView
     ? movements
     : isWarehouseView
@@ -144,7 +162,11 @@ export function StockPage() {
         )}
         {isLedgerView && (
           <>
-            <Field label="Gudang ID" type="number" value={draft.warehouse_id} onChange={(value) => setDraft({ ...draft, warehouse_id: value })} />
+            {canAccessAllWarehouses ? (
+              <Field label="Gudang ID" type="number" value={draft.warehouse_id} onChange={(value) => setDraft({ ...draft, warehouse_id: value })} />
+            ) : (
+              <SelectField label="Gudang" value={effectiveParams.warehouse_id || draft.warehouse_id} onChange={(value) => setDraft({ ...draft, warehouse_id: value })} options={scopedWarehouseSelectOptions} />
+            )}
             <Field label="Lokasi ID" type="number" value={draft.location_id} onChange={(value) => setDraft({ ...draft, location_id: value })} />
             <Field label="Barang ID" type="number" value={draft.item_id} onChange={(value) => setDraft({ ...draft, item_id: value })} />
             <SelectField label="Jenis mutasi" value={draft.movement_type} onChange={(value) => setDraft({ ...draft, movement_type: value })} options={[["", "Semua jenis"], ["IN_PURCHASE", "Penerimaan pembelian"], ["OUT_TRANSFER", "Pengeluaran transfer"], ["IN_TRANSFER", "Penerimaan transfer"], ["ADJUSTMENT_PLUS", "Penyesuaian tambah"], ["ADJUSTMENT_MINUS", "Penyesuaian kurang"]]} />
@@ -156,7 +178,11 @@ export function StockPage() {
         )}
         {!isLedgerView && (
           <>
-            <Field label="Gudang ID" type="number" value={draft.warehouse_id} onChange={(value) => setDraft({ ...draft, warehouse_id: value })} />
+            {canAccessAllWarehouses ? (
+              <Field label="Gudang ID" type="number" value={draft.warehouse_id} onChange={(value) => setDraft({ ...draft, warehouse_id: value })} />
+            ) : (
+              <SelectField label="Gudang" value={effectiveParams.warehouse_id || draft.warehouse_id} onChange={(value) => setDraft({ ...draft, warehouse_id: value })} options={scopedWarehouseSelectOptions} />
+            )}
             {(!isWarehouseView && !isSummaryView) && <Field label="Lokasi ID" type="number" value={draft.location_id} onChange={(value) => setDraft({ ...draft, location_id: value })} />}
             <Field label="Barang ID" type="number" value={draft.item_id} onChange={(value) => setDraft({ ...draft, item_id: value })} />
             <Field label="Kategori ID" type="number" value={draft.category_id} onChange={(value) => setDraft({ ...draft, category_id: value })} />

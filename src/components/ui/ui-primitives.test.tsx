@@ -143,7 +143,7 @@ describe("shadcn/ui primitives", () => {
     expect(screen.getByText("Konten Detail")).toBeVisible();
   });
 
-  it("membuka Dialog dan Sheet dari trigger masing-masing", () => {
+  it("membuka Dialog dan menutupnya, serta membuka Sheet dan merender Select", () => {
     render(
       <div>
         <Dialog>
@@ -184,15 +184,18 @@ describe("shadcn/ui primitives", () => {
       </div>,
     );
 
+    expect(screen.getByRole("combobox", { name: "Pilih Gudang" })).toHaveTextContent(
+      "Gudang Utama",
+    );
+
     fireEvent.click(screen.getByRole("button", { name: "Buka Dialog" }));
     expect(screen.getByRole("dialog")).toBeInTheDocument();
     expect(screen.getByText("Konfirmasi Dokumen")).toBeInTheDocument();
 
+    fireEvent.click(screen.getAllByRole("button", { name: "Close" })[0]);
+    expect(screen.queryByText("Konfirmasi Dokumen")).not.toBeInTheDocument();
+
     fireEvent.click(screen.getByRole("button", { name: "Buka Panel" }));
     expect(screen.getByText("Filter Lanjutan")).toBeInTheDocument();
-
-    expect(screen.getByRole("combobox", { name: "Pilih Gudang" })).toHaveTextContent(
-      "Gudang Utama",
-    );
   });
 });

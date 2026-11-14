@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { PageHeader } from "@/components/layout/PageHeader";
-import { useAuthStore } from "@/features/auth/store";
+import { useWarehouseScope } from "@/hooks/useWarehouseScope";
 import { useDashboardSummary } from "@/features/dashboard/api";
 import { getMenuIconComponent } from "@/features/navigation/icons";
 import { useMyMenu } from "@/features/navigation/api";
@@ -119,7 +119,7 @@ function getMovementBadge(type: string) {
 }
 
 export function DashboardPage() {
-  const user = useAuthStore((state) => state.user);
+  const { user, activeWarehouseId, activeWarehouseLabel } = useWarehouseScope();
   const { data: menu = [] } = useMyMenu();
   const {
     data: dashboardData,
@@ -127,7 +127,7 @@ export function DashboardPage() {
     isError,
     refetch,
     isFetching,
-  } = useDashboardSummary();
+  } = useDashboardSummary(activeWarehouseId);
 
   const shortcuts = collectShortcuts(menu).slice(0, 9);
   const displayName = user?.full_name || user?.username;
@@ -193,6 +193,11 @@ export function DashboardPage() {
             <span className="text-slate-500">({assignedWarehouses.length} gudang)</span>
           </div>
         )}
+        {activeWarehouseId !== null ? (
+          <span className="ml-auto rounded-full border border-teal-300 bg-teal-100 px-2.5 py-0.5 font-semibold text-teal-800">
+            Filter aktif: {activeWarehouseLabel}
+          </span>
+        ) : null}
       </div>
 
       {/* Kartu Metrik Utama (KPI Cards) */}
