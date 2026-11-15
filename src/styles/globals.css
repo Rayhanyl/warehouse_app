@@ -42,7 +42,49 @@
   --shadow-2: 0 12px 30px rgb(23 37 42 / 0.12);
 }
 
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+}
+
 :root {
+  --background: var(--color-canvas-50);
+  --foreground: var(--color-ink-950);
+  --card: var(--color-surface-0);
+  --card-foreground: var(--color-ink-950);
+  --popover: var(--color-surface-0);
+  --popover-foreground: var(--color-ink-950);
+  --primary: var(--color-teal-600);
+  --primary-foreground: var(--color-surface-0);
+  --secondary: var(--color-teal-100);
+  --secondary-foreground: var(--color-teal-700);
+  --muted: #ede7dc;
+  --muted-foreground: var(--color-slate-700);
+  --accent: #efe9df;
+  --accent-foreground: var(--color-ink-950);
+  --destructive: var(--color-red-600);
+  --destructive-foreground: var(--color-surface-0);
+  --border: var(--color-line-200);
+  --input: var(--color-line-200);
+  --ring: var(--color-teal-600);
+  --radius: 0.625rem;
   font-family: var(--font-sans);
   color-scheme: light;
   font-synthesis: none;
@@ -87,15 +129,29 @@ body {
   }
 }
 
-@media print {
-  @page {
-    size: A4 portrait;
-    margin: 12mm;
-  }
+@page {
+  size: A4 portrait;
+  margin: 12mm;
+}
 
+@media print {
+
+  html,
   body {
+    min-width: 0 !important;
+    width: auto !important;
+    height: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
     background-color: #ffffff !important;
     color: #000000 !important;
+  }
+
+  main {
+    padding: 0 !important;
+    max-width: none !important;
+    overflow: visible !important;
   }
 
   #admin-sidebar,
@@ -110,18 +166,36 @@ body {
 
   .print-dialog-backdrop {
     position: static !important;
+    inset: auto !important;
     display: block !important;
+    width: auto !important;
+    height: auto !important;
     background: transparent !important;
+    margin: 0 !important;
     padding: 0 !important;
+    overflow: visible !important;
   }
 
   .print-dialog-panel {
+    display: block !important;
+    height: auto !important;
     max-height: none !important;
     max-width: none !important;
     width: 100% !important;
     overflow: visible !important;
     border: none !important;
     box-shadow: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  [data-slot="document-dialog-body"] {
+    display: block !important;
+    flex: none !important;
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+    margin: 0 !important;
     padding: 0 !important;
   }
 
@@ -130,10 +204,112 @@ body {
     width: 100% !important;
     color: #000000 !important;
     background: #ffffff !important;
+    overflow: visible !important;
   }
 
+  .printable-document-table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+  }
+
+  .printable-document-table thead {
+    display: table-header-group;
+  }
+
+  .printable-document-table tfoot {
+    display: table-footer-group;
+  }
+
+  .printable-document-table tbody tr {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .print-notes-block,
   .print-signature-grid {
     break-inside: avoid;
     page-break-inside: avoid;
+  }
+
+  /* Isolasi total cetak stiker barcode/QR: sembunyikan seluruh root aplikasi (#root),
+     overlay modal, toast, dan chrome dialog agar hanya BarcodeStickerSheet yang tercetak
+     tanpa terkena translate(-50%, -50%) atau batasan overflow/min-width layar. */
+  body.wms-sticker-print-mode #root,
+  body:has([data-sticker-print-dialog="true"]) #root,
+  body.wms-sticker-print-mode [data-slot="dialog-overlay"],
+  body:has([data-sticker-print-dialog="true"]) [data-slot="dialog-overlay"] {
+    display: none !important;
+  }
+
+  [data-sticker-print-dialog="true"] {
+    position: static !important;
+    inset: auto !important;
+    top: auto !important;
+    left: auto !important;
+    right: auto !important;
+    bottom: auto !important;
+    translate: none !important;
+    scale: none !important;
+    rotate: none !important;
+    transform: none !important;
+    display: block !important;
+    width: auto !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    max-height: none !important;
+    height: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: none !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    background: transparent !important;
+    overflow: visible !important;
+  }
+
+  [data-sticker-print-dialog="true"] [data-slot="sticker-dialog-body"] {
+    display: block !important;
+    flex: none !important;
+    height: auto !important;
+    max-height: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+  }
+
+  [data-sticker-print-dialog="true"] [data-slot="dialog-close"] {
+    display: none !important;
+  }
+
+  .printable-sticker-sheet {
+    display: block !important;
+    width: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+    background: #ffffff !important;
+  }
+
+  .printable-sticker-sheet[data-paper-mode="thermal"] .printable-sticker-grid {
+    display: block !important;
+    width: auto !important;
+    margin: 0 !important;
+    gap: 0 !important;
+  }
+
+  .printable-sticker-sheet[data-paper-mode="thermal"] .print-sticker-card {
+    margin: 0 !important;
+    border-color: transparent !important;
+    border-radius: 0 !important;
+  }
+
+  .printable-sticker-sheet[data-paper-mode="thermal"] .print-sticker-card:not(:last-child) {
+    break-after: page;
+    page-break-after: always;
+  }
+
+  .printable-sticker-sheet[data-paper-mode="a4"] .print-sticker-card {
+    border-color: #cbd5e1 !important;
+    border-radius: 0 !important;
   }
 }

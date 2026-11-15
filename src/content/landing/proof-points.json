@@ -1,22 +1,22 @@
 [
   {
-    "label": "Stok & inspeksi rak multi-SKU",
-    "description": "Telusuri saldo hingga lokasi rak atau pindai barcode/QR rak untuk melihat seluruh daftar barang di dalamnya.",
+    "label": "WMS Berbasis Rak Lorong",
+    "description": "Lacak posisi dan saldo setiap SKU hingga tingkat rak penyimpanan atau inspeksi seluruh isi rak multi-SKU dalam sekali pindai.",
     "icon": "boxes"
   },
   {
-    "label": "Pemindai & cetak label barcode",
-    "description": "Pindai via kamera atau scanner gun, buat barcode internal EAN-13/Code-128, dan cetak stiker 50x30 mm.",
+    "label": "Pemindai Barcode/QR Multifungsi",
+    "description": "Gunakan kamera perangkat maupun barcode gun USB/Bluetooth untuk menerima barang, hitung opname, dan cek stok rak seketika.",
     "icon": "scan-barcode"
   },
   {
-    "label": "Alur kerja & cetak dokumen fisik",
-    "description": "Proses PO, GR, Transfer, dan Opname sesuai izin peran lengkap dengan cetak Bukti Penerimaan (GRN) dan Surat Jalan.",
-    "icon": "route"
+    "label": "Cetak Label & Dokumen Modular",
+    "description": "Atur ukuran stiker label (roll termal 50x30 hingga A4 Grid) serta kustomisasi logo dan tata letak PO, GRN, dan Surat Jalan.",
+    "icon": "printer"
   },
   {
-    "label": "Aktivitas terlacak append-only",
-    "description": "Setiap mutasi stok dan perubahan data terekam permanen pada stock ledger serta audit log.",
+    "label": "Pelacakan Real-Time & Audit Log",
+    "description": "Setiap pergerakan barang, pembekuan opname, perubahan data, dan alamat IP aktor terekam permanen untuk audit yang akurat.",
     "icon": "shield-check"
   }
 ]

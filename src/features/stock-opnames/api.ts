@@ -1,6 +1,7 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api-client";
 import { extractApiErrorInfo } from "@/lib/errors";
+import { invalidateAndRefetchAll } from "@/lib/query-invalidation";
 import type { OpnameItemReference, OpnameReference, StockOpname, StockOpnameCreatePayload, StockOpnamePage, StockOpnameUpdatePayload } from "./types";
 
 export const opnameKeys = {
@@ -67,9 +68,13 @@ export function useOpnameMutation(action: "create" | "update" | "start" | "count
       }
       return opnameAction(id!, action, payload);
     },
-    onSuccess: (opname) => {
+    onSuccess: async (opname) => {
       queryClient.setQueryData(opnameKeys.detail(opname.id), opname);
-      void queryClient.invalidateQueries({ queryKey: opnameKeys.lists() });
+      await invalidateAndRefetchAll(queryClient, [
+        opnameKeys.lists(),
+        ["stock"],
+        ["dashboard"],
+      ]);
     },
   });
 }
@@ -90,7 +95,15 @@ export function useOpnameReferences() {
 
 export function mapOpnameError(error: unknown, fallback: string) {
   const info = extractApiErrorInfo(error);
-  if (info.status === 403) return "Anda tidak memiliki izin atau akses gudang untuk aksi ini.";
+  if (info.status === 403) {
+    if (info.details?.code === "SOD_VIOLATION") {
+      return (
+        info.message ||
+        "Pemisahan tugas (SoD): petugas hitung, pengaju, atau approver Level 1 tidak dapat menyetujui sesi opname ini."
+      );
+    }
+    return info.message || "Anda tidak memiliki izin atau akses gudang untuk aksi ini.";
+  }
   if (info.status === 409) return info.message || "Status sesi atau lokasi sudah berubah. Muat ulang data sebelum mencoba lagi.";
   if (info.status === 422) return info.message || "Data stock opname belum valid.";
   return info.message || fallback;

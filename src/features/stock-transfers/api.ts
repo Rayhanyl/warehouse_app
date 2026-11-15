@@ -1,6 +1,7 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api-client";
 import { extractApiErrorInfo } from "@/lib/errors";
+import { invalidateAndRefetchAll } from "@/lib/query-invalidation";
 import type { StockTransfer, StockTransferCreatePayload, StockTransferPage, StockTransferUpdatePayload, TransferReceiveLinePayload, TransferReference } from "./types";
 
 export const transferKeys = {
@@ -15,6 +16,7 @@ export interface TransferListParams {
   offset: number;
   search: string;
   status: string;
+  warehouse_id?: number | null;
   date_from: string;
   date_to: string;
 }
@@ -25,6 +27,7 @@ export async function fetchTransfers(params: TransferListParams): Promise<StockT
     offset: params.offset,
     search: params.search.trim() || undefined,
     status: params.status === "all" ? undefined : params.status,
+    warehouse_id: params.warehouse_id ?? undefined,
     date_from: params.date_from || undefined,
     date_to: params.date_to || undefined,
   };
@@ -93,9 +96,13 @@ export function useTransferMutation(action: "create" | "update" | "approve" | "s
       if (!id) throw new Error("ID transfer tidak tersedia.");
       return transferAction(id, action, lines);
     },
-    onSuccess: (transfer) => {
+    onSuccess: async (transfer) => {
       queryClient.setQueryData(transferKeys.detail(transfer.id), transfer);
-      void queryClient.invalidateQueries({ queryKey: transferKeys.lists() });
+      await invalidateAndRefetchAll(queryClient, [
+        transferKeys.lists(),
+        ["stock"],
+        ["dashboard"],
+      ]);
     },
   });
 }
@@ -125,7 +132,15 @@ export function useTransferReferences() {
 
 export function mapTransferError(error: unknown, fallback: string) {
   const info = extractApiErrorInfo(error);
-  if (info.status === 403) return "Anda tidak memiliki izin atau akses gudang untuk aksi ini.";
+  if (info.status === 403) {
+    if (info.details?.code === "SOD_VIOLATION") {
+      return (
+        info.message ||
+        "Pemisahan tugas (SoD): pembuat draft transfer tidak boleh menyetujui transfer-nya sendiri."
+      );
+    }
+    return info.message || "Anda tidak memiliki izin atau akses gudang untuk aksi ini.";
+  }
   if (info.status === 409) return info.message || "Status transfer atau saldo sudah berubah. Muat ulang data sebelum mencoba lagi.";
   if (info.status === 422) return info.message || "Data transfer belum valid. Periksa lokasi dan kuantitas.";
   return info.message || fallback;

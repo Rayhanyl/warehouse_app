@@ -1,5 +1,6 @@
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { AlertCircle, Save, X } from "lucide-react";
+import { categoryFormSchema, validateZodSchema } from "../../validation";
 import type { Category, CategoryCreatePayload, CategoryUpdatePayload } from "../types";
 
 interface CategoryFormDialogProps {
@@ -68,36 +69,30 @@ export function CategoryFormDialog({
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const trimmedName = name.trim();
-    const trimmedDescription = description.trim();
-    const nextErrors: { name?: string; description?: string } = {};
-
-    if (trimmedName.length === 0) {
-      nextErrors.name = "Nama kategori wajib diisi (1 sampai 120 karakter).";
-    } else if (trimmedName.length > 120) {
-      nextErrors.name = "Nama kategori maksimal terdiri dari 120 karakter.";
-    }
-
-    if (trimmedDescription.length > 1000) {
-      nextErrors.description = "Deskripsi kategori maksimal terdiri dari 1.000 karakter.";
-    }
-
-    if (nextErrors.name || nextErrors.description) {
-      setValidationErrors(nextErrors);
+    const parsed = validateZodSchema(categoryFormSchema, {
+      name,
+      description,
+      is_active: isActive,
+    });
+    if (!parsed.ok) {
+      setValidationErrors({
+        name: parsed.fieldErrors.name,
+        description: parsed.fieldErrors.description,
+      });
       return;
     }
 
     setValidationErrors({});
     await onSubmit({
-      name: trimmedName,
-      description: trimmedDescription.length > 0 ? trimmedDescription : null,
-      is_active: isActive,
+      name: parsed.data.name,
+      description: parsed.data.description.length > 0 ? parsed.data.description : null,
+      is_active: parsed.data.is_active,
     });
   }
 
   return (
     <div
-      className="fixed inset-0 z-50 grid place-items-center bg-ink-950/55 p-4"
+      className="fixed inset-0 z-50 grid place-items-center bg-ink-950/55 p-2 sm:p-4"
       onMouseDown={() => {
         if (!isSubmitting) {
           onClose();
@@ -107,11 +102,11 @@ export function CategoryFormDialog({
       <div
         aria-labelledby="category-form-title"
         aria-modal="true"
-        className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-[var(--radius-lg)] border border-line-200 bg-surface-0 p-5 shadow-[var(--shadow-2)] sm:p-6"
+        className="flex max-h-[94dvh] w-full max-w-2xl flex-col overflow-hidden rounded-[var(--radius-lg)] border border-line-200 bg-surface-0 shadow-[var(--shadow-2)] sm:max-h-[92vh]"
         onMouseDown={(event) => event.stopPropagation()}
         role="dialog"
       >
-        <div className="flex items-start justify-between gap-3 border-b border-line-200 pb-4">
+        <div className="flex shrink-0 items-start justify-between gap-3 border-b border-line-200 px-4 py-4 sm:px-6 sm:py-5">
           <div>
             <h2
               className="text-lg font-bold text-ink-950"
@@ -138,7 +133,8 @@ export function CategoryFormDialog({
           </button>
         </div>
 
-        <form className="mt-5 space-y-4" noValidate onSubmit={handleSubmit}>
+        <form className="flex min-h-0 flex-1 flex-col overflow-hidden" noValidate onSubmit={handleSubmit}>
+          <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 py-4 sm:px-6 sm:py-5">
           {submitError && (
             <div
               className="flex items-start gap-2.5 rounded-[var(--radius-md)] border border-red-600/30 bg-red-100 p-3.5 text-sm text-red-700"
@@ -283,9 +279,11 @@ export function CategoryFormDialog({
             )}
           </div>
 
-          <div className="flex flex-wrap items-center justify-end gap-2 border-t border-line-200 pt-4">
+          </div>
+
+          <div className="flex shrink-0 flex-col-reverse gap-2 border-t border-line-200 bg-surface-0 px-4 py-3 sm:flex-row sm:items-center sm:justify-end sm:px-6 sm:py-4">
             <button
-              className="inline-flex min-h-11 items-center justify-center rounded-[var(--radius-md)] border border-line-500 bg-surface-0 px-4 text-sm font-semibold text-ink-950 transition hover:bg-canvas-50 disabled:opacity-50"
+              className="inline-flex min-h-11 w-full items-center justify-center rounded-[var(--radius-md)] border border-line-500 bg-surface-0 px-4 text-sm font-semibold text-ink-950 transition hover:bg-canvas-50 disabled:opacity-50 sm:w-auto"
               disabled={isSubmitting}
               onClick={onClose}
               type="button"
@@ -293,7 +291,7 @@ export function CategoryFormDialog({
               Batal
             </button>
             <button
-              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-[var(--radius-md)] bg-teal-600 px-4 text-sm font-semibold text-surface-0 transition hover:bg-teal-700 disabled:cursor-not-allowed disabled:opacity-60"
+              className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-[var(--radius-md)] bg-teal-600 px-4 text-sm font-semibold text-surface-0 transition hover:bg-teal-700 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
               disabled={isSubmitting}
               type="submit"
             >

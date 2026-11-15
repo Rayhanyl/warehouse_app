@@ -1,11 +1,13 @@
 import { useEffect, useState } from "react";
-import { X } from "lucide-react";
+import { Loader2, X } from "lucide-react";
+import { MasterFormErrorBanner } from "../../components/MasterFormErrorBanner";
+import type { MasterFormSubmitError } from "../../errors";
 import type {
   StorageLocationFormPayload,
   StorageLocationRecord,
   StorageLocationWarehouseOption,
 } from "../types";
-import { CODE_REGEX } from "../../validation";
+import { storageLocationFormSchema, validateZodSchema } from "../../validation";
 
 interface StorageLocationFormDialogProps {
   open: boolean;
@@ -13,8 +15,10 @@ interface StorageLocationFormDialogProps {
   initialData: StorageLocationRecord | null;
   warehouseOptions: StorageLocationWarehouseOption[];
   existingLocations: StorageLocationRecord[];
+  isSubmitting?: boolean;
+  submitError?: MasterFormSubmitError | null;
   onClose: () => void;
-  onSubmit: (payload: StorageLocationFormPayload) => void;
+  onSubmit: (payload: StorageLocationFormPayload) => void | Promise<void>;
 }
 
 interface FieldErrors {
@@ -28,6 +32,8 @@ function StorageLocationFormInner({
   initialData,
   warehouseOptions,
   existingLocations,
+  isSubmitting = false,
+  submitError = null,
   onClose,
   onSubmit,
 }: Omit<StorageLocationFormDialogProps, "open">) {
@@ -39,23 +45,29 @@ function StorageLocationFormInner({
   const [isActive, setIsActive] = useState(() => initialData?.is_active ?? true);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
 
+  const mergedErrors: FieldErrors = {
+    warehouse_id: fieldErrors.warehouse_id ?? submitError?.fieldErrors?.warehouse_id,
+    code: fieldErrors.code ?? submitError?.fieldErrors?.code,
+    name: fieldErrors.name ?? submitError?.fieldErrors?.name,
+  };
+
   const validate = (): boolean => {
-    const nextErrors: FieldErrors = {};
+    const parsed = validateZodSchema(storageLocationFormSchema, {
+      warehouse_id: warehouseId,
+      code: code.trim().toUpperCase(),
+      name,
+      is_active: isActive,
+    });
+    const nextErrors: FieldErrors = parsed.ok
+      ? {}
+      : {
+          warehouse_id: parsed.fieldErrors.warehouse_id,
+          code: parsed.fieldErrors.code,
+          name: parsed.fieldErrors.name,
+        };
+
     const trimmedCode = code.trim().toUpperCase();
-    const trimmedName = name.trim();
-
-    if (!warehouseId) {
-      nextErrors.warehouse_id = "Pilih gudang induk terlebih dahulu.";
-    }
-
-    if (!trimmedCode) {
-      nextErrors.code = "Kode lokasi wajib diisi.";
-    } else if (!CODE_REGEX.test(trimmedCode)) {
-      nextErrors.code =
-        "Kode hanya boleh berisi huruf, angka, titik, garis bawah, garis miring, atau tanda hubung.";
-    } else if (trimmedCode.length > 50) {
-      nextErrors.code = "Kode lokasi maksimal 50 karakter.";
-    } else {
+    if (!nextErrors.code) {
       const duplicate = existingLocations.some(
         (item) =>
           item.warehouse_id === warehouseId &&
@@ -67,23 +79,17 @@ function StorageLocationFormInner({
       }
     }
 
-    if (!trimmedName) {
-      nextErrors.name = "Nama lokasi wajib diisi.";
-    } else if (trimmedName.length > 120) {
-      nextErrors.name = "Nama lokasi maksimal 120 karakter.";
-    }
-
     setFieldErrors(nextErrors);
-    return Object.keys(nextErrors).length === 0;
+    return !nextErrors.warehouse_id && !nextErrors.code && !nextErrors.name;
   };
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!validate()) {
+    if (isSubmitting || !validate()) {
       return;
     }
 
-    onSubmit({
+    void onSubmit({
       warehouse_id: warehouseId,
       code: code.trim().toUpperCase(),
       name: name.trim(),
@@ -92,8 +98,10 @@ function StorageLocationFormInner({
   };
 
   return (
-    <form onSubmit={handleSubmit} noValidate>
-      <div className="space-y-4 px-6 py-5">
+    <form className="flex min-h-0 flex-1 flex-col overflow-hidden" onSubmit={handleSubmit} noValidate>
+      <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 py-4 sm:px-6 sm:py-5">
+        <MasterFormErrorBanner error={submitError} />
+
         <div>
           <label
             htmlFor="storage-location-warehouse-select"
@@ -103,6 +111,7 @@ function StorageLocationFormInner({
           </label>
           <select
             id="storage-location-warehouse-select"
+            disabled={mode === "edit" || isSubmitting}
             value={warehouseId}
             onChange={(event) => {
               setWarehouseId(event.target.value);
@@ -110,9 +119,9 @@ function StorageLocationFormInner({
                 setFieldErrors((prev) => ({ ...prev, warehouse_id: undefined }));
               }
             }}
-            aria-invalid={Boolean(fieldErrors.warehouse_id)}
-            className={`mt-1.5 h-12 w-full rounded-md border bg-white px-3.5 text-sm text-slate-900 focus:outline-none focus:ring-2 ${
-              fieldErrors.warehouse_id
+            aria-invalid={Boolean(mergedErrors.warehouse_id)}
+            className={`mt-1.5 h-12 w-full rounded-md border bg-white px-3.5 text-sm text-slate-900 focus:outline-none focus:ring-2 disabled:cursor-not-allowed disabled:bg-slate-100 ${
+              mergedErrors.warehouse_id
                 ? "border-red-600 focus:ring-red-600"
                 : "border-slate-300 focus:border-emerald-700 focus:ring-emerald-700"
             }`}
@@ -123,9 +132,14 @@ function StorageLocationFormInner({
               </option>
             ))}
           </select>
-          {fieldErrors.warehouse_id ? (
+          {mode === "edit" ? (
+            <p className="mt-1 text-xs text-slate-600">
+              Gudang induk tidak dapat dipindahkan setelah lokasi dibuat.
+            </p>
+          ) : null}
+          {mergedErrors.warehouse_id ? (
             <p className="mt-1.5 text-xs font-medium text-red-700" role="alert">
-              {fieldErrors.warehouse_id}
+              {mergedErrors.warehouse_id}
             </p>
           ) : null}
         </div>
@@ -143,6 +157,7 @@ function StorageLocationFormInner({
           <input
             id="storage-location-code-input"
             type="text"
+            disabled={isSubmitting}
             maxLength={50}
             value={code}
             onChange={(event) => {
@@ -152,16 +167,16 @@ function StorageLocationFormInner({
               }
             }}
             placeholder="Contoh: RACK-A01-01"
-            aria-invalid={Boolean(fieldErrors.code)}
-            className={`mt-1.5 h-12 w-full rounded-md border bg-white px-3.5 font-mono text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 ${
-              fieldErrors.code
+            aria-invalid={Boolean(mergedErrors.code)}
+            className={`mt-1.5 h-12 w-full rounded-md border bg-white px-3.5 font-mono text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 disabled:cursor-not-allowed disabled:bg-slate-100 ${
+              mergedErrors.code
                 ? "border-red-600 focus:ring-red-600"
                 : "border-slate-300 focus:border-emerald-700 focus:ring-emerald-700"
             }`}
           />
-          {fieldErrors.code ? (
+          {mergedErrors.code ? (
             <p className="mt-1.5 text-xs font-medium text-red-700" role="alert">
-              {fieldErrors.code}
+              {mergedErrors.code}
             </p>
           ) : null}
         </div>
@@ -176,6 +191,7 @@ function StorageLocationFormInner({
           <input
             id="storage-location-name-input"
             type="text"
+            disabled={isSubmitting}
             maxLength={120}
             value={name}
             onChange={(event) => {
@@ -185,16 +201,16 @@ function StorageLocationFormInner({
               }
             }}
             placeholder="Contoh: Rak A Lorong 1 Tingkat 1"
-            aria-invalid={Boolean(fieldErrors.name)}
-            className={`mt-1.5 h-12 w-full rounded-md border bg-white px-3.5 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 ${
-              fieldErrors.name
+            aria-invalid={Boolean(mergedErrors.name)}
+            className={`mt-1.5 h-12 w-full rounded-md border bg-white px-3.5 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 disabled:cursor-not-allowed disabled:bg-slate-100 ${
+              mergedErrors.name
                 ? "border-red-600 focus:ring-red-600"
                 : "border-slate-300 focus:border-emerald-700 focus:ring-emerald-700"
             }`}
           />
-          {fieldErrors.name ? (
+          {mergedErrors.name ? (
             <p className="mt-1.5 text-xs font-medium text-red-700" role="alert">
-              {fieldErrors.name}
+              {mergedErrors.name}
             </p>
           ) : null}
         </div>
@@ -212,6 +228,7 @@ function StorageLocationFormInner({
               </div>
               <input
                 type="checkbox"
+                disabled={isSubmitting}
                 checked={isActive}
                 onChange={(event) => setIsActive(event.target.checked)}
                 className="h-5 w-5 rounded border-slate-300 text-emerald-800 focus:ring-emerald-700"
@@ -221,19 +238,30 @@ function StorageLocationFormInner({
         ) : null}
       </div>
 
-      <div className="flex flex-wrap items-center justify-end gap-2 border-t border-slate-200 bg-slate-50 px-6 py-4">
+      <div className="flex shrink-0 flex-col-reverse gap-2 border-t border-slate-200 bg-slate-50 px-4 py-3 sm:flex-row sm:items-center sm:justify-end sm:px-6 sm:py-4">
         <button
           type="button"
+          disabled={isSubmitting}
           onClick={onClose}
-          className="inline-flex min-h-11 items-center justify-center rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-700"
+          className="inline-flex min-h-11 w-full items-center justify-center rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-700 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
         >
           Batal
         </button>
         <button
           type="submit"
-          className="inline-flex min-h-11 items-center justify-center rounded-md bg-emerald-800 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-900 focus:outline-none focus:ring-2 focus:ring-emerald-700 focus:ring-offset-2"
+          disabled={isSubmitting}
+          className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-md bg-emerald-800 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-900 focus:outline-none focus:ring-2 focus:ring-emerald-700 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
         >
-          {mode === "create" ? "Simpan lokasi" : "Simpan perubahan"}
+          {isSubmitting ? (
+            <>
+              <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+              Menyimpan...
+            </>
+          ) : mode === "create" ? (
+            "Simpan lokasi"
+          ) : (
+            "Simpan perubahan"
+          )}
         </button>
       </div>
     </form>
@@ -246,19 +274,21 @@ export function StorageLocationFormDialog({
   initialData,
   warehouseOptions,
   existingLocations,
+  isSubmitting = false,
+  submitError = null,
   onClose,
   onSubmit,
 }: StorageLocationFormDialogProps) {
   useEffect(() => {
     if (!open) return;
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
+      if (event.key === "Escape" && !isSubmitting) {
         onClose();
       }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [open, onClose]);
+  }, [open, isSubmitting, onClose]);
 
   if (!open) {
     return null;
@@ -266,16 +296,24 @@ export function StorageLocationFormDialog({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 p-2 sm:p-4"
       role="dialog"
       aria-modal="true"
       aria-labelledby="storage-location-form-title"
+      onMouseDown={() => {
+        if (!isSubmitting) {
+          onClose();
+        }
+      }}
     >
-      <div className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-xl">
-        <div className="flex items-start justify-between gap-3 border-b border-slate-200 px-4 py-4 sm:px-6">
+      <div
+        className="flex max-h-[94dvh] w-full max-w-3xl flex-col overflow-hidden rounded-lg border border-slate-200 bg-white shadow-xl sm:max-h-[92vh]"
+        onMouseDown={(event) => event.stopPropagation()}
+      >
+        <div className="flex shrink-0 items-start justify-between gap-3 border-b border-slate-200 px-4 py-4 sm:px-6">
           <div>
             <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">
-              {mode === "create" ? "Tambah data contoh" : "Perbarui data contoh"}
+              {mode === "create" ? "Lokasi penyimpanan baru" : "Perbarui lokasi penyimpanan"}
             </p>
             <h2
               id="storage-location-form-title"
@@ -286,9 +324,10 @@ export function StorageLocationFormDialog({
           </div>
           <button
             type="button"
+            disabled={isSubmitting}
             onClick={onClose}
             aria-label="Tutup dialog form lokasi penyimpanan"
-            className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-md border border-slate-200 text-slate-600 hover:bg-slate-100 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-700"
+            className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-md border border-slate-200 text-slate-600 hover:bg-slate-100 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
           >
             <X className="h-4 w-4" aria-hidden="true" />
           </button>
@@ -300,6 +339,8 @@ export function StorageLocationFormDialog({
           initialData={initialData}
           warehouseOptions={warehouseOptions}
           existingLocations={existingLocations}
+          isSubmitting={isSubmitting}
+          submitError={submitError}
           onClose={onClose}
           onSubmit={onSubmit}
         />

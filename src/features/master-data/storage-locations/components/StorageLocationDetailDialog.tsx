@@ -1,7 +1,17 @@
-import { useEffect, useState } from "react";
-import { Printer, X } from "lucide-react";
+import { useState } from "react";
+import { Edit3, Printer, SlidersHorizontal } from "lucide-react";
 import { toast } from "sonner";
-import { BarcodeStickerSheet, BarcodeVisual, QrCodeVisual } from "@/components/ui/BarcodeVisual";
+
+import { StickerPrintDialog } from "@/components/shared/StickerPrintDialog";
+import { StatusBadge } from "@/components/shared/StatusBadge";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { BarcodePrintConfigurator } from "@/components/ui/BarcodePrintConfigurator";
+import { BarcodeVisual, QrCodeVisual } from "@/components/ui/BarcodeVisual";
+import {
+  type BarcodePrintConfig,
+  createConfigFromPreset,
+} from "@/components/ui/barcode-print-presets";
 import type { StorageLocationRecord } from "../types";
 
 interface StorageLocationDetailDialogProps {
@@ -24,32 +34,33 @@ function formatDateTime(iso: string): string {
 
 export function StorageLocationDetailDialog({
   location,
-  canManage,
-  onClose,
-  onEdit,
+  ...rest
 }: StorageLocationDetailDialogProps) {
-  const [showStickerPreview, setShowStickerPreview] = useState(false);
-  const [codeFormat, setCodeFormat] = useState<"qr" | "barcode">("qr");
-
-  useEffect(() => {
-    setShowStickerPreview(false);
-    setCodeFormat("qr");
-  }, [location?.id]);
-
-  useEffect(() => {
-    if (!location) return;
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        onClose();
-      }
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [location, onClose]);
-
   if (!location) {
     return null;
   }
+  return (
+    <StorageLocationDetailDialogContent
+      key={location.id}
+      location={location}
+      {...rest}
+    />
+  );
+}
+
+function StorageLocationDetailDialogContent({
+  location,
+  canManage,
+  onClose,
+  onEdit,
+}: Omit<StorageLocationDetailDialogProps, "location"> & {
+  location: StorageLocationRecord;
+}) {
+  const [showStickerPreview, setShowStickerPreview] = useState(false);
+  const [codeFormat, setCodeFormat] = useState<"qr" | "barcode">("qr");
+  const [printConfig, setPrintConfig] = useState<BarcodePrintConfig>(() =>
+    createConfigFromPreset("70x40"),
+  );
 
   function handlePrintRackSticker() {
     toast.dismiss();
@@ -58,67 +69,88 @@ export function StorageLocationDetailDialog({
   }
 
   return (
-    <div
-      className="print-dialog-backdrop fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 p-4"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="storage-location-detail-title"
-    >
-      <div className="print-dialog-panel max-h-[90vh] w-full max-w-4xl overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-xl">
-        <div className="no-print flex items-start justify-between gap-3 border-b border-slate-200 px-4 py-4 sm:px-6">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">
-              Detail lokasi penyimpanan
-            </p>
-            <h2
-              id="storage-location-detail-title"
-              className="mt-0.5 text-lg font-bold text-slate-900"
-            >
-              {location.name}
-            </h2>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Tutup dialog detail lokasi penyimpanan"
-            className="inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-md border border-slate-200 text-slate-600 hover:bg-slate-100 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-700"
+    <StickerPrintDialog
+      closeAriaLabel="Tutup dialog detail lokasi penyimpanan"
+      description="Informasi kode rak penyimpanan, gudang induk, dan konfigurasi cetak label lokasi."
+      footer={
+        <>
+          <Button
+            className="w-full sm:w-auto"
+            onClick={() => setShowStickerPreview((prev) => !prev)}
+            variant="outline"
           >
-            <X className="h-4 w-4" aria-hidden="true" />
-          </button>
-        </div>
-
-        <dl className="no-print divide-y divide-slate-200 px-4 py-2 text-sm sm:px-6">
-          <div className="flex flex-col items-start justify-between gap-3 py-3 sm:flex-row sm:items-center">
+            <SlidersHorizontal aria-hidden="true" size={16} />
+            <span>
+              {showStickerPreview ? "Tutup Pratinjau Ukuran" : "Atur Ukuran & Pratinjau"}
+            </span>
+          </Button>
+          <Button
+            className="w-full sm:w-auto"
+            onClick={handlePrintRackSticker}
+            variant="outline"
+          >
+            <Printer aria-hidden="true" size={16} />
+            <span>Cetak Label Rak</span>
+          </Button>
+          <Button
+            className="w-full sm:w-auto"
+            onClick={onClose}
+            variant="outline"
+          >
+            Tutup
+          </Button>
+          {canManage ? (
+            <Button
+              className="w-full sm:w-auto"
+              onClick={() => {
+                onClose();
+                onEdit(location);
+              }}
+            >
+              <Edit3 aria-hidden="true" size={16} />
+              <span>Edit lokasi</span>
+            </Button>
+          ) : null}
+        </>
+      }
+      headerMeta={
+        <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">
+          Detail lokasi penyimpanan
+        </p>
+      }
+      metadataSection={
+        <dl className="divide-y divide-border text-sm">
+          <div className="flex flex-col items-start justify-between gap-3 pb-3 sm:flex-row sm:items-center">
             <div>
               <div className="flex flex-wrap items-center gap-2">
-                <dt className="font-semibold text-slate-900">Barcode Lokasi Rak</dt>
-                <span className="rounded bg-teal-100 px-1.5 py-0.5 text-[10px] font-bold text-teal-800">
+                <dt className="font-semibold text-ink-950">Barcode Lokasi Rak</dt>
+                <Badge className="rounded px-1.5 py-0.5 text-[10px] font-bold" variant="secondary">
                   {codeFormat === "qr" ? "QR Code 2D" : "1D Code-128"}
-                </span>
+                </Badge>
               </div>
               <dd className="mt-0.5 text-xs text-slate-600">
                 Pindai untuk menampilkan seluruh macam barang (SKU) di rak ini
               </dd>
-              <div className="mt-2 inline-flex items-center gap-1 rounded-md border border-slate-200 bg-slate-50 p-0.5 text-xs">
+              <div className="mt-2 inline-flex items-center gap-1 rounded-md border border-border bg-muted/50 p-0.5 text-xs">
                 <button
-                  type="button"
-                  onClick={() => setCodeFormat("qr")}
                   className={`rounded px-2 py-0.5 font-semibold transition ${
                     codeFormat === "qr"
-                      ? "bg-emerald-800 text-white shadow-sm"
-                      : "text-slate-600 hover:text-slate-900"
+                      ? "bg-teal-700 text-surface-0 shadow-xs"
+                      : "text-slate-600 hover:text-ink-950"
                   }`}
+                  onClick={() => setCodeFormat("qr")}
+                  type="button"
                 >
                   QR Code (2D)
                 </button>
                 <button
-                  type="button"
-                  onClick={() => setCodeFormat("barcode")}
                   className={`rounded px-2 py-0.5 font-semibold transition ${
                     codeFormat === "barcode"
-                      ? "bg-emerald-800 text-white shadow-sm"
-                      : "text-slate-600 hover:text-slate-900"
+                      ? "bg-teal-700 text-surface-0 shadow-xs"
+                      : "text-slate-600 hover:text-ink-950"
                   }`}
+                  onClick={() => setCodeFormat("barcode")}
+                  type="button"
                 >
                   Barcode (1D)
                 </button>
@@ -127,47 +159,41 @@ export function StorageLocationDetailDialog({
             <div className="max-w-full overflow-x-auto">
               {codeFormat === "qr" ? (
                 <QrCodeVisual
-                  className="border border-slate-200"
+                  className="border border-border"
                   size={76}
                   value={location.code}
                 />
               ) : (
                 <BarcodeVisual
-                  className="border border-slate-200"
+                  className="border border-border"
                   height={38}
                   value={location.code}
                 />
               )}
             </div>
           </div>
+
           <div className="grid grid-cols-1 gap-1 py-3 sm:grid-cols-3 sm:gap-4">
             <dt className="font-medium text-slate-600">Kode lokasi</dt>
-            <dd className="font-mono font-semibold text-slate-900 sm:col-span-2">
+            <dd className="font-mono font-semibold text-ink-950 sm:col-span-2">
               {location.code}
             </dd>
           </div>
           <div className="grid grid-cols-1 gap-1 py-3 sm:grid-cols-3 sm:gap-4">
             <dt className="font-medium text-slate-600">Nama lokasi</dt>
-            <dd className="font-semibold text-slate-900 sm:col-span-2">{location.name}</dd>
+            <dd className="font-semibold text-ink-950 sm:col-span-2">{location.name}</dd>
           </div>
           <div className="grid grid-cols-1 gap-1 py-3 sm:grid-cols-3 sm:gap-4">
             <dt className="font-medium text-slate-600">Gudang induk</dt>
-            <dd className="text-slate-900 sm:col-span-2">
-              <span className="font-mono font-semibold">{location.warehouse_code}</span> ({location.warehouse_name})
+            <dd className="text-ink-950 sm:col-span-2">
+              <span className="font-mono font-semibold">{location.warehouse_code}</span> (
+              {location.warehouse_name})
             </dd>
           </div>
           <div className="grid grid-cols-1 gap-1 py-3 sm:grid-cols-3 sm:gap-4">
             <dt className="font-medium text-slate-600">Status</dt>
             <dd className="sm:col-span-2">
-              {location.is_active ? (
-                <span className="inline-flex items-center rounded-md border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-900">
-                  Aktif
-                </span>
-              ) : (
-                <span className="inline-flex items-center rounded-md border border-slate-300 bg-slate-100 px-2.5 py-0.5 text-xs font-semibold text-slate-800">
-                  Nonaktif
-                </span>
-              )}
+              <StatusBadge status={location.is_active ? "ACTIVE" : "INACTIVE"} />
             </dd>
           </div>
           <div className="grid grid-cols-1 gap-1 py-3 sm:grid-cols-3 sm:gap-4">
@@ -189,49 +215,28 @@ export function StorageLocationDetailDialog({
             </dd>
           </div>
         </dl>
-
-        <div className="px-4 sm:px-6">
-          <BarcodeStickerSheet
-            badgeText="LABEL LOKASI RAK"
-            code={location.code}
-            format={codeFormat}
-            metaLabel={`GUDANG: ${location.warehouse_code}`}
-            secondaryCode={location.warehouse_name}
-            title={`${location.code} · ${location.name}`}
-            visibleOnScreen={showStickerPreview}
-          />
-        </div>
-
-        <div className="no-print flex flex-wrap items-center justify-end gap-2 border-t border-slate-200 bg-slate-50 px-4 py-4 sm:px-6">
-          <button
-            type="button"
-            onClick={handlePrintRackSticker}
-            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-700"
-          >
-            <Printer className="h-4 w-4" aria-hidden="true" />
-            Cetak Label Rak
-          </button>
-          <button
-            type="button"
-            onClick={onClose}
-            className="inline-flex min-h-11 items-center justify-center rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-700"
-          >
-            Tutup
-          </button>
-          {canManage ? (
-            <button
-              type="button"
-              onClick={() => {
-                onClose();
-                onEdit(location);
-              }}
-              className="inline-flex min-h-11 items-center justify-center rounded-md bg-emerald-800 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-900 focus:outline-none focus:ring-2 focus:ring-emerald-700 focus:ring-offset-2"
-            >
-              Edit lokasi
-            </button>
-          ) : null}
-        </div>
-      </div>
-    </div>
+      }
+      onClose={onClose}
+      open={true}
+      stickerSection={
+        <BarcodePrintConfigurator
+          badgeText="LABEL LOKASI RAK"
+          code={location.code}
+          config={printConfig}
+          defaultPresetId="70x40"
+          format={codeFormat}
+          metaLabel={location.warehouse_code}
+          onConfigChange={setPrintConfig}
+          onFormatChange={setCodeFormat}
+          onPrint={handlePrintRackSticker}
+          secondaryCode={location.warehouse_name}
+          secondaryLabel="GUDANG"
+          title={`${location.code} · ${location.name}`}
+          visibleOnScreen={showStickerPreview}
+        />
+      }
+      title={location.name}
+      titleId="storage-location-detail-title"
+    />
   );
 }

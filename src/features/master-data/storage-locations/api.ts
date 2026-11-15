@@ -1,6 +1,12 @@
 import { apiClient } from "@/lib/api-client";
+import { mapMasterDomainError, type MasterFormSubmitError } from "../errors";
 import type { Paginated } from "@/types/api";
-import type { StorageLocationRecord, StorageLocationWarehouseOption } from "./types";
+import type {
+  StorageLocationCreatePayload,
+  StorageLocationRecord,
+  StorageLocationUpdatePayload,
+  StorageLocationWarehouseOption,
+} from "./types";
 
 export const sampleWarehouseOptions: StorageLocationWarehouseOption[] = [
   {
@@ -104,13 +110,88 @@ export function toStorageLocationQueryParams(
   return query;
 }
 
+interface RawStorageLocationRecord {
+  id: number | string;
+  warehouse_id: number | string;
+  warehouse_code: string;
+  warehouse_name: string;
+  code: string;
+  name: string;
+  is_active: boolean;
+  created_by: number | string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export function normalizeStorageLocationRecord(
+  raw: RawStorageLocationRecord,
+): StorageLocationRecord {
+  return {
+    ...raw,
+    id: String(raw.id),
+    warehouse_id: String(raw.warehouse_id),
+    created_by: raw.created_by === null ? null : String(raw.created_by),
+  };
+}
+
 export async function fetchStorageLocations(
   params: StorageLocationListParams,
 ): Promise<Paginated<StorageLocationRecord>> {
-  const { data } = await apiClient.get<Paginated<StorageLocationRecord>>("/locations", {
+  const { data } = await apiClient.get<Paginated<RawStorageLocationRecord>>("/locations", {
     params: toStorageLocationQueryParams(params),
   });
-  return data;
+  return {
+    ...data,
+    items: data.items.map(normalizeStorageLocationRecord),
+  };
+}
+
+export async function createStorageLocation(
+  payload: StorageLocationCreatePayload,
+): Promise<StorageLocationRecord> {
+  const parsedWarehouseId = Number(payload.warehouse_id);
+  const warehouseId =
+    Number.isInteger(parsedWarehouseId) && parsedWarehouseId > 0
+      ? parsedWarehouseId
+      : payload.warehouse_id;
+  const { data } = await apiClient.post<RawStorageLocationRecord>("/locations", {
+    warehouse_id: warehouseId,
+    code: payload.code.trim().toUpperCase(),
+    name: payload.name.trim(),
+    is_active: payload.is_active ?? true,
+  });
+  return normalizeStorageLocationRecord(data);
+}
+
+export async function updateStorageLocation(
+  locationId: string | number,
+  payload: StorageLocationUpdatePayload,
+): Promise<StorageLocationRecord> {
+  const body: StorageLocationUpdatePayload = {};
+  if (payload.code !== undefined) {
+    body.code = payload.code.trim().toUpperCase();
+  }
+  if (payload.name !== undefined) {
+    body.name = payload.name.trim();
+  }
+  if (payload.is_active !== undefined) {
+    body.is_active = payload.is_active;
+  }
+  const { data } = await apiClient.patch<RawStorageLocationRecord>(
+    `/locations/${locationId}`,
+    body,
+  );
+  return normalizeStorageLocationRecord(data);
+}
+
+export function mapStorageLocationApiError(
+  error: unknown,
+  fallbackMessage: string,
+): MasterFormSubmitError {
+  return mapMasterDomainError(error, fallbackMessage, {
+    entityLabel: "Lokasi penyimpanan",
+    duplicateField: "code",
+  });
 }
 
 export async function fetchStorageLocationWarehouses(): Promise<StorageLocationWarehouseOption[]> {

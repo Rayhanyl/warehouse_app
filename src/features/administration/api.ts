@@ -1,5 +1,6 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api-client";
+import { invalidateAndRefetchAll } from "@/lib/query-invalidation";
 import type {
   AdminMenuPage,
   AdminMenu,
@@ -8,6 +9,8 @@ import type {
   AdminUserPage,
   AdminUserWarehouse,
   AdminWarehouse,
+  ApprovalSettings,
+  ApprovalSettingsUpdatePayload,
   Permission,
   Role,
 } from "./types";
@@ -20,6 +23,7 @@ export const administrationKeys = {
   menus: (params: MenuParams) => [...administrationKeys.all, "menus", params] as const,
   warehouses: () => [...administrationKeys.all, "warehouses"] as const,
   userWarehouses: (id: number) => [...administrationKeys.all, "user-warehouses", id] as const,
+  approvalSettings: () => [...administrationKeys.all, "approval-settings"] as const,
 };
 
 export interface UserParams {
@@ -74,7 +78,7 @@ export function useCreateAdminMenu() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (payload: AdminMenuPayload) => apiClient.post<AdminMenu>("/menus", payload).then((response) => response.data),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: [...administrationKeys.all, "menus"] }),
+    onSuccess: () => invalidateAndRefetchAll(queryClient, [[...administrationKeys.all, "menus"]]),
   });
 }
 
@@ -83,7 +87,7 @@ export function useUpdateAdminMenu() {
   return useMutation({
     mutationFn: ({ id, payload }: { id: number; payload: Partial<AdminMenuPayload> & { clear_parent?: boolean; clear_permission?: boolean } }) =>
       apiClient.patch<AdminMenu>(`/menus/${id}`, payload).then((response) => response.data),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: [...administrationKeys.all, "menus"] }),
+    onSuccess: () => invalidateAndRefetchAll(queryClient, [[...administrationKeys.all, "menus"]]),
   });
 }
 
@@ -126,7 +130,7 @@ export function useCreateAdminUser() {
       is_active: boolean;
       warehouse_ids: number[];
     }) => apiClient.post<AdminUser>("/users", payload).then((response) => response.data),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: [...administrationKeys.all, "users"] }),
+    onSuccess: () => invalidateAndRefetchAll(queryClient, [[...administrationKeys.all, "users"]]),
   });
 }
 
@@ -135,7 +139,7 @@ export function useUpdateAdminUser() {
   return useMutation({
     mutationFn: ({ id, payload }: { id: number; payload: Partial<Pick<AdminUser, "email" | "full_name" | "role_id" | "is_active">> & { password?: string } }) =>
       apiClient.patch<AdminUser>(`/users/${id}`, payload).then((response) => response.data),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: [...administrationKeys.all, "users"] }),
+    onSuccess: () => invalidateAndRefetchAll(queryClient, [[...administrationKeys.all, "users"]]),
   });
 }
 
@@ -144,10 +148,11 @@ export function useUpdateAdminUserWarehouses() {
   return useMutation({
     mutationFn: ({ id, warehouse_ids }: { id: number; warehouse_ids: number[] }) =>
       apiClient.put<AdminUserWarehouse[]>(`/users/${id}/warehouses`, { warehouse_ids }).then((response) => response.data),
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: [...administrationKeys.all, "users"] });
-      queryClient.invalidateQueries({ queryKey: administrationKeys.userWarehouses(variables.id) });
-    },
+    onSuccess: (_, variables) =>
+      invalidateAndRefetchAll(queryClient, [
+        [...administrationKeys.all, "users"],
+        administrationKeys.userWarehouses(variables.id),
+      ]),
   });
 }
 
@@ -156,6 +161,26 @@ export function useUpdateRolePermissions() {
   return useMutation({
     mutationFn: ({ id, permissions }: { id: number; permissions: string[] }) =>
       apiClient.put<Role>(`/users/roles/${id}/permissions`, { permissions }).then((response) => response.data),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: administrationKeys.roles() }),
+    onSuccess: () => invalidateAndRefetchAll(queryClient, [administrationKeys.roles()]),
+  });
+}
+
+export function useApprovalSettings(enabled = true) {
+  return useQuery({
+    queryKey: administrationKeys.approvalSettings(),
+    queryFn: async () => (await apiClient.get<ApprovalSettings>("/settings/approval")).data,
+    enabled,
+  });
+}
+
+export function useUpdateApprovalSettings() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: ApprovalSettingsUpdatePayload) =>
+      apiClient.put<ApprovalSettings>("/settings/approval", payload).then((response) => response.data),
+    onSuccess: (updated) => {
+      queryClient.setQueryData(administrationKeys.approvalSettings(), updated);
+      return invalidateAndRefetchAll(queryClient, [administrationKeys.approvalSettings()]);
+    },
   });
 }

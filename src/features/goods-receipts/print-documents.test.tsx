@@ -112,7 +112,7 @@ describe("AC-32 Cetak Dokumen Fisik (Bukti Penerimaan Barang & Surat Jalan Trans
         role_id: 2,
         role_name: "Warehouse Manager",
         is_active: true,
-        permissions: ["gr:read", "gr:manage", "transfer:read", "transfer:create", "transfer:approve", "transfer:ship", "transfer:receive"],
+        permissions: ["gr:read", "gr:create", "gr:post", "transfer:read", "transfer:create", "transfer:approve", "transfer:ship", "transfer:receive"],
         warehouse_ids: [1, 2],
       });
     });

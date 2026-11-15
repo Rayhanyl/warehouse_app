@@ -1,45 +1,45 @@
 {
-  "eyebrow": "Keamanan, ketertelusuran, dan hak akses",
-  "title": "Setiap perubahan stok memiliki aktor, izin, dan jejak dokumen.",
-  "description": "Atur hak akses berdasarkan peran, batasi ruang kerja per gudang yang ditugaskan, dan periksa kembali setiap mutasi tanpa mengandalkan catatan terpisah.",
+  "eyebrow": "Keamanan, ketertelusuran, dan panduan operator",
+  "title": "Setiap perubahan stok memiliki aktor, izin granular, dan jejak audit lengkap.",
+  "description": "Kendalikan hak akses berdasarkan peran dan cakupan gudang, kurangi kesalahan input staf dengan panduan SOP interaktif di dalam aplikasi, serta jaga integritas catatan transaksi.",
   "pillars": [
     {
-      "title": "Akses sesuai peran",
-      "description": "Lima peran dengan 24 permission rinci mengatur siapa yang dapat membuat draf, menyetujui, atau memposting dokumen."
+      "title": "Kontrol akses berbasis peran (RBAC)",
+      "description": "Lima peran standar dengan permission granular mengatur otoritas pembuatan draf, penerbitan PO, persetujuan opname, hingga pengaturan template cetak."
     },
     {
-      "title": "Pembatasan per gudang",
-      "description": "Staf gudang hanya melihat dan memproses transaksi pada gudang yang ditugaskan kepadanya."
+      "title": "Pembatasan ruang lingkup per gudang",
+      "description": "Operator dan kepala cabang hanya dapat mengakses, memindai, dan memproses dokumen pada gudang yang ditugaskan kepada akunnya."
     },
     {
-      "title": "Catatan yang tidak dapat diubah",
-      "description": "Stock ledger dan audit log hanya menerima catatan baru (append-only) dan dilindungi di tingkat database."
+      "title": "Buku Besar & Audit Log permanen",
+      "description": "Catatan mutasi stok dan rekam jejak aktivitas beserta perbandingan diff data tersimpan permanen di level database untuk transparansi penuh."
     },
     {
-      "title": "Sesi terjaga",
-      "description": "Akun dikunci sementara setelah beberapa kali gagal masuk untuk melindungi akses ruang kerja."
+      "title": "Panduan interaktif & validasi ketat",
+      "description": "Validasi aturan desimal UoM, proteksi over-receipt, dan tombol Panduan SOP di setiap halaman membantu operator bekerja akurat sejak hari pertama."
     }
   ],
   "controlPanel": {
-    "label": "Ringkasan pengendalian lokasi & akses",
+    "label": "Ringkasan pengawasan lokasi, audit & akses",
     "sampleBadge": "Contoh data",
-    "caption": "Simulasi status pengawasan lokasi penyimpanan dan aturan akses pada ruang kerja.",
+    "caption": "Simulasi status pengawasan rak penyimpanan, penegakan permission, dan pencatatan audit real-time.",
     "items": [
       {
         "label": "Lokasi RAK-B-04 (Sesi Opname SO-2026-0008)",
-        "detail": "Mutasi masuk dan keluar ditahan selama penghitungan fisik",
+        "detail": "Mutasi masuk dan keluar dibekukan selama penghitungan fisik",
         "status": "IN_PROGRESS",
         "tone": "amber"
       },
       {
-        "label": "Pembatasan ruang lingkup gudang",
-        "detail": "5 peran · 24 permission terverifikasi di backend",
+        "label": "Cakupan gudang & kontrol peran RBAC",
+        "detail": "Permission granular dan pembatasan gudang tervalidasi di server",
         "status": "AKTIF",
         "tone": "teal"
       },
       {
-        "label": "Perlindungan stock ledger & audit log",
-        "detail": "Catatan mutasi bersifat append-only",
+        "label": "Buku Besar Stok & Audit Log ber-IP",
+        "detail": "Rekam jejak transaksi dan diff perubahan tersimpan permanen",
         "status": "TERCATAT",
         "tone": "blue"
       }
@@ -47,6 +47,6 @@
   },
   "image": {
     "src": "/assets/image/rack.jpg",
-    "alt": "Susunan rak gudang dengan penomoran lokasi dan daftar pemeriksaan stok"
+    "alt": "Susunan rak lorong gudang dengan label lokasi dan daftar pemeriksaan stok"
   }
 }

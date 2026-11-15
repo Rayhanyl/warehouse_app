@@ -42,6 +42,7 @@ export interface StockTransfer {
   shipped_at?: string | null;
   received_by?: number | null;
   received_at?: string | null;
+  created_by?: number | null;
   created_at: string;
   updated_at: string;
   lines?: StockTransferLine[];

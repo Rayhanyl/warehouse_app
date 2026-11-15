@@ -5,7 +5,11 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api-client";
-import { extractApiErrorInfo } from "@/lib/errors";
+import { extractApiErrorInfo, extractApiFieldErrors } from "@/lib/errors";
+import {
+  invalidateAndRefetchAll,
+  invalidateMasterDependentCaches,
+} from "@/lib/query-invalidation";
 import type {
   Uom,
   UomCreatePayload,
@@ -109,9 +113,10 @@ export function useCreateUom() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (payload: UomCreatePayload) => createUom(payload),
-    onSuccess: (created) => {
+    onSuccess: async (created) => {
       queryClient.setQueryData(uomKeys.detail(created.id), created);
-      void queryClient.invalidateQueries({ queryKey: uomKeys.lists() });
+      await invalidateAndRefetchAll(queryClient, [uomKeys.lists()]);
+      await invalidateMasterDependentCaches(queryClient);
     },
   });
 }
@@ -126,9 +131,10 @@ export function useUpdateUom() {
       uomId: number;
       payload: UomUpdatePayload;
     }) => updateUom(uomId, payload),
-    onSuccess: (updated) => {
+    onSuccess: async (updated) => {
       queryClient.setQueryData(uomKeys.detail(updated.id), updated);
-      void queryClient.invalidateQueries({ queryKey: uomKeys.lists() });
+      await invalidateAndRefetchAll(queryClient, [uomKeys.lists()]);
+      await invalidateMasterDependentCaches(queryClient);
     },
   });
 }
@@ -179,11 +185,16 @@ export function mapUomApiError(
   }
 
   if (info.status === 422 || info.code === "VALIDATION_ERROR") {
+    const parsedFields = extractApiFieldErrors(info.details, info.message);
     return {
       message:
         info.message ||
         "Data yang dikirim belum valid. Periksa kembali kode dan nama satuan ukur.",
       requestId: info.requestId,
+      fieldErrors: {
+        code: parsedFields.code,
+        name: parsedFields.name,
+      },
     };
   }
 

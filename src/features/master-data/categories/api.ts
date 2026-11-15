@@ -5,7 +5,11 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api-client";
-import { extractApiErrorInfo } from "@/lib/errors";
+import { extractApiErrorInfo, extractApiFieldErrors } from "@/lib/errors";
+import {
+  invalidateAndRefetchAll,
+  invalidateMasterDependentCaches,
+} from "@/lib/query-invalidation";
 import type {
   Category,
   CategoryCreatePayload,
@@ -105,9 +109,10 @@ export function useCreateCategory() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (payload: CategoryCreatePayload) => createCategory(payload),
-    onSuccess: (created) => {
+    onSuccess: async (created) => {
       queryClient.setQueryData(categoryKeys.detail(created.id), created);
-      void queryClient.invalidateQueries({ queryKey: categoryKeys.lists() });
+      await invalidateAndRefetchAll(queryClient, [categoryKeys.lists()]);
+      await invalidateMasterDependentCaches(queryClient);
     },
   });
 }
@@ -122,9 +127,10 @@ export function useUpdateCategory() {
       categoryId: number;
       payload: CategoryUpdatePayload;
     }) => updateCategory(categoryId, payload),
-    onSuccess: (updated) => {
+    onSuccess: async (updated) => {
       queryClient.setQueryData(categoryKeys.detail(updated.id), updated);
-      void queryClient.invalidateQueries({ queryKey: categoryKeys.lists() });
+      await invalidateAndRefetchAll(queryClient, [categoryKeys.lists()]);
+      await invalidateMasterDependentCaches(queryClient);
     },
   });
 }
@@ -171,11 +177,16 @@ export function mapCategoryApiError(
   }
 
   if (info.status === 422 || info.code === "VALIDATION_ERROR") {
+    const parsedFields = extractApiFieldErrors(info.details, info.message);
     return {
       message:
         info.message ||
         "Data yang dikirim belum valid. Periksa kembali nama dan deskripsi kategori.",
       requestId: info.requestId,
+      fieldErrors: {
+        name: parsedFields.name,
+        description: parsedFields.description,
+      },
     };
   }
 

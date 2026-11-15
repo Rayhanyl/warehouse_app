@@ -6,6 +6,7 @@ import {
 } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api-client";
 import { extractApiErrorInfo } from "@/lib/errors";
+import { invalidateAndRefetchAll } from "@/lib/query-invalidation";
 import type {
   PurchaseOrder,
   PurchaseOrderCreatePayload,
@@ -36,6 +37,7 @@ function toQueryParams(params: PurchaseOrderListParams): URLSearchParams {
   if (params.warehouse_id) query.set("warehouse_id", String(params.warehouse_id));
   if (params.date_from) query.set("date_from", params.date_from);
   if (params.date_to) query.set("date_to", params.date_to);
+  if (params.overdue_only) query.set("overdue_only", "true");
   return query;
 }
 
@@ -73,12 +75,32 @@ export async function updatePurchaseOrder(
 
 export async function runPurchaseOrderAction(
   id: number,
-  action: "issue" | "cancel" | "close",
-  closedReason?: string,
+  action: "submit" | "approve" | "reject" | "issue" | "cancel" | "close" | "revise-draft",
+  reasonOrNotes?: string,
 ): Promise<PurchaseOrder> {
+  const body =
+    action === "close"
+      ? { closed_reason: reasonOrNotes?.trim() }
+      : action === "reject"
+        ? { rejection_reason: reasonOrNotes?.trim() }
+        : (action === "submit" || action === "approve") && reasonOrNotes?.trim()
+          ? { notes: reasonOrNotes.trim() }
+          : undefined;
   const { data } = await apiClient.post<PurchaseOrder>(
     `/purchase-orders/${id}/${action}`,
-    action === "close" ? { closed_reason: closedReason?.trim() } : undefined,
+    body,
+  );
+  return data;
+}
+
+export async function closePurchaseOrderLine(
+  poId: number,
+  poLineId: number,
+  closedReason: string,
+): Promise<PurchaseOrder> {
+  const { data } = await apiClient.post<PurchaseOrder>(
+    `/purchase-orders/${poId}/lines/${poLineId}/close`,
+    { closed_reason: closedReason.trim() },
   );
   return data;
 }
@@ -110,27 +132,47 @@ export function usePurchaseOrder(id: number | null) {
 }
 
 export function usePurchaseOrderMutation(
-  action: "create" | "update" | "issue" | "cancel" | "close",
+  action:
+    | "create"
+    | "update"
+    | "submit"
+    | "approve"
+    | "reject"
+    | "issue"
+    | "cancel"
+    | "close"
+    | "revise-draft"
+    | "close-line",
 ) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({
       id,
+      poLineId,
       payload,
       closedReason,
     }: {
       id?: number;
+      poLineId?: number;
       payload?: PurchaseOrderCreatePayload | PurchaseOrderUpdatePayload;
       closedReason?: string;
     }) => {
       if (action === "create") return createPurchaseOrder(payload as PurchaseOrderCreatePayload);
       if (!id) throw new Error("ID purchase order tidak tersedia.");
       if (action === "update") return updatePurchaseOrder(id, payload as PurchaseOrderUpdatePayload);
+      if (action === "close-line") {
+        if (!poLineId) throw new Error("ID baris purchase order tidak tersedia.");
+        return closePurchaseOrderLine(id, poLineId, closedReason ?? "");
+      }
       return runPurchaseOrderAction(id, action, closedReason);
     },
-    onSuccess: (purchaseOrder) => {
+    onSuccess: async (purchaseOrder) => {
       queryClient.setQueryData(purchaseOrderKeys.detail(purchaseOrder.id), purchaseOrder);
-      void queryClient.invalidateQueries({ queryKey: purchaseOrderKeys.lists() });
+      await invalidateAndRefetchAll(queryClient, [
+        purchaseOrderKeys.lists(),
+        ["goods-receipts", "references"],
+        ["dashboard"],
+      ]);
     },
   });
 }
@@ -151,10 +193,33 @@ export function usePurchaseOrderReferences() {
 
 export function mapPurchaseOrderError(error: unknown, fallback: string) {
   const info = extractApiErrorInfo(error);
-  if (info.status === 403) return { message: "Anda tidak memiliki izin untuk menjalankan aksi ini.", requestId: info.requestId };
-  if (info.status === 409 || info.code === "INVALID_STATE_TRANSITION") {
-    return { message: info.message || "Status purchase order sudah berubah. Muat ulang data sebelum mencoba lagi.", requestId: info.requestId };
+  if (info.status === 403) {
+    if (info.details?.code === "SOD_VIOLATION") {
+      return {
+        message:
+          info.message ||
+          "Pemisahan tugas (SoD): pembuat, pengaju, atau penyetuju sebelumnya tidak boleh menyetujui PO ini.",
+        requestId: info.requestId,
+      };
+    }
+    return {
+      message: info.message || "Anda tidak memiliki izin untuk menjalankan aksi ini.",
+      requestId: info.requestId,
+    };
   }
-  if (info.status === 422) return { message: info.message || "Data purchase order belum valid. Periksa kembali isian Anda.", requestId: info.requestId };
+  if (info.status === 409 || info.code === "INVALID_STATE_TRANSITION") {
+    return {
+      message:
+        info.message ||
+        "Status purchase order sudah berubah. Muat ulang data sebelum mencoba lagi.",
+      requestId: info.requestId,
+    };
+  }
+  if (info.status === 422) {
+    return {
+      message: info.message || "Data purchase order belum valid. Periksa kembali isian Anda.",
+      requestId: info.requestId,
+    };
+  }
   return { message: info.message || fallback, requestId: info.requestId };
 }

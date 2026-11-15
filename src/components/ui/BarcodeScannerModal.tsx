@@ -21,51 +21,59 @@ export interface BarcodeScannerModalProps {
   onDetected: (code: string) => void;
 }
 
-export function BarcodeScannerModal({
-  isOpen,
+function hasCameraSupport(): boolean {
+  return (
+    typeof navigator !== "undefined" &&
+    Boolean(
+      navigator.mediaDevices &&
+        typeof navigator.mediaDevices.getUserMedia === "function",
+    )
+  );
+}
+
+export function BarcodeScannerModal(props: BarcodeScannerModalProps) {
+  if (!props.isOpen) {
+    return null;
+  }
+
+  return <BarcodeScannerModalInner {...props} />;
+}
+
+function BarcodeScannerModalInner({
   title = "Pindai Barcode / QR Barang",
   onClose,
   onDetected,
 }: BarcodeScannerModalProps) {
+  const cameraSupported = hasCameraSupport();
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const manualInputRef = useRef<HTMLInputElement | null>(null);
   const [manualCode, setManualCode] = useState("");
   const [cameraStatus, setCameraStatus] = useState<
     "idle" | "starting" | "active" | "unsupported" | "error"
-  >("idle");
-  const [cameraMessage, setCameraMessage] = useState("");
+  >(() => (cameraSupported ? "starting" : "unsupported"));
+  const [cameraMessage, setCameraMessage] = useState(() =>
+    cameraSupported
+      ? ""
+      : "Kamera tidak tersedia pada peramban ini. Gunakan scanner USB/Bluetooth atau ketik kode di bawah.",
+  );
 
   useEffect(() => {
-    if (!isOpen) {
-      setManualCode("");
-      setCameraStatus("idle");
-      setCameraMessage("");
-      return;
-    }
-
     const focusTimer = window.setTimeout(() => {
       manualInputRef.current?.focus();
     }, 30);
+
+    if (!cameraSupported) {
+      return () => {
+        window.clearTimeout(focusTimer);
+      };
+    }
 
     let active = true;
     let mediaStream: MediaStream | null = null;
     let rafId: number | null = null;
 
     async function startCamera() {
-      if (
-        typeof navigator === "undefined" ||
-        !navigator.mediaDevices ||
-        typeof navigator.mediaDevices.getUserMedia !== "function"
-      ) {
-        setCameraStatus("unsupported");
-        setCameraMessage(
-          "Kamera tidak tersedia pada peramban ini. Gunakan scanner USB/Bluetooth atau ketik kode di bawah.",
-        );
-        return;
-      }
-
       try {
-        setCameraStatus("starting");
         mediaStream = await navigator.mediaDevices.getUserMedia({
           video: { facingMode: "environment" },
           audio: false,
@@ -144,11 +152,7 @@ export function BarcodeScannerModal({
         mediaStream.getTracks().forEach((track) => track.stop());
       }
     };
-  }, [isOpen, onClose, onDetected]);
-
-  if (!isOpen) {
-    return null;
-  }
+  }, [cameraSupported, onClose, onDetected]);
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -161,18 +165,18 @@ export function BarcodeScannerModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 grid place-items-center bg-ink-950/60 p-4"
+      className="fixed inset-0 z-50 grid place-items-center bg-ink-950/60 p-2 sm:p-4"
       onMouseDown={onClose}
     >
       <div
         aria-labelledby="barcode-scanner-modal-title"
         aria-modal="true"
-        className="max-h-[90vh] w-full max-w-xl overflow-y-auto rounded-[var(--radius-lg)] border border-line-200 bg-surface-0 p-5 shadow-[var(--shadow-2)] sm:p-6"
+        className="flex max-h-[94dvh] w-full max-w-xl flex-col overflow-hidden rounded-[var(--radius-lg)] border border-line-200 bg-surface-0 shadow-[var(--shadow-2)] sm:max-h-[92vh]"
         onMouseDown={(event) => event.stopPropagation()}
         role="dialog"
       >
-        <div className="flex items-start justify-between gap-3 border-b border-line-200 pb-3">
-          <div>
+        <div className="flex shrink-0 items-start justify-between gap-3 border-b border-line-200 px-4 py-3.5 sm:px-6 sm:py-4">
+          <div className="min-w-0">
             <h3
               className="text-base font-bold text-ink-950"
               id="barcode-scanner-modal-title"
@@ -185,7 +189,7 @@ export function BarcodeScannerModal({
           </div>
           <button
             aria-label="Tutup pemindai barcode"
-            className="grid min-h-10 min-w-10 place-items-center rounded-[var(--radius-md)] text-slate-700 hover:bg-canvas-50"
+            className="grid min-h-11 min-w-11 shrink-0 place-items-center rounded-[var(--radius-md)] text-slate-700 hover:bg-canvas-50"
             onClick={onClose}
             type="button"
           >
@@ -193,52 +197,54 @@ export function BarcodeScannerModal({
           </button>
         </div>
 
-        <div className="mt-4 overflow-hidden rounded-[var(--radius-md)] border border-line-200 bg-ink-950 text-surface-0">
-          {cameraStatus === "active" || cameraStatus === "starting" ? (
-            <div className="relative aspect-video w-full">
-              <video
-                className="h-full w-full object-cover"
-                muted
-                playsInline
-                ref={videoRef}
+        <form className="flex min-h-0 flex-1 flex-col" onSubmit={handleSubmit}>
+          <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 py-4 sm:px-6">
+            <div className="overflow-hidden rounded-[var(--radius-md)] border border-line-200 bg-ink-950 text-surface-0">
+              {cameraStatus === "active" || cameraStatus === "starting" ? (
+                <div className="relative aspect-video w-full">
+                  <video
+                    className="h-full w-full object-cover"
+                    muted
+                    playsInline
+                    ref={videoRef}
+                  />
+                  <div className="pointer-events-none absolute inset-6 rounded-[var(--radius-md)] border-2 border-dashed border-teal-400/80" />
+                </div>
+              ) : (
+                <div className="flex aspect-video flex-col items-center justify-center gap-2 p-4 text-center text-xs text-surface-0/90">
+                  <Camera aria-hidden="true" size={28} />
+                  <p>{cameraMessage || "Menyiapkan kamera pemindai..."}</p>
+                </div>
+              )}
+            </div>
+
+            {cameraMessage && cameraStatus === "active" && (
+              <p className="text-xs text-slate-600">{cameraMessage}</p>
+            )}
+
+            <label className="block text-xs font-semibold text-ink-950">
+              Input Scanner USB / Bluetooth atau Ketik Kode
+              <input
+                aria-label="Kode hasil scan barcode atau SKU"
+                className="mt-1.5 h-11 w-full rounded-[var(--radius-md)] border border-line-500 bg-surface-0 px-3 text-sm font-semibold text-ink-950 tabular-nums focus:border-teal-600 focus:outline-none focus:ring-2 focus:ring-teal-600/20"
+                onChange={(event) => setManualCode(event.target.value)}
+                placeholder="Contoh: 8991234567890 atau SKU..."
+                ref={manualInputRef}
+                type="text"
+                value={manualCode}
               />
-              <div className="pointer-events-none absolute inset-6 rounded-[var(--radius-md)] border-2 border-dashed border-teal-400/80" />
-            </div>
-          ) : (
-            <div className="flex aspect-video flex-col items-center justify-center gap-2 p-4 text-center text-xs text-surface-0/90">
-              <Camera aria-hidden="true" size={28} />
-              <p>{cameraMessage || "Menyiapkan kamera pemindai..."}</p>
-            </div>
-          )}
-        </div>
-
-        {cameraMessage && cameraStatus === "active" && (
-          <p className="mt-2 text-xs text-slate-600">{cameraMessage}</p>
-        )}
-
-        <form className="mt-4 space-y-3" onSubmit={handleSubmit}>
-          <label className="block text-xs font-semibold text-ink-950">
-            Input Scanner USB / Bluetooth atau Ketik Kode
-            <input
-              aria-label="Kode hasil scan barcode atau SKU"
-              className="mt-1.5 h-11 w-full rounded-[var(--radius-md)] border border-line-500 bg-surface-0 px-3 text-sm font-semibold text-ink-950 tabular-nums focus:border-teal-600 focus:outline-none focus:ring-2 focus:ring-teal-600/20"
-              onChange={(event) => setManualCode(event.target.value)}
-              placeholder="Contoh: 8991234567890 atau SKU..."
-              ref={manualInputRef}
-              type="text"
-              value={manualCode}
-            />
-          </label>
-          <div className="flex justify-end gap-2 pt-1">
+            </label>
+          </div>
+          <div className="flex shrink-0 flex-col-reverse gap-2 border-t border-line-200 bg-canvas-50/50 px-4 py-3 sm:flex-row sm:justify-end sm:px-6">
             <button
-              className="inline-flex min-h-10 items-center justify-center rounded-[var(--radius-md)] border border-line-500 px-3.5 text-xs font-semibold text-ink-950 hover:bg-canvas-50"
+              className="inline-flex min-h-11 items-center justify-center rounded-[var(--radius-md)] border border-line-500 bg-surface-0 px-4 text-xs font-semibold text-ink-950 hover:bg-canvas-50"
               onClick={onClose}
               type="button"
             >
               Batal
             </button>
             <button
-              className="inline-flex min-h-10 items-center gap-1.5 rounded-[var(--radius-md)] bg-teal-600 px-4 text-xs font-semibold text-surface-0 hover:bg-teal-700 disabled:opacity-50"
+              className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-[var(--radius-md)] bg-teal-600 px-4 text-xs font-semibold text-surface-0 hover:bg-teal-700 disabled:opacity-50"
               disabled={!manualCode.trim()}
               type="submit"
             >

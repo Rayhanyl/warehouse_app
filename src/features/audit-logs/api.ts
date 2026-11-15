@@ -13,7 +13,12 @@ function toQueryParams(filters: AuditLogFilters, offset: number) {
   });
 
   Object.entries(filters).forEach(([key, value]) => {
-    if (!value) {
+    if (value === "" || value === false || value === undefined || value === null) {
+      return;
+    }
+
+    if (typeof value === "boolean") {
+      params.set(key, "true");
       return;
     }
 

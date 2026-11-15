@@ -15,41 +15,41 @@
     "loginLink": { "label": "Masuk", "href": "/login" },
     "mobileLoginLink": { "label": "Masuk ke ruang kerja", "href": "/login" }
   },
-  "eyebrow": "Sistem manajemen gudang",
-  "title": "Satu kendali untuk setiap pergerakan stok.",
-  "description": "Pantau saldo per lokasi rak, pindai barcode barang maupun QR code rak, cetak label stiker termal serta Surat Jalan resmi, dan telusuri setiap mutasi stok sesuai permission.",
+  "eyebrow": "Sistem Manajemen Gudang Berbasis Rak & Barcode",
+  "title": "Kendalikan setiap rak lorong, barcode, dan mutasi stok secara real-time.",
+  "description": "Pantau saldo inventaris hingga tingkat rak penyimpanan, percepat transaksi lewat pemindai barcode dan QR code multifungsi, cetak label stiker serta dokumen PO, GRN, dan Surat Jalan modular, lengkap dengan jejak audit permanen.",
   "primaryCta": { "label": "Lihat alur kerja", "href": "#workflow" },
   "secondaryCta": { "label": "Masuk ke ruang kerja", "href": "/login" },
-  "visualLabel": "Jejak dokumen operasional",
-  "visualSubLabel": "Alur PO → GR → Stok bertambah → Stock ledger",
+  "visualLabel": "Pelacakan Dokumen Real-Time",
+  "visualSubLabel": "Alur Pemesanan PO -> Penerimaan GRN -> Stok Rak -> Buku Besar",
   "sampleDataBadge": "Contoh data",
-  "traceSummaryTitle": "Mutasi stok tercatat secara atomik",
-  "visualCaption": "Saldo hanya berubah melalui dokumen yang diposting dan setiap baris merujuk ke nomor dokumen sumber.",
+  "traceSummaryTitle": "Mutasi stok tercatat atomik dan real-time",
+  "visualCaption": "Saldo stok rak hanya berubah melalui dokumen transaksi sah dan setiap mutasi merujuk ke nomor dokumen sumber.",
   "traceRecords": [
     {
-      "module": "Purchase Orders",
+      "module": "Purchase Order",
       "documentCode": "PO-2026-0042",
       "detail": "120 unit · Gudang Utama",
       "status": "ISSUED",
       "tone": "blue"
     },
     {
-      "module": "Goods Receipts",
+      "module": "Penerimaan Barang",
       "documentCode": "GR-2026-0019",
       "detail": "+120 unit · Lokasi RAK-A-02",
       "status": "POSTED",
       "tone": "teal"
     },
     {
-      "module": "Stock Ledger",
+      "module": "Buku Besar Stok",
       "documentCode": "SL-2026-0884",
-      "detail": "Saldo akhir 420 unit · Append-only",
+      "detail": "Saldo akhir 420 unit · Permanen",
       "status": "COMPLETED",
       "tone": "teal"
     }
   ],
   "image": {
     "src": "/assets/image/warehouse.jpg",
-    "alt": "Area operasional gudang dengan susunan rak penyimpanan, palet barang, dan jalur kerja"
+    "alt": "Area operasional gudang dengan susunan rak lorong penyimpanan, palet barang, dan jalur kerja"
   }
 }

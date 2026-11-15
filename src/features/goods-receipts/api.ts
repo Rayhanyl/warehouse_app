@@ -1,6 +1,7 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api-client";
 import { extractApiErrorInfo } from "@/lib/errors";
+import { invalidateAndRefetchAll } from "@/lib/query-invalidation";
 import type {
   GoodsReceipt,
   GoodsReceiptCreatePayload,
@@ -90,9 +91,15 @@ export function useGoodsReceiptMutation(action: "create" | "update" | "post" | "
       if (action === "update") return updateGoodsReceipt(id, payload as GoodsReceiptUpdatePayload);
       return runGoodsReceiptAction(id, action);
     },
-    onSuccess: (receipt) => {
+    onSuccess: async (receipt) => {
       queryClient.setQueryData(goodsReceiptKeys.detail(receipt.id), receipt);
-      void queryClient.invalidateQueries({ queryKey: goodsReceiptKeys.lists() });
+      await invalidateAndRefetchAll(queryClient, [
+        goodsReceiptKeys.lists(),
+        [...goodsReceiptKeys.all, "references"],
+        ["purchase-orders"],
+        ["stock"],
+        ["dashboard"],
+      ]);
     },
   });
 }
@@ -125,7 +132,15 @@ export function useGoodsReceiptReferences() {
 
 export function mapGoodsReceiptError(error: unknown, fallback: string) {
   const info = extractApiErrorInfo(error);
-  if (info.status === 403) return "Anda tidak memiliki izin atau akses gudang untuk aksi ini.";
+  if (info.status === 403) {
+    if (info.details?.code === "SOD_VIOLATION") {
+      return (
+        info.message ||
+        "Pemisahan tugas (SoD): pembuat draft penerimaan barang tidak boleh memposting GR-nya sendiri."
+      );
+    }
+    return info.message || "Anda tidak memiliki izin atau akses gudang untuk aksi ini.";
+  }
   if (info.status === 409) return info.message || "Status dokumen atau kuantitas sudah berubah. Muat ulang data sebelum mencoba lagi.";
   if (info.status === 422) return info.message || "Data penerimaan belum valid. Periksa tanggal, lokasi, dan kuantitas.";
   return info.message || fallback;

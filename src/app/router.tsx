@@ -7,10 +7,14 @@ import { ProfilePage } from "@/features/auth/pages/ProfilePage";
 import { CategoriesPage } from "@/features/master-data/categories/pages/CategoriesPage";
 import { StocksPage } from "@/features/master-data/stocks/pages/StocksPage";
 import { StorageLocationsPage } from "@/features/master-data/storage-locations/pages/StorageLocationsPage";
-import { SuppliersPage } from "@/features/master-data/suplliers/pages/SuppliersPage";
+import { SuppliersPage } from "@/features/master-data/suppliers/pages/SuppliersPage";
 import { UomsPage } from "@/features/master-data/uoms/pages/UomsPage";
 import { WarehousesPage } from "@/features/master-data/warehouses/pages/WarehousesPage";
-import { PurchaseOrderCreatePage, PurchaseOrdersPage } from "@/features/purchase-orders/pages/PurchaseOrdersPage";
+import {
+  PurchaseOrderCreatePage,
+  PurchaseOrderEditPage,
+  PurchaseOrdersPage,
+} from "@/features/purchase-orders/pages/PurchaseOrdersPage";
 import { GoodsReceiptCreatePage, GoodsReceiptsPage } from "@/features/goods-receipts/pages/GoodsReceiptsPage";
 import { StockTransfersPage } from "@/features/stock-transfers/pages/StockTransfersPage";
 import { StockOpnamesPage } from "@/features/stock-opnames/pages/StockOpnamesPage";
@@ -143,8 +147,24 @@ export const router = createBrowserRouter([
             element: <AdministrationPage />,
           },
           {
+            path: "/admin/document-templates",
+            element: <AdministrationPage />,
+          },
+          {
+            path: "/admin/settings",
+            element: <AdministrationPage />,
+          },
+          {
+            path: "/document-templates",
+            element: <AdministrationPage />,
+          },
+          {
             path: "/purchase-orders/new",
             element: <PurchaseOrderCreatePage />,
+          },
+          {
+            path: "/purchase-orders/:poId/edit",
+            element: <PurchaseOrderEditPage />,
           },
           {
             path: "/purchase-orders",
@@ -153,6 +173,10 @@ export const router = createBrowserRouter([
           {
             path: "/purchasing/purchase-orders/new",
             element: <PurchaseOrderCreatePage />,
+          },
+          {
+            path: "/purchasing/purchase-orders/:poId/edit",
+            element: <PurchaseOrderEditPage />,
           },
           {
             path: "/purchasing/purchase-orders",

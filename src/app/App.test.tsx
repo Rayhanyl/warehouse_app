@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { vi } from "vitest";
 import { AppShell } from "@/components/layout/AppShell";
@@ -140,6 +140,14 @@ describe("AppShell, Sidebar, DashboardPage, & ProfilePage", () => {
       is_active: true,
       permissions: ["items:read", "warehouses:read"],
       warehouse_ids: [1, 2],
+      has_all_warehouse_access: false,
+      warehouses: [
+        { id: 1, code: "WH-JKT", name: "Gudang Pusat Jakarta", is_active: true },
+        { id: 2, code: "WH-SBY", name: "Gudang Surabaya", is_active: true },
+      ],
+      last_login_at: "2026-11-14T08:30:00Z",
+      created_at: "2026-10-01T01:00:00Z",
+      updated_at: "2026-11-10T05:00:00Z",
     });
   });
 
@@ -235,7 +243,16 @@ describe("AppShell, Sidebar, DashboardPage, & ProfilePage", () => {
     expect(
       screen.getByText("Belum ada menu yang tersedia untuk peran akun Anda."),
     ).toBeInTheDocument();
-    expect(screen.getByRole("heading", { level: 1, name: "Profil" })).toBeInTheDocument();
+    const main = within(screen.getByRole("main"));
+    expect(main.getByRole("heading", { level: 1, name: "Profil" })).toBeInTheDocument();
+    expect(main.getByText("#1")).toBeInTheDocument();
+    expect(main.getByText("Aktif")).toBeInTheDocument();
+    expect(main.getByText("WH-JKT - Gudang Pusat Jakarta")).toBeInTheDocument();
+    expect(main.getByText("WH-SBY - Gudang Surabaya")).toBeInTheDocument();
+    expect(main.getByText("2 permission")).toBeInTheDocument();
+    expect(main.getByText("Barang (SKU)")).toBeInTheDocument();
+    expect(main.getByText("items:read")).toBeInTheDocument();
+    expect(main.getByText("warehouses:read")).toBeInTheDocument();
 
     const toggleCurrentBtn = screen.getByRole("button", {
       name: "Tampilkan kata sandi saat ini",
@@ -244,6 +261,47 @@ describe("AppShell, Sidebar, DashboardPage, & ProfilePage", () => {
     expect(
       screen.getByRole("button", { name: "Sembunyikan kata sandi saat ini" }),
     ).toHaveAttribute("aria-pressed", "true");
+  });
+
+  it("menampilkan label Akses Seluruh Gudang dan info akun lengkap untuk Super Admin di ProfilePage", () => {
+    useAuthStore.getState().setAuthenticated("token-super", {
+      id: 99,
+      username: "superadmin",
+      email: "super@wms.local",
+      full_name: "Super Admin WMS",
+      role_id: 1,
+      role_name: "Super Admin",
+      is_active: true,
+      permissions: ["user:manage", "po:create", "po:issue"],
+      warehouse_ids: [],
+      has_all_warehouse_access: true,
+      warehouses: [],
+      last_login_at: null,
+      created_at: "2026-10-01T01:00:00Z",
+      updated_at: "2026-11-12T04:00:00Z",
+    });
+
+    const queryClient = new QueryClient();
+    queryClient.setQueryData(menuQueryKey, []);
+
+    const { container } = render(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter initialEntries={["/profile"]}>
+          <Routes>
+            <Route element={<AppShell />}>
+              <Route path="/profile" element={<ProfilePage />} />
+            </Route>
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+
+    expect(container.textContent).not.toMatch(/[—–]/);
+    expect(screen.getByText("#99")).toBeInTheDocument();
+    expect(screen.getByText("Belum pernah login")).toBeInTheDocument();
+    expect(screen.getByText("Akses Seluruh Gudang")).toBeInTheDocument();
+    expect(screen.getByText("3 permission")).toBeInTheDocument();
+    expect(screen.getByText("Purchase Order (PO)")).toBeInTheDocument();
   });
 });
 
@@ -261,7 +319,7 @@ describe("LandingPage", () => {
     expect(
       screen.getByRole("heading", {
         level: 1,
-        name: "Satu kendali untuk setiap pergerakan stok.",
+        name: "Kendalikan setiap rak lorong, barcode, dan mutasi stok secara real-time.",
       }),
     ).toBeInTheDocument();
 
@@ -269,13 +327,16 @@ describe("LandingPage", () => {
     expect(container.textContent).not.toMatch(/[—–]/);
 
     expect(
-      screen.getByText("Stok & inspeksi rak multi-SKU"),
+      screen.getByText("WMS Berbasis Rak Lorong"),
     ).toBeInTheDocument();
     expect(
-      screen.getByText("Pemindai & cetak label barcode"),
+      screen.getByText("Pemindai Barcode/QR Multifungsi"),
     ).toBeInTheDocument();
     expect(
-      screen.getByText("Barcode Barang & Inspeksi Rak"),
+      screen.getByText("Cetak Label & Dokumen Modular"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("Pemindai Barcode/QR & Rak Lorong"),
     ).toBeInTheDocument();
 
     expect(
@@ -302,7 +363,20 @@ describe("LandingPage", () => {
     }
 
     expect(container.querySelector("#workflow")).not.toBeNull();
-    expect(container.querySelector("#pain-points")).not.toBeNull();
+    const painPointsSection = container.querySelector("#pain-points");
+    expect(painPointsSection).not.toBeNull();
+    expect(
+      screen.getByText("Prinsip ketertelusuran stok"),
+    ).toBeInTheDocument();
+    const painPointsGrid = painPointsSection?.querySelector(".md\\:grid-cols-2");
+    expect(painPointsGrid).not.toBeNull();
+    const painPointCards = painPointsGrid?.querySelectorAll("article");
+    expect(painPointCards?.length).toBe(4);
+    for (const card of painPointCards ?? []) {
+      expect(card.className).toContain("h-full");
+    }
+    expect(screen.getByText("Kasus 01")).toBeInTheDocument();
+    expect(screen.getByText("Kasus 04")).toBeInTheDocument();
     expect(container.querySelector("#security")).not.toBeNull();
 
     const menuButton = screen.getByRole("button", {
@@ -341,7 +415,7 @@ describe("LandingPage", () => {
     ).toHaveAttribute("aria-expanded", "false");
 
     const ctaLoginLink = screen.getByRole("link", {
-      name: "Masuk ke Jejakstok",
+      name: "Masuk ke Ruang Kerja",
     });
     fireEvent.click(ctaLoginLink);
     expect(screen.getByText("Halaman Login Tujuan")).toBeInTheDocument();

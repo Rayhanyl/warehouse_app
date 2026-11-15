@@ -1,15 +1,21 @@
 import { useEffect } from "react";
-import { AlertTriangle, PowerOff, RotateCcw, X } from "lucide-react";
+import { AlertTriangle, Loader2, PowerOff, RotateCcw, X } from "lucide-react";
+import { MasterFormErrorBanner } from "../../components/MasterFormErrorBanner";
+import type { MasterFormSubmitError } from "../../errors";
 import type { WarehouseRecord } from "../types";
 
 interface WarehouseDeleteDialogProps {
   warehouse: WarehouseRecord | null;
+  isSubmitting?: boolean;
+  submitError?: MasterFormSubmitError | null;
   onClose: () => void;
-  onConfirm: (warehouse: WarehouseRecord) => void;
+  onConfirm: (warehouse: WarehouseRecord) => void | Promise<void>;
 }
 
 export function WarehouseDeleteDialog({
   warehouse,
+  isSubmitting = false,
+  submitError = null,
   onClose,
   onConfirm,
 }: WarehouseDeleteDialogProps) {
@@ -18,13 +24,13 @@ export function WarehouseDeleteDialog({
       return;
     }
     function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") {
+      if (event.key === "Escape" && !isSubmitting) {
         onClose();
       }
     }
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [warehouse, onClose]);
+  }, [warehouse, isSubmitting, onClose]);
 
   if (!warehouse) {
     return null;
@@ -34,14 +40,18 @@ export function WarehouseDeleteDialog({
 
   return (
     <div
-      className="fixed inset-0 z-50 grid place-items-center bg-ink-950/55 p-4"
-      onMouseDown={onClose}
+      className="fixed inset-0 z-50 grid place-items-center bg-ink-950/55 p-2 sm:p-4"
+      onMouseDown={() => {
+        if (!isSubmitting) {
+          onClose();
+        }
+      }}
     >
       <div
         aria-describedby="warehouse-confirm-desc"
         aria-labelledby="warehouse-confirm-title"
         aria-modal="true"
-        className="w-full max-w-lg rounded-[var(--radius-lg)] border border-line-200 bg-surface-0 p-5 shadow-[var(--shadow-2)] sm:p-6"
+        className="max-h-[94dvh] w-full max-w-lg overflow-y-auto rounded-[var(--radius-lg)] border border-line-200 bg-surface-0 p-4 shadow-[var(--shadow-2)] sm:p-6"
         onMouseDown={(event) => event.stopPropagation()}
         role="alertdialog"
       >
@@ -76,7 +86,8 @@ export function WarehouseDeleteDialog({
           </div>
           <button
             aria-label="Tutup dialog konfirmasi"
-            className="grid min-h-11 min-w-11 shrink-0 place-items-center rounded-[var(--radius-md)] text-slate-700 transition hover:bg-canvas-50 hover:text-ink-950"
+            className="grid min-h-11 min-w-11 shrink-0 place-items-center rounded-[var(--radius-md)] text-slate-700 transition hover:bg-canvas-50 hover:text-ink-950 disabled:cursor-not-allowed disabled:opacity-60"
+            disabled={isSubmitting}
             onClick={onClose}
             type="button"
           >
@@ -107,24 +118,35 @@ export function WarehouseDeleteDialog({
           )}
         </p>
 
-        <div className="mt-6 flex flex-wrap items-center justify-end gap-2 border-t border-line-200 pt-4">
+        <div className="mt-4">
+          <MasterFormErrorBanner error={submitError} />
+        </div>
+
+        <div className="mt-6 flex flex-col-reverse gap-2 border-t border-line-200 pt-4 sm:flex-row sm:items-center sm:justify-end">
           <button
-            className="inline-flex min-h-11 items-center justify-center rounded-[var(--radius-md)] border border-line-500 bg-surface-0 px-4 text-sm font-semibold text-ink-950 transition hover:bg-canvas-50"
+            className="inline-flex min-h-11 w-full items-center justify-center rounded-[var(--radius-md)] border border-line-500 bg-surface-0 px-4 text-sm font-semibold text-ink-950 transition hover:bg-canvas-50 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
+            disabled={isSubmitting}
             onClick={onClose}
             type="button"
           >
             Batal
           </button>
           <button
-            className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-[var(--radius-md)] px-4 text-sm font-semibold text-surface-0 transition ${
+            className={`inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-[var(--radius-md)] px-4 text-sm font-semibold text-surface-0 transition disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto ${
               isDeactivating
                 ? "bg-red-600 hover:bg-red-700"
                 : "bg-teal-600 hover:bg-teal-700"
             }`}
-            onClick={() => onConfirm(warehouse)}
+            disabled={isSubmitting}
+            onClick={() => void onConfirm(warehouse)}
             type="button"
           >
-            {isDeactivating ? (
+            {isSubmitting ? (
+              <>
+                <Loader2 aria-hidden="true" className="animate-spin" size={16} />
+                Memproses...
+              </>
+            ) : isDeactivating ? (
               <>
                 <PowerOff aria-hidden="true" size={16} />
                 Ya, nonaktifkan gudang
