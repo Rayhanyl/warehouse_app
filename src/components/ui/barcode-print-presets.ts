@@ -328,25 +328,48 @@ export function computeVisualDimensionsPx(
     Math.min(BARCODE_LIMITS.maxScalePct, Math.max(BARCODE_LIMITS.minScalePct, config.codeScale || 100)) /
     100;
 
-  // ~3.78 px per mm pada layar 96 DPI sebagai proporsi SVG yang bersih
-  const pxPerMm = 3.2;
-  const headerFooterAllowance = safeHeight <= 24 ? 8 : 11;
-  const availableHeightMm = Math.max(6, safeHeight - safeMargin * 2 - headerFooterAllowance);
-  const availableWidthMm = Math.max(14, safeWidth - safeMargin * 2);
+  // 1 CSS mm = 96 / 25.4 ≈ 3.7795 px; sisakan ruang tepat untuk header, judul, teks kode, dan footer
+  const pxPerMm = 3.78;
+  const isMini = safeHeight <= 24 || safeWidth <= 44;
+  const isLarge = safeWidth >= 80 && safeHeight >= 42;
+  const showMeta = config.showMeta ?? true;
 
-  const barcodeHeightPx = Math.round(
-    Math.min(72, Math.max(22, availableHeightMm * pxPerMm * scaleFactor)),
+  const headerMm = isMini ? 2.4 : isLarge ? 3.8 : 3.0;
+  const titleMm = isMini ? 2.8 : isLarge ? 7.6 : 5.6;
+  const footerMm = showMeta ? (isMini ? 2.4 : isLarge ? 3.8 : 3.0) : 0;
+  const valueTextMm = isMini ? 2.8 : isLarge ? 4.2 : 3.4;
+  const gapsAndBufferMm = isMini ? 1.4 : isLarge ? 2.4 : 1.8;
+
+  const fixedVerticalMm =
+    safeMargin * 2 + headerMm + titleMm + footerMm + valueTextMm + gapsAndBufferMm;
+  const availableHeightMm = Math.max(4.5, safeHeight - fixedVerticalMm);
+  const availableWidthMm = Math.max(12, safeWidth - safeMargin * 2);
+
+  // Pada skala 100% gunakan ~88% tinggi aman agar label & SVG tidak berdesakan; maksimal 100% batas aman.
+  const clampedScaleRatio = Math.min(1, 0.88 * scaleFactor);
+  const maxBarcodeHeightPx = Math.max(16, Math.floor(availableHeightMm * pxPerMm));
+  const barcodeHeightPx = Math.min(
+    maxBarcodeHeightPx,
+    Math.round(Math.min(72, Math.max(16, availableHeightMm * pxPerMm * clampedScaleRatio))),
   );
-  const qrSizePx = Math.round(
-    Math.min(
-      132,
-      Math.max(36, Math.min(availableWidthMm, availableHeightMm) * pxPerMm * scaleFactor),
+
+  const maxQrSidePx = Math.max(
+    18,
+    Math.floor(Math.min(availableWidthMm, availableHeightMm) * pxPerMm),
+  );
+  const qrSizePx = Math.min(
+    maxQrSidePx,
+    Math.round(
+      Math.min(
+        132,
+        Math.max(18, Math.min(availableWidthMm, availableHeightMm) * pxPerMm * clampedScaleRatio),
+      ),
     ),
   );
 
   return {
     barcodeHeightPx,
-    barcodeMaxWidthPercent: Math.round(scaleFactor * 100),
+    barcodeMaxWidthPercent: Math.round(Math.min(100, scaleFactor * 92)),
     qrSizePx,
   };
 }

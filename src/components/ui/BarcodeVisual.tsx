@@ -14,6 +14,7 @@ export interface BarcodeVisualProps {
   subtitle?: string;
   className?: string;
   compact?: boolean;
+  stickerMode?: boolean;
   svgClassName?: string;
   svgStyle?: React.CSSProperties;
 }
@@ -25,6 +26,7 @@ export function BarcodeVisual({
   subtitle,
   className = "",
   compact = false,
+  stickerMode = false,
   svgClassName = "w-full max-w-[260px]",
   svgStyle,
 }: BarcodeVisualProps) {
@@ -57,7 +59,7 @@ export function BarcodeVisual({
     <div
       aria-label={`Visual barcode ${trimmed}`}
       className={`inline-flex flex-col items-center rounded-[var(--radius-sm)] bg-white ${
-        compact ? "px-1 py-0.5" : "px-2.5 py-1.5"
+        stickerMode ? "p-0" : compact ? "px-1 py-0.5" : "px-2.5 py-1.5"
       } text-ink-950 ${className}`}
     >
       <svg
@@ -86,7 +88,13 @@ export function BarcodeVisual({
       {showValue && (
         <span
           className={`${
-            compact ? "mt-0.5 text-[9px] tracking-wider" : "mt-1 text-xs tracking-widest"
+            stickerMode
+              ? compact
+                ? "mt-0.5 text-[7px] leading-none tracking-wider"
+                : "mt-0.5 text-[9.5px] leading-none tracking-wider"
+              : compact
+                ? "mt-0.5 text-[9px] tracking-wider"
+                : "mt-1 text-xs tracking-widest"
           } font-mono font-bold text-ink-950 tabular-nums`}
         >
           {trimmed}
@@ -108,6 +116,7 @@ export interface QrCodeVisualProps {
   subtitle?: string;
   className?: string;
   compact?: boolean;
+  stickerMode?: boolean;
   errorCorrectionLevel?: "L" | "M" | "Q" | "H";
 }
 
@@ -118,6 +127,7 @@ export function QrCodeVisual({
   subtitle,
   className = "",
   compact = false,
+  stickerMode = false,
   errorCorrectionLevel = "M",
 }: QrCodeVisualProps) {
   const trimmed = value.trim();
@@ -148,7 +158,7 @@ export function QrCodeVisual({
     <div
       aria-label={`Visual QR code ${trimmed}`}
       className={`inline-flex flex-col items-center rounded-[var(--radius-sm)] bg-white ${
-        compact ? "p-0.5" : "p-1.5"
+        stickerMode ? "p-0" : compact ? "p-0.5" : "p-1.5"
       } text-ink-950 ${className}`}
     >
       <svg
@@ -156,6 +166,7 @@ export function QrCodeVisual({
         className="shrink-0"
         height={size}
         role="img"
+        style={{ maxWidth: "100%", maxHeight: "100%" }}
         viewBox={`0 0 ${viewBoxSize} ${viewBoxSize}`}
         width={size}
       >
@@ -165,8 +176,14 @@ export function QrCodeVisual({
       {showValue && (
         <span
           className={`${
-            compact ? "mt-0.5 text-[9px]" : "mt-1 text-xs"
-          } font-mono font-bold tracking-wider text-ink-950 tabular-nums`}
+            stickerMode
+              ? compact
+                ? "mt-0.5 text-[7px] leading-none tracking-wider"
+                : "mt-0.5 text-[9.5px] leading-none tracking-wider"
+              : compact
+                ? "mt-0.5 text-[9px] tracking-wider"
+                : "mt-1 text-xs tracking-wider"
+          } font-mono font-bold text-ink-950 tabular-nums`}
         >
           {trimmed}
         </span>
@@ -184,6 +201,7 @@ export interface BarcodeStickerSheetProps {
   title: string;
   code: string;
   secondaryCode?: string | null;
+  secondaryLabel?: string;
   metaLabel?: string | null;
   badgeText?: string;
   visibleOnScreen?: boolean;
@@ -195,6 +213,7 @@ export function BarcodeStickerSheet({
   title,
   code,
   secondaryCode,
+  secondaryLabel = "SKU",
   metaLabel,
   badgeText = "LABEL BARANG WMS",
   visibleOnScreen = false,
@@ -230,6 +249,15 @@ export function BarcodeStickerSheet({
       ? `@page { size: A4 portrait; margin: ${effectiveConfig.pageMarginMm || 5}mm; }`
       : `@page { size: ${safeWidthMm}mm ${safeHeightMm}mm; margin: 0; }`;
 
+  const thermalPrintSafeHeightMm = Math.max(
+    12,
+    Number((safeHeightMm - 0.4).toFixed(2)),
+  );
+  const thermalCardOverrideCss =
+    effectiveConfig.paperMode === "thermal"
+      ? `.printable-sticker-sheet[data-paper-mode="thermal"] .print-sticker-card { width: ${safeWidthMm}mm !important; height: ${thermalPrintSafeHeightMm}mm !important; max-height: ${thermalPrintSafeHeightMm}mm !important; overflow: hidden !important; }`
+      : "";
+
   const gridStyle: React.CSSProperties =
     effectiveConfig.paperMode === "a4"
       ? {
@@ -255,12 +283,12 @@ export function BarcodeStickerSheet({
       data-preset-id={effectiveConfig.presetId}
       data-slot="barcode-sticker-sheet"
     >
-      <style>{`@media print { ${pageCssRule} .print-sticker-card { break-inside: avoid; page-break-inside: avoid; } }`}</style>
+      <style>{`${pageCssRule} @media print { .print-sticker-card { break-inside: avoid; page-break-inside: avoid; } ${thermalCardOverrideCss} }`}</style>
       <div className="printable-sticker-grid mx-auto w-fit" style={gridStyle}>
         {Array.from({ length: safeCopies }).map((_, copyIdx) => (
           <article
             key={copyIdx}
-            className="print-sticker-card box-border flex flex-col justify-between overflow-hidden rounded-[var(--radius-sm)] border border-dashed border-ink-950/60 bg-white text-ink-950 print:rounded-none print:border-solid"
+            className="print-sticker-card box-border flex flex-col justify-between overflow-hidden rounded-[var(--radius-sm)] border border-dashed border-ink-950/60 bg-white text-ink-950 print:rounded-none print:border-0"
             style={{
               width: `${safeWidthMm}mm`,
               height: `${safeHeightMm}mm`,
@@ -269,7 +297,7 @@ export function BarcodeStickerSheet({
           >
             <div
               className={`flex shrink-0 items-center justify-between gap-1.5 border-b border-ink-950/30 pb-0.5 leading-none font-bold tracking-wider uppercase ${
-                isMini ? "text-[6.5px]" : isLarge ? "text-[10.5px]" : "text-[8.5px]"
+                isMini ? "text-[6px]" : isLarge ? "text-[9.5px]" : "text-[7.5px]"
               }`}
             >
               <span className="shrink-0">JEJAKSTOK</span>
@@ -285,28 +313,30 @@ export function BarcodeStickerSheet({
                     : "text-center"
               } ${
                 isMini
-                  ? "line-clamp-1 text-[7.5px] leading-tight"
+                  ? "line-clamp-1 text-[7px] leading-tight"
                   : isLarge
-                    ? "line-clamp-2 text-sm leading-tight"
-                    : "line-clamp-2 text-[10.5px] leading-tight"
+                    ? "line-clamp-2 text-[13px] leading-tight"
+                    : "line-clamp-2 text-[9.5px] leading-tight"
               }`}
             >
               {title}
             </p>
 
-            <div className={`my-auto flex min-h-0 w-full items-center overflow-hidden ${alignClass}`}>
+            <div className={`my-auto flex min-h-0 flex-1 w-full items-center overflow-hidden ${alignClass}`}>
               {format === "qr" ? (
                 <QrCodeVisual
-                  className="max-w-full py-0.5"
+                  className="max-h-full max-w-full"
                   compact={isMini}
                   size={qrSizePx}
+                  stickerMode={true}
                   value={code}
                 />
               ) : (
                 <BarcodeVisual
-                  className="w-full max-w-full py-0.5"
+                  className="max-h-full w-full max-w-full"
                   compact={isMini}
                   height={barcodeHeightPx}
+                  stickerMode={true}
                   svgClassName="mx-auto"
                   svgStyle={{
                     width: `${Math.min(100, barcodeMaxWidthPercent)}%`,
@@ -320,11 +350,15 @@ export function BarcodeStickerSheet({
             {effectiveConfig.showMeta && (
               <div
                 className={`mt-0.5 flex shrink-0 items-center justify-between gap-1.5 border-t border-ink-950/30 pt-0.5 leading-none font-semibold text-slate-700 tabular-nums ${
-                  isMini ? "text-[6.5px]" : isLarge ? "text-[10.5px]" : "text-[8.5px]"
+                  isMini ? "text-[6px]" : isLarge ? "text-[9.5px]" : "text-[7.5px]"
                 }`}
               >
                 <span className="min-w-0 truncate">
-                  {secondaryCode ? `SKU: ${secondaryCode}` : `KODE: ${code}`}
+                  {secondaryCode
+                    ? secondaryLabel
+                      ? `${secondaryLabel}: ${secondaryCode}`
+                      : secondaryCode
+                    : `KODE: ${code}`}
                 </span>
                 {metaLabel && <span className="min-w-0 truncate text-right">{metaLabel}</span>}
               </div>

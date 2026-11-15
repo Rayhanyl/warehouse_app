@@ -278,6 +278,7 @@ function StockDetailDialogContent({
           onFormatChange={setCodeFormat}
           onPrint={handlePrintSticker}
           secondaryCode={item.sku}
+          secondaryLabel="SKU"
           title={item.name}
           visibleOnScreen={showStickerPreview}
         />

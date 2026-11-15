@@ -129,11 +129,12 @@ body {
   }
 }
 
+@page {
+  size: A4 portrait;
+  margin: 12mm;
+}
+
 @media print {
-  @page {
-    size: A4 portrait;
-    margin: 12mm;
-  }
 
   html,
   body {

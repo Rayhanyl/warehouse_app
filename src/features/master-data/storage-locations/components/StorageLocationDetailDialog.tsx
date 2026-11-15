@@ -225,11 +225,12 @@ function StorageLocationDetailDialogContent({
           config={printConfig}
           defaultPresetId="70x40"
           format={codeFormat}
-          metaLabel={`GUDANG: ${location.warehouse_code}`}
+          metaLabel={location.warehouse_code}
           onConfigChange={setPrintConfig}
           onFormatChange={setCodeFormat}
           onPrint={handlePrintRackSticker}
           secondaryCode={location.warehouse_name}
+          secondaryLabel="GUDANG"
           title={`${location.code} · ${location.name}`}
           visibleOnScreen={showStickerPreview}
         />

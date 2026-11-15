@@ -9,6 +9,7 @@ import {
   BARCODE_LABEL_PRESETS,
   type BarcodeFormat,
   type BarcodePrintConfig,
+  computeVisualDimensionsPx,
   createConfigFromPreset,
   evaluateBarcodeScannability,
   validateBarcodePrintConfig,
@@ -284,5 +285,98 @@ describe("Tahap 16: Fleksibilitas Ukuran Cetak QR Code dan Barcode", () => {
     ).toHaveAttribute("data-sticker-print-dialog", "true");
     whView.unmount();
     expect(document.body).not.toHaveClass("wms-sticker-print-mode");
+  });
+
+  it("uses GUDANG footer label on Location and Warehouse stickers instead of SKU", () => {
+    const locView = render(
+      <StorageLocationDetailDialog
+        canManage={false}
+        location={{
+          id: "21",
+          warehouse_id: "1",
+          warehouse_code: "WH-JKT-01",
+          warehouse_name: "Gudang Pusat Jakarta",
+          code: "JKT-RCV-01",
+          name: "Area Receiving & Inbound Staging",
+          is_active: true,
+          created_by: "1",
+          created_at: "2026-11-10T08:00:00Z",
+          updated_at: "2026-11-14T08:00:00Z",
+        }}
+        onClose={vi.fn()}
+        onEdit={vi.fn()}
+      />,
+    );
+
+    const locSheet = locView.container.ownerDocument.querySelector(
+      '[data-slot="barcode-sticker-sheet"]',
+    );
+    expect(locSheet).toHaveTextContent(/GUDANG:\s*Gudang Pusat Jakarta/i);
+    expect(locSheet).not.toHaveTextContent(/SKU:/i);
+    locView.unmount();
+
+    const whView = render(
+      <WarehouseDetailDialog
+        canManage={false}
+        onClose={vi.fn()}
+        onEdit={vi.fn()}
+        onToggleStatus={vi.fn()}
+        warehouse={{
+          id: 2,
+          code: "WH-JKT-01",
+          name: "Gudang Pusat Jakarta",
+          address: "Jl. Industri No. 1",
+          allow_negative_stock: false,
+          is_active: true,
+          created_by: 1,
+          created_at: "2026-11-10T08:00:00Z",
+          updated_at: "2026-11-14T08:00:00Z",
+        }}
+      />,
+    );
+
+    const whSheet = whView.container.ownerDocument.querySelector(
+      '[data-slot="barcode-sticker-sheet"]',
+    );
+    expect(whSheet).toHaveTextContent(/GUDANG:\s*WH-JKT-01/i);
+    expect(whSheet).not.toHaveTextContent(/SKU:/i);
+    whView.unmount();
+  });
+
+  it("emits top-level @page rule and clamps SVG dimensions inside card height", () => {
+    const cfg = createConfigFromPreset("70x40");
+    cfg.codeScale = 115;
+
+    const { container } = render(
+      <BarcodeStickerSheet
+        badgeText="LABEL LOKASI RAK"
+        code="JKT-RCV-01"
+        config={cfg}
+        format="qr"
+        metaLabel="WH-JKT-01"
+        secondaryCode="Gudang Pusat Jakarta"
+        secondaryLabel="GUDANG"
+        title="JKT-RCV-01 · Area Receiving & Inbound Staging"
+      />,
+    );
+
+    const styleEl = container.querySelector("style");
+    const cssText = styleEl?.textContent ?? "";
+    expect(cssText).toContain("@page { size: 70mm 40mm; margin: 0; }");
+    expect(cssText).toContain("height: 39.6mm !important;");
+    expect(cssText.indexOf("@page")).toBeLessThan(
+      cssText.indexOf("@media print"),
+    );
+
+    for (const preset of BARCODE_LABEL_PRESETS) {
+      const testCfg = createConfigFromPreset(preset.id);
+      testCfg.codeScale = 115;
+      const dims = computeVisualDimensionsPx(testCfg);
+      const maxCardHeightPx = testCfg.heightMm * 3.78;
+      expect(dims.barcodeHeightPx).toBeGreaterThanOrEqual(16);
+      expect(dims.barcodeHeightPx).toBeLessThan(maxCardHeightPx);
+      expect(dims.qrSizePx).toBeGreaterThanOrEqual(18);
+      expect(dims.qrSizePx).toBeLessThan(maxCardHeightPx);
+    }
   });
 });

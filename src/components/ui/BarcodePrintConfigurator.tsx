@@ -18,6 +18,7 @@ export interface BarcodePrintConfiguratorProps {
   title: string;
   code: string;
   secondaryCode?: string | null;
+  secondaryLabel?: string;
   metaLabel?: string | null;
   badgeText?: string;
   format: BarcodeFormat;
@@ -41,6 +42,7 @@ export function BarcodePrintConfigurator({
   title,
   code,
   secondaryCode,
+  secondaryLabel = "SKU",
   metaLabel,
   badgeText = "LABEL BARANG WMS",
   format,
@@ -403,7 +405,7 @@ export function BarcodePrintConfigurator({
                   onChange={(e) => updateField("showMeta", e.target.checked)}
                   type="checkbox"
                 />
-                Tampilkan footer SKU & info
+                Tampilkan footer info label
               </label>
             </div>
 
@@ -452,6 +454,7 @@ export function BarcodePrintConfigurator({
         format={format}
         metaLabel={metaLabel}
         secondaryCode={secondaryCode}
+        secondaryLabel={secondaryLabel}
         title={title}
         visibleOnScreen={visibleOnScreen}
       />

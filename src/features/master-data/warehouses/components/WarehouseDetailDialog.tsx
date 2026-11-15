@@ -260,6 +260,7 @@ function WarehouseDetailDialogContent({
           onFormatChange={setCodeFormat}
           onPrint={handlePrintWarehouseSticker}
           secondaryCode={warehouse.code}
+          secondaryLabel="GUDANG"
           title={warehouse.name}
           visibleOnScreen={showStickerPreview}
         />
