@@ -1,6 +1,12 @@
-import type { Paginated } from "@/types/api";
+import type { ApprovalLog, Paginated } from "@/types/api";
 
-export type StockOpnameStatus = "DRAFT" | "IN_PROGRESS" | "WAITING_APPROVAL" | "COMPLETED" | "CANCELLED";
+export type StockOpnameStatus =
+  | "DRAFT"
+  | "IN_PROGRESS"
+  | "WAITING_L1_APPROVAL"
+  | "WAITING_L2_APPROVAL"
+  | "COMPLETED"
+  | "CANCELLED";
 
 export interface StockOpnameLine {
   id: number;
@@ -16,6 +22,8 @@ export interface StockOpnameLine {
   qty_system: string;
   qty_physical: string | null;
   qty_variance: string | null;
+  counted_by?: number | null;
+  counted_at?: string | null;
   notes: string | null;
 }
 
@@ -32,12 +40,21 @@ export interface StockOpname {
   notes: string | null;
   line_count: number;
   rejection_reason: string | null;
+  started_by?: number | null;
   started_at?: string | null;
+  submitted_by?: number | null;
   submitted_at?: string | null;
+  l1_approved_by?: number | null;
+  l1_approved_at?: string | null;
+  l2_approved_by?: number | null;
+  l2_approved_at?: string | null;
+  approved_by?: number | null;
   approved_at?: string | null;
+  created_by?: number | null;
   created_at: string;
   updated_at: string;
   lines?: StockOpnameLine[];
+  approval_logs?: ApprovalLog[];
 }
 
 export interface StockOpnameCreatePayload {

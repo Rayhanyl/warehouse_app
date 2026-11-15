@@ -41,6 +41,7 @@ export interface GoodsReceipt {
   line_count: number;
   posted_at: string | null;
   posted_by: number | null;
+  created_by?: number | null;
   created_at: string;
   updated_at: string;
   lines?: GoodsReceiptLine[];

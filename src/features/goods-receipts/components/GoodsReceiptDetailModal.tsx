@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { Printer, X } from "lucide-react";
 import { toast } from "sonner";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { usePermission } from "@/hooks/usePermission";
+import { evaluateSodGuard } from "@/lib/utils";
 import {
   formatGrDate,
   formatGrDateTime,
@@ -14,6 +16,8 @@ import { GoodsReceiptPrintSheet } from "./GoodsReceiptPrintSheet";
 export function GoodsReceiptDetailModal({
   receipt,
   isLoading,
+  canCreate,
+  canPost,
   canManage,
   isMutating,
   onClose,
@@ -21,14 +25,24 @@ export function GoodsReceiptDetailModal({
 }: {
   receipt?: GoodsReceipt;
   isLoading: boolean;
-  canManage: boolean;
+  canCreate?: boolean;
+  canPost?: boolean;
+  canManage?: boolean;
   isMutating: boolean;
   onClose: () => void;
   onAction: (receipt: GoodsReceipt, action: "post" | "cancel") => Promise<void>;
 }) {
+  const { user } = usePermission();
   const [confirmation, setConfirmation] = useState<"cancel" | "post" | null>(null);
   const [previewReceiptId, setPreviewReceiptId] = useState<number | null>(null);
   const showPrintPreview = Boolean(receipt && previewReceiptId === receipt.id);
+  const allowCreate = canCreate ?? canManage ?? false;
+  const allowPost = canPost ?? canManage ?? false;
+  const postSod = evaluateSodGuard(
+    user,
+    [receipt?.created_by],
+    "Aturan Pemisahan Tugas (SoD): pembuat draft penerimaan barang tidak dapat memposting GR-nya sendiri.",
+  );
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
@@ -168,6 +182,30 @@ export function GoodsReceiptDetailModal({
                     {receipt.notes}
                   </p>
                 )}
+
+                {receipt.status === "DRAFT" &&
+                  allowPost &&
+                  (postSod.isBlocked || postSod.isOverride) && (
+                    <div
+                      className={`mt-4 rounded-[var(--radius-md)] border p-3 text-sm ${
+                        postSod.isBlocked
+                          ? "border-amber-300 bg-amber-50 text-amber-950"
+                          : "border-blue-300 bg-blue-50 text-blue-950"
+                      }`}
+                    >
+                      <p className="font-semibold">
+                        {postSod.isOverride
+                          ? "Mode Override Super Admin"
+                          : "Pemisahan Tugas (Segregation of Duties)"}
+                      </p>
+                      <p className="mt-0.5 text-xs leading-5">
+                        {postSod.reason}
+                        {postSod.isOverride
+                          ? " Sebagai Super Admin Anda dapat memposting, dan override akan dicatat di Audit Log."
+                          : ""}
+                      </p>
+                    </div>
+                  )}
               </div>
 
               {receipt.status === "POSTED" && (
@@ -199,25 +237,25 @@ export function GoodsReceiptDetailModal({
                   </button>
                 </>
               )}
-              {canManage && receipt.status === "DRAFT" && (
-                <>
-                  <button
-                    className="inline-flex min-h-11 items-center justify-center whitespace-nowrap rounded-[var(--radius-md)] border border-red-600/40 bg-surface-0 px-4 text-sm font-semibold leading-5 text-red-700 hover:bg-red-50 disabled:opacity-50"
-                    disabled={isMutating}
-                    onClick={() => setConfirmation("cancel")}
-                    type="button"
-                  >
-                    Batalkan draft
-                  </button>
-                  <button
-                    className="inline-flex min-h-11 items-center justify-center whitespace-nowrap rounded-[var(--radius-md)] bg-teal-600 px-4 text-sm font-semibold leading-5 text-surface-0 hover:bg-teal-700 disabled:opacity-50"
-                    disabled={isMutating}
-                    onClick={() => setConfirmation("post")}
-                    type="button"
-                  >
-                    {isMutating ? "Memproses..." : "Posting penerimaan"}
-                  </button>
-                </>
+              {receipt.status === "DRAFT" && allowCreate && (
+                <button
+                  className="inline-flex min-h-11 items-center justify-center whitespace-nowrap rounded-[var(--radius-md)] border border-red-600/40 bg-surface-0 px-4 text-sm font-semibold leading-5 text-red-700 hover:bg-red-50 disabled:opacity-50"
+                  disabled={isMutating}
+                  onClick={() => setConfirmation("cancel")}
+                  type="button"
+                >
+                  Batalkan draft
+                </button>
+              )}
+              {receipt.status === "DRAFT" && allowPost && !postSod.isBlocked && (
+                <button
+                  className="inline-flex min-h-11 items-center justify-center whitespace-nowrap rounded-[var(--radius-md)] bg-teal-600 px-4 text-sm font-semibold leading-5 text-surface-0 hover:bg-teal-700 disabled:opacity-50"
+                  disabled={isMutating}
+                  onClick={() => setConfirmation("post")}
+                  type="button"
+                >
+                  {isMutating ? "Memproses..." : "Posting penerimaan"}
+                </button>
               )}
               <button
                 className="inline-flex min-h-11 items-center justify-center whitespace-nowrap rounded-[var(--radius-md)] border border-line-500 bg-surface-0 px-4 text-sm font-semibold leading-5 text-ink-950 hover:bg-canvas-50"

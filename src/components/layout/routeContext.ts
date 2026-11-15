@@ -40,6 +40,10 @@ const ROUTE_CONTEXT_MAP: Record<string, RouteContextInfo> = {
     title: "Template dokumen",
     groupName: "Administrasi dan keamanan",
   },
+  "/admin/settings": {
+    title: "Pengaturan Approval",
+    groupName: "Administrasi dan keamanan",
+  },
   "/document-templates": {
     title: "Template dokumen",
     groupName: "Administrasi dan keamanan",

@@ -1,3 +1,4 @@
+export { ApprovalTimeline } from "@/components/shared/ApprovalTimeline";
 export {
   DataPagination,
   type DataPaginationProps,

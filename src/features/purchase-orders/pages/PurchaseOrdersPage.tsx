@@ -35,7 +35,9 @@ export function PurchaseOrdersPage() {
   const { can } = usePermission();
   const { filterWarehouseChoices, resolveEffectiveWarehouseFilter } = useWarehouseScope();
   const canCreate = can("po:create");
-  const canIssue = can("po:issue");
+  const canApproveL1 = can("po:approve_l1");
+  const canApproveL2 = can("po:approve_l2");
+  const canIssue = canApproveL1;
   const canCancel = can("po:cancel");
   const canClose = can("po:close");
 
@@ -118,6 +120,10 @@ export function PurchaseOrdersPage() {
       toast.error("Alasan penutupan wajib diisi.");
       return;
     }
+    if (actionType === "reject" && !closedReason.trim()) {
+      toast.error("Alasan penolakan wajib diisi.");
+      return;
+    }
     try {
       const updated = await actionMutation.mutateAsync({
         id: actionTarget.id,
@@ -195,6 +201,8 @@ export function PurchaseOrdersPage() {
 
       {detailId !== null && (
         <PurchaseOrderDetailModal
+          canApproveL1={canApproveL1}
+          canApproveL2={canApproveL2}
           canCancel={canCancel || canCreate}
           canClose={canClose}
           canEdit={canCreate}

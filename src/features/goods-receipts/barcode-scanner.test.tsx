@@ -31,7 +31,8 @@ describe("AC-33: Barcode / QR Scanner & Hardware Gun Integration", () => {
         is_active: true,
         permissions: [
           "gr:read",
-          "gr:manage",
+          "gr:create",
+          "gr:post",
           "transfer:read",
           "transfer:create",
           "transfer:approve",
@@ -40,7 +41,8 @@ describe("AC-33: Barcode / QR Scanner & Hardware Gun Integration", () => {
           "opname:read",
           "opname:manage",
           "opname:count",
-          "opname:approve",
+          "opname:approve_l1",
+          "opname:approve_l2",
         ],
         warehouse_ids: [1, 2],
       });

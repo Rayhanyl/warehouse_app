@@ -9,6 +9,8 @@ import type {
   AdminUserPage,
   AdminUserWarehouse,
   AdminWarehouse,
+  ApprovalSettings,
+  ApprovalSettingsUpdatePayload,
   Permission,
   Role,
 } from "./types";
@@ -21,6 +23,7 @@ export const administrationKeys = {
   menus: (params: MenuParams) => [...administrationKeys.all, "menus", params] as const,
   warehouses: () => [...administrationKeys.all, "warehouses"] as const,
   userWarehouses: (id: number) => [...administrationKeys.all, "user-warehouses", id] as const,
+  approvalSettings: () => [...administrationKeys.all, "approval-settings"] as const,
 };
 
 export interface UserParams {
@@ -159,5 +162,25 @@ export function useUpdateRolePermissions() {
     mutationFn: ({ id, permissions }: { id: number; permissions: string[] }) =>
       apiClient.put<Role>(`/users/roles/${id}/permissions`, { permissions }).then((response) => response.data),
     onSuccess: () => invalidateAndRefetchAll(queryClient, [administrationKeys.roles()]),
+  });
+}
+
+export function useApprovalSettings(enabled = true) {
+  return useQuery({
+    queryKey: administrationKeys.approvalSettings(),
+    queryFn: async () => (await apiClient.get<ApprovalSettings>("/settings/approval")).data,
+    enabled,
+  });
+}
+
+export function useUpdateApprovalSettings() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: ApprovalSettingsUpdatePayload) =>
+      apiClient.put<ApprovalSettings>("/settings/approval", payload).then((response) => response.data),
+    onSuccess: (updated) => {
+      queryClient.setQueryData(administrationKeys.approvalSettings(), updated);
+      return invalidateAndRefetchAll(queryClient, [administrationKeys.approvalSettings()]);
+    },
   });
 }

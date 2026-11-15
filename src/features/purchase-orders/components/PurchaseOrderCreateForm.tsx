@@ -2,6 +2,7 @@ import { type FormEvent, useState } from "react";
 import { Plus, X } from "lucide-react";
 import { useWarehouseScope } from "@/hooks/useWarehouseScope";
 import { mapApiFormError } from "@/lib/errors";
+import { formatCurrencyIdr } from "@/lib/utils";
 import { validateDecimalQtyInput } from "@/lib/validation";
 import type {
   PurchaseOrder,
@@ -56,6 +57,7 @@ export function PurchaseOrderCreateForm({
     initialPurchaseOrder?.lines?.map((line) => ({
       item_id: line.item_id,
       qty_ordered: line.qty_ordered,
+      unit_price: line.unit_price ?? "",
       notes: line.notes ?? null,
     })) ?? [],
   );
@@ -76,7 +78,10 @@ export function PurchaseOrderCreateForm({
   function addLine() {
     const firstItem = availableItems[0];
     if (firstItem) {
-      setLines((current) => [...current, { item_id: firstItem.id, qty_ordered: "", notes: null }]);
+      setLines((current) => [
+        ...current,
+        { item_id: firstItem.id, qty_ordered: "", unit_price: "", notes: null },
+      ]);
     }
   }
 
@@ -84,12 +89,20 @@ export function PurchaseOrderCreateForm({
     setFieldErrors((prev) => ({
       ...prev,
       [`lines.${index}.qty_ordered`]: "",
+      [`lines.${index}.unit_price`]: "",
       [`lines.${index}.item_id`]: "",
     }));
     setLines((current) =>
       current.map((line, lineIndex) => (lineIndex === index ? { ...line, ...patch } : line)),
     );
   }
+
+  const estimatedTotal = lines.reduce((acc, line) => {
+    const qty = Number(line.qty_ordered);
+    const price = Number(line.unit_price ?? 0);
+    if (!Number.isFinite(qty) || !Number.isFinite(price) || qty <= 0 || price < 0) return acc;
+    return acc + qty * price;
+  }, 0);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -122,6 +135,14 @@ export function PurchaseOrderCreateForm({
       if (qtyError) {
         nextFieldErrors[`lines.${index}.qty_ordered`] = qtyError;
       }
+
+      const rawPrice = (line.unit_price ?? "").toString().trim();
+      if (rawPrice !== "") {
+        if (!/^\d+(\.\d{1,2})?$/.test(rawPrice) || Number(rawPrice) < 0) {
+          nextFieldErrors[`lines.${index}.unit_price`] =
+            `Harga satuan baris ${index + 1} harus angka >= 0 (maks. 2 desimal).`;
+        }
+      }
     });
 
     const firstError = Object.values(nextFieldErrors)[0];
@@ -143,6 +164,7 @@ export function PurchaseOrderCreateForm({
         lines: lines.map((line) => ({
           ...line,
           qty_ordered: line.qty_ordered.trim(),
+          unit_price: line.unit_price?.toString().trim() || "0.00",
           notes: line.notes?.trim() || null,
         })),
       });
@@ -282,6 +304,16 @@ export function PurchaseOrderCreateForm({
                 );
                 const lineItemError = fieldErrors[`lines.${index}.item_id`];
                 const lineQtyError = fieldErrors[`lines.${index}.qty_ordered`];
+                const linePriceError = fieldErrors[`lines.${index}.unit_price`];
+                const lineQtyNum = Number(line.qty_ordered);
+                const linePriceNum = Number(line.unit_price ?? 0);
+                const lineSubtotal =
+                  Number.isFinite(lineQtyNum) &&
+                  Number.isFinite(linePriceNum) &&
+                  lineQtyNum > 0 &&
+                  linePriceNum >= 0
+                    ? lineQtyNum * linePriceNum
+                    : 0;
                 return (
                   <div
                     aria-label={`Barang pesanan ${index + 1}`}
@@ -289,7 +321,7 @@ export function PurchaseOrderCreateForm({
                     key={`${line.item_id}-${index}`}
                     role="group"
                   >
-                    <div className="grid items-end gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(10rem,0.45fr)_auto]">
+                    <div className="grid items-end gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(8.5rem,0.38fr)_minmax(9.5rem,0.45fr)_auto]">
                       <label className="text-sm font-semibold text-ink-950">
                         Barang {index + 1}
                         <select
@@ -336,6 +368,28 @@ export function PurchaseOrderCreateForm({
                         />
                       </label>
 
+                      <label className="text-sm font-semibold text-ink-950">
+                        Harga Satuan (Rp){" "}
+                        <span className="font-normal text-slate-600">(opsional)</span>
+                        <input
+                          aria-invalid={Boolean(linePriceError)}
+                          aria-label={`Harga satuan baris ${index + 1}`}
+                          className={`mt-2 h-11 w-full rounded-[var(--radius-md)] border bg-surface-0 px-3 text-sm tabular-nums text-ink-950 focus:outline-none focus:ring-2 ${
+                            linePriceError
+                              ? "border-red-600 focus:ring-red-600/20"
+                              : "border-line-500 focus:border-teal-600 focus:ring-teal-600/20"
+                          }`}
+                          inputMode="decimal"
+                          maxLength={20}
+                          onChange={(event) =>
+                            updateLine(index, { unit_price: event.target.value.replace(",", ".") })
+                          }
+                          placeholder="0"
+                          type="text"
+                          value={line.unit_price ?? ""}
+                        />
+                      </label>
+
                       <button
                         aria-label={`Hapus barang pesanan ${index + 1}`}
                         className="inline-flex min-h-11 w-full items-center justify-center gap-1.5 rounded-[var(--radius-md)] border border-red-300 px-3 text-xs font-semibold text-red-700 hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-700 sm:w-11 sm:px-0"
@@ -348,18 +402,25 @@ export function PurchaseOrderCreateForm({
                         <span className="sm:hidden">Hapus baris</span>
                       </button>
                     </div>
-                    {(lineItemError || lineQtyError) && (
+                    {(lineItemError || lineQtyError || linePriceError) && (
                       <p className="mt-2 text-xs font-medium text-red-700" role="alert">
-                        {lineItemError || lineQtyError}
+                        {lineItemError || lineQtyError || linePriceError}
                       </p>
                     )}
-                    {selectedItem && (
-                      <p className="mt-2 text-xs text-slate-600">
-                        {selectedItem.allow_decimal === false
-                          ? "Gunakan bilangan bulat."
-                          : "Kuantitas dapat memakai hingga empat angka desimal."}
-                      </p>
-                    )}
+                    <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-600">
+                      <span>
+                        {selectedItem
+                          ? selectedItem.allow_decimal === false
+                            ? "Gunakan bilangan bulat."
+                            : "Kuantitas dapat memakai hingga empat angka desimal."
+                          : ""}
+                      </span>
+                      {lineSubtotal > 0 && (
+                        <span className="font-semibold text-ink-950 tabular-nums">
+                          Subtotal: {formatCurrencyIdr(lineSubtotal)}
+                        </span>
+                      )}
+                    </div>
                     <label className="mt-3 block text-sm font-semibold text-ink-950">
                       Catatan barang <span className="font-normal text-slate-600">(opsional)</span>
                       <input
@@ -387,6 +448,14 @@ export function PurchaseOrderCreateForm({
           </button>
           {lines.length > 0 && availableItems.length === 0 && (
             <p className="text-sm text-slate-700">Semua barang aktif sudah ditambahkan ke pesanan.</p>
+          )}
+          {lines.length > 0 && (
+            <div className="flex flex-wrap items-center justify-between gap-2 rounded-[var(--radius-md)] border border-line-200 bg-canvas-50 px-4 py-3 text-sm">
+              <span className="font-semibold text-slate-700">Total Estimasi PO</span>
+              <span className="text-base font-bold tabular-nums text-ink-950">
+                {formatCurrencyIdr(estimatedTotal)}
+              </span>
+            </div>
           )}
         </section>
 

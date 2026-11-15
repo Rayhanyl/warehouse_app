@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react";
-import { AlertTriangle, Ban, Copy, Pencil, Printer, X } from "lucide-react";
+import { AlertTriangle, Ban, CheckCircle2, Copy, Pencil, Printer, Send, X, XCircle } from "lucide-react";
 import { toast } from "sonner";
+import { ApprovalTimeline } from "@/components/shared";
+import { usePermission } from "@/hooks/usePermission";
+import { evaluateSodGuard, formatCurrencyIdr } from "@/lib/utils";
 import {
   formatPoDate,
   formatPoDateTime,
@@ -9,20 +12,32 @@ import {
   PO_STATUS_CLASSES,
   PO_STATUS_LABELS,
 } from "../constants";
-import type { PurchaseOrder, PurchaseOrderLine } from "../types";
+import type { PurchaseOrder, PurchaseOrderLine, PurchaseOrderStatus } from "../types";
 import { PurchaseOrderPrintSheet } from "./PurchaseOrderPrintSheet";
 
 export type PurchaseOrderActionType =
+  | "submit"
+  | "approve"
+  | "reject"
   | "issue"
   | "cancel"
   | "close"
   | "revise-draft"
   | "close-line";
 
+const PRINTABLE_PO_STATUSES = new Set<PurchaseOrderStatus>([
+  "ISSUED",
+  "PARTIALLY_RECEIVED",
+  "RECEIVED",
+  "CLOSED",
+]);
+
 export function PurchaseOrderDetailModal({
   purchaseOrder,
   isLoading,
   canEdit = false,
+  canApproveL1 = false,
+  canApproveL2 = false,
   canIssue,
   canCancel,
   canClose,
@@ -33,6 +48,8 @@ export function PurchaseOrderDetailModal({
   purchaseOrder?: PurchaseOrder;
   isLoading: boolean;
   canEdit?: boolean;
+  canApproveL1?: boolean;
+  canApproveL2?: boolean;
   canIssue: boolean;
   canCancel: boolean;
   canClose: boolean;
@@ -44,6 +61,7 @@ export function PurchaseOrderDetailModal({
     poLine?: PurchaseOrderLine,
   ) => void;
 }) {
+  const { user } = usePermission();
   const [previewPoId, setPreviewPoId] = useState<number | null>(null);
   const showPrintPreview = Boolean(purchaseOrder && previewPoId === purchaseOrder.id);
 
@@ -63,10 +81,33 @@ export function PurchaseOrderDetailModal({
   }
 
   const canPrint = Boolean(
-    purchaseOrder &&
-      purchaseOrder.status !== "DRAFT" &&
-      purchaseOrder.status !== "CANCELLED",
+    purchaseOrder && PRINTABLE_PO_STATUSES.has(purchaseOrder.status),
   );
+
+  const issueSod = evaluateSodGuard(
+    user,
+    [purchaseOrder?.created_by, purchaseOrder?.submitted_by],
+    "Aturan Pemisahan Tugas (SoD): pembuat/pengaju PO tidak dapat menerbitkan atau menyetujui PO-nya sendiri.",
+  );
+  const l1Sod = evaluateSodGuard(
+    user,
+    [purchaseOrder?.created_by, purchaseOrder?.submitted_by],
+    "Aturan Pemisahan Tugas (SoD): pembuat atau pengaju PO tidak dapat melakukan Approval Level 1 sendiri.",
+  );
+  const l2Sod = evaluateSodGuard(
+    user,
+    [purchaseOrder?.created_by, purchaseOrder?.submitted_by, purchaseOrder?.l1_approved_by],
+    "Aturan Pemisahan Tugas (SoD): pembuat, pengaju, atau penyetuju Level 1 tidak dapat melakukan Approval Level 2 sendiri.",
+  );
+
+  const activeSodBanner =
+    purchaseOrder?.status === "WAITING_L1_APPROVAL" && canApproveL1
+      ? l1Sod
+      : purchaseOrder?.status === "WAITING_L2_APPROVAL" && canApproveL2
+        ? l2Sod
+        : purchaseOrder?.status === "DRAFT" && canIssue
+          ? issueSod
+          : null;
 
   return (
     <div
@@ -184,14 +225,49 @@ export function PurchaseOrderDetailModal({
                     </dd>
                   </div>
                   {purchaseOrder.revised_from_po_number && (
-                    <div className="sm:col-span-4">
+                    <div className="sm:col-span-2">
                       <dt className="text-xs text-slate-600">Direvisi dari PO sebelumnya</dt>
                       <dd className="mt-1 font-semibold text-teal-700">
                         {purchaseOrder.revised_from_po_number}
                       </dd>
                     </div>
                   )}
+                  <div>
+                    <dt className="text-xs text-slate-600">Total Estimasi PO</dt>
+                    <dd className="mt-1 font-bold text-ink-950 tabular-nums">
+                      {formatCurrencyIdr(purchaseOrder.total_amount)}
+                    </dd>
+                  </div>
                 </dl>
+
+                {purchaseOrder.rejection_reason && purchaseOrder.status === "DRAFT" && (
+                  <div className="mb-4 rounded-[var(--radius-md)] border border-red-300 bg-red-50 p-3 text-sm text-red-900">
+                    <p className="font-semibold">PO Dikembalikan / Ditolak</p>
+                    <p className="mt-1">Alasan penolakan: {purchaseOrder.rejection_reason}</p>
+                  </div>
+                )}
+
+                {activeSodBanner && (activeSodBanner.isBlocked || activeSodBanner.isOverride) && (
+                  <div
+                    className={`mb-4 rounded-[var(--radius-md)] border p-3 text-sm ${
+                      activeSodBanner.isBlocked
+                        ? "border-amber-300 bg-amber-50 text-amber-950"
+                        : "border-blue-300 bg-blue-50 text-blue-950"
+                    }`}
+                  >
+                    <p className="font-semibold">
+                      {activeSodBanner.isOverride
+                        ? "Mode Override Super Admin"
+                        : "Pemisahan Tugas (Segregation of Duties)"}
+                    </p>
+                    <p className="mt-0.5 text-xs leading-5">
+                      {activeSodBanner.reason}
+                      {activeSodBanner.isOverride
+                        ? " Sebagai Super Admin Anda dapat melanjutkan, dan override akan dicatat di Audit Log."
+                        : ""}
+                    </p>
+                  </div>
+                )}
 
                 {purchaseOrder.status === "CLOSED" && (
                   <div className="mb-4 rounded-[var(--radius-md)] border border-amber-600/30 bg-amber-50 p-3 text-sm text-amber-950">
@@ -220,6 +296,8 @@ export function PurchaseOrderDetailModal({
                           <tr>
                             <th className="px-3 py-3">Barang</th>
                             <th className="px-3 py-3">Pesanan</th>
+                            <th className="px-3 py-3">Harga Satuan</th>
+                            <th className="px-3 py-3">Subtotal</th>
                             <th className="px-3 py-3">Diterima</th>
                             <th className="px-3 py-3">Ditutup</th>
                             <th className="px-3 py-3">Sisa Belum Diterima</th>
@@ -231,7 +309,7 @@ export function PurchaseOrderDetailModal({
                         <tbody className="divide-y divide-line-200">
                           {(purchaseOrder.lines ?? []).length === 0 ? (
                             <tr>
-                              <td className="px-3 py-5 text-slate-700" colSpan={canManageLines ? 8 : 7}>
+                              <td className="px-3 py-5 text-slate-700" colSpan={canManageLines ? 10 : 9}>
                                 Belum ada baris barang.
                               </td>
                             </tr>
@@ -250,6 +328,10 @@ export function PurchaseOrderDetailModal({
                               const qtyRemainingNum = Number(qtyRemaining);
                               const canCloseLine =
                                 canManageLines && lineStatus !== "CLOSED" && qtyRemainingNum > 0;
+                              const unitPriceNum = Number(line.unit_price ?? 0);
+                              const subtotalValue =
+                                line.line_subtotal ??
+                                String(Number(line.qty_ordered) * unitPriceNum);
                               return (
                                 <tr key={line.id}>
                                   <td className="px-3 py-3">
@@ -259,6 +341,12 @@ export function PurchaseOrderDetailModal({
                                     <p className="text-xs text-slate-600">{line.uom_code}</p>
                                   </td>
                                   <td className="px-3 py-3 tabular-nums">{line.qty_ordered}</td>
+                                  <td className="px-3 py-3 tabular-nums text-slate-700">
+                                    {unitPriceNum > 0 ? formatCurrencyIdr(unitPriceNum) : "-"}
+                                  </td>
+                                  <td className="px-3 py-3 font-semibold tabular-nums text-ink-950">
+                                    {Number(subtotalValue) > 0 ? formatCurrencyIdr(subtotalValue) : "-"}
+                                  </td>
                                   <td className="px-3 py-3 tabular-nums">{line.qty_received}</td>
                                   <td className="px-3 py-3 tabular-nums">{qtyClosed}</td>
                                   <td className="px-3 py-3 font-semibold text-ink-950 tabular-nums">
@@ -318,6 +406,8 @@ export function PurchaseOrderDetailModal({
                     {purchaseOrder.notes}
                   </p>
                 )}
+
+                <ApprovalTimeline logs={purchaseOrder.approval_logs} />
               </div>
 
               {canPrint && (
@@ -362,6 +452,16 @@ export function PurchaseOrderDetailModal({
                   Ubah Draft PO
                 </button>
               )}
+              {purchaseOrder.status === "DRAFT" && canEdit && (purchaseOrder.lines?.length ?? 0) > 0 && (
+                <button
+                  className="inline-flex min-h-11 items-center justify-center gap-2 rounded-[var(--radius-md)] bg-indigo-600 px-4 text-sm font-semibold text-surface-0 hover:bg-indigo-700"
+                  onClick={() => onAction(purchaseOrder, "submit")}
+                  type="button"
+                >
+                  <Send aria-hidden="true" size={16} />
+                  Ajukan Persetujuan
+                </button>
+              )}
               {purchaseOrder.status === "ISSUED" && canEdit && canCancel && (
                 <button
                   className="inline-flex min-h-11 items-center justify-center gap-2 rounded-[var(--radius-md)] border border-teal-700/40 bg-surface-0 px-4 text-sm font-semibold text-teal-800 hover:bg-teal-50"
@@ -372,7 +472,7 @@ export function PurchaseOrderDetailModal({
                   Batalkan &amp; Salin ke Draft Baru
                 </button>
               )}
-              {purchaseOrder.status === "DRAFT" && canIssue && (
+              {purchaseOrder.status === "DRAFT" && canIssue && !issueSod.isBlocked && (
                 <button
                   className="inline-flex min-h-11 items-center justify-center rounded-[var(--radius-md)] bg-teal-600 px-4 text-sm font-semibold text-surface-0 hover:bg-teal-700"
                   onClick={() => onAction(purchaseOrder, "issue")}
@@ -381,7 +481,54 @@ export function PurchaseOrderDetailModal({
                   Terbitkan purchase order
                 </button>
               )}
-              {(purchaseOrder.status === "DRAFT" || purchaseOrder.status === "ISSUED") &&
+              {purchaseOrder.status === "WAITING_L1_APPROVAL" && canApproveL1 && (
+                <>
+                  {!l1Sod.isBlocked && (
+                    <button
+                      className="inline-flex min-h-11 items-center justify-center gap-2 rounded-[var(--radius-md)] bg-teal-600 px-4 text-sm font-semibold text-surface-0 hover:bg-teal-700"
+                      onClick={() => onAction(purchaseOrder, "approve")}
+                      type="button"
+                    >
+                      <CheckCircle2 aria-hidden="true" size={16} />
+                      Setujui Level 1
+                    </button>
+                  )}
+                  <button
+                    className="inline-flex min-h-11 items-center justify-center gap-2 rounded-[var(--radius-md)] border border-amber-700/40 bg-surface-0 px-4 text-sm font-semibold text-amber-800 hover:bg-amber-50"
+                    onClick={() => onAction(purchaseOrder, "reject")}
+                    type="button"
+                  >
+                    <XCircle aria-hidden="true" size={16} />
+                    Tolak
+                  </button>
+                </>
+              )}
+              {purchaseOrder.status === "WAITING_L2_APPROVAL" && canApproveL2 && (
+                <>
+                  {!l2Sod.isBlocked && (
+                    <button
+                      className="inline-flex min-h-11 items-center justify-center gap-2 rounded-[var(--radius-md)] bg-teal-600 px-4 text-sm font-semibold text-surface-0 hover:bg-teal-700"
+                      onClick={() => onAction(purchaseOrder, "approve")}
+                      type="button"
+                    >
+                      <CheckCircle2 aria-hidden="true" size={16} />
+                      Setujui Level 2 (Final)
+                    </button>
+                  )}
+                  <button
+                    className="inline-flex min-h-11 items-center justify-center gap-2 rounded-[var(--radius-md)] border border-amber-700/40 bg-surface-0 px-4 text-sm font-semibold text-amber-800 hover:bg-amber-50"
+                    onClick={() => onAction(purchaseOrder, "reject")}
+                    type="button"
+                  >
+                    <XCircle aria-hidden="true" size={16} />
+                    Tolak
+                  </button>
+                </>
+              )}
+              {(purchaseOrder.status === "DRAFT" ||
+                purchaseOrder.status === "WAITING_L1_APPROVAL" ||
+                purchaseOrder.status === "WAITING_L2_APPROVAL" ||
+                purchaseOrder.status === "ISSUED") &&
                 canCancel && (
                   <button
                     className="inline-flex min-h-11 items-center justify-center rounded-[var(--radius-md)] border border-red-600/40 bg-surface-0 px-4 text-sm font-semibold text-red-700 hover:bg-red-100"
@@ -438,6 +585,12 @@ export function PurchaseOrderActionDialog({
   onSubmit: () => void;
 }) {
   const actionLabels: Record<PurchaseOrderActionType, string> = {
+    submit: "Ajukan Persetujuan PO",
+    approve:
+      purchaseOrder.status === "WAITING_L2_APPROVAL"
+        ? "Setujui Level 2 (Final)"
+        : "Setujui Level 1",
+    reject: "Tolak & Kembalikan ke Draft",
     issue: "Terbitkan purchase order",
     cancel: "Batalkan purchase order",
     close: "Tutup PO (Short-Close)",
@@ -445,7 +598,8 @@ export function PurchaseOrderActionDialog({
     "close-line": "Hentikan Sisa Pengiriman Baris",
   };
 
-  const showReasonField = action === "close" || action === "close-line";
+  const showCloseReasonField = action === "close" || action === "close-line";
+  const showRejectReasonField = action === "reject";
 
   return (
     <div
@@ -463,7 +617,23 @@ export function PurchaseOrderActionDialog({
           {actionLabels[action]}
         </h2>
         <p className="mt-2 text-sm leading-6 text-slate-700">
-          {action === "revise-draft" ? (
+          {action === "submit" ? (
+            <>
+              PO <span className="font-semibold text-ink-950">{purchaseOrder.po_number}</span> akan
+              diajukan ke antrean persetujuan berjenjang.
+            </>
+          ) : action === "approve" ? (
+            <>
+              Persetujuan Anda untuk PO{" "}
+              <span className="font-semibold text-ink-950">{purchaseOrder.po_number}</span> akan
+              dicatat ke riwayat approval.
+            </>
+          ) : action === "reject" ? (
+            <>
+              PO <span className="font-semibold text-ink-950">{purchaseOrder.po_number}</span> akan
+              dikembalikan ke status DRAFT agar pembuat dapat memperbaiki dokumen.
+            </>
+          ) : action === "revise-draft" ? (
             <>
               PO <span className="font-semibold text-ink-950">{purchaseOrder.po_number}</span> akan
               dibatalkan (CANCELLED) dan sistem membuat salinan baru berstatus DRAFT agar Anda
@@ -485,7 +655,21 @@ export function PurchaseOrderActionDialog({
             </>
           )}
         </p>
-        {showReasonField && (
+        {showRejectReasonField && (
+          <div className="mt-4">
+            <label className="block text-sm font-semibold text-ink-950">
+              Alasan penolakan (wajib)
+              <textarea
+                className="mt-2 min-h-24 w-full rounded-[var(--radius-md)] border border-line-500 p-3 text-sm text-ink-950 focus:border-teal-600 focus:outline-none focus:ring-2 focus:ring-teal-600/20"
+                maxLength={500}
+                onChange={(event) => onReasonChange(event.target.value)}
+                placeholder="Contoh: Harga satuan perlu dikonfirmasi ulang ke supplier"
+                value={closedReason}
+              />
+            </label>
+          </div>
+        )}
+        {showCloseReasonField && (
           <div className="mt-4 space-y-2.5">
             <p className="text-xs font-semibold text-slate-600">Pilih alasan cepat (opsional):</p>
             <div className="flex flex-wrap gap-1.5">
@@ -522,7 +706,9 @@ export function PurchaseOrderActionDialog({
           </button>
           <button
             className={`inline-flex min-h-11 items-center justify-center rounded-[var(--radius-md)] px-4 text-sm font-semibold text-surface-0 ${
-              action === "cancel" ? "bg-red-600 hover:bg-red-700" : "bg-teal-600 hover:bg-teal-700"
+              action === "cancel" || action === "reject"
+                ? "bg-red-600 hover:bg-red-700"
+                : "bg-teal-600 hover:bg-teal-700"
             }`}
             disabled={isSubmitting}
             onClick={onSubmit}

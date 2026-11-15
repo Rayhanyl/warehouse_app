@@ -75,12 +75,20 @@ export async function updatePurchaseOrder(
 
 export async function runPurchaseOrderAction(
   id: number,
-  action: "issue" | "cancel" | "close" | "revise-draft",
-  closedReason?: string,
+  action: "submit" | "approve" | "reject" | "issue" | "cancel" | "close" | "revise-draft",
+  reasonOrNotes?: string,
 ): Promise<PurchaseOrder> {
+  const body =
+    action === "close"
+      ? { closed_reason: reasonOrNotes?.trim() }
+      : action === "reject"
+        ? { rejection_reason: reasonOrNotes?.trim() }
+        : (action === "submit" || action === "approve") && reasonOrNotes?.trim()
+          ? { notes: reasonOrNotes.trim() }
+          : undefined;
   const { data } = await apiClient.post<PurchaseOrder>(
     `/purchase-orders/${id}/${action}`,
-    action === "close" ? { closed_reason: closedReason?.trim() } : undefined,
+    body,
   );
   return data;
 }
@@ -124,7 +132,17 @@ export function usePurchaseOrder(id: number | null) {
 }
 
 export function usePurchaseOrderMutation(
-  action: "create" | "update" | "issue" | "cancel" | "close" | "revise-draft" | "close-line",
+  action:
+    | "create"
+    | "update"
+    | "submit"
+    | "approve"
+    | "reject"
+    | "issue"
+    | "cancel"
+    | "close"
+    | "revise-draft"
+    | "close-line",
 ) {
   const queryClient = useQueryClient();
   return useMutation({
@@ -175,10 +193,33 @@ export function usePurchaseOrderReferences() {
 
 export function mapPurchaseOrderError(error: unknown, fallback: string) {
   const info = extractApiErrorInfo(error);
-  if (info.status === 403) return { message: "Anda tidak memiliki izin untuk menjalankan aksi ini.", requestId: info.requestId };
-  if (info.status === 409 || info.code === "INVALID_STATE_TRANSITION") {
-    return { message: info.message || "Status purchase order sudah berubah. Muat ulang data sebelum mencoba lagi.", requestId: info.requestId };
+  if (info.status === 403) {
+    if (info.details?.code === "SOD_VIOLATION") {
+      return {
+        message:
+          info.message ||
+          "Pemisahan tugas (SoD): pembuat, pengaju, atau penyetuju sebelumnya tidak boleh menyetujui PO ini.",
+        requestId: info.requestId,
+      };
+    }
+    return {
+      message: info.message || "Anda tidak memiliki izin untuk menjalankan aksi ini.",
+      requestId: info.requestId,
+    };
   }
-  if (info.status === 422) return { message: info.message || "Data purchase order belum valid. Periksa kembali isian Anda.", requestId: info.requestId };
+  if (info.status === 409 || info.code === "INVALID_STATE_TRANSITION") {
+    return {
+      message:
+        info.message ||
+        "Status purchase order sudah berubah. Muat ulang data sebelum mencoba lagi.",
+      requestId: info.requestId,
+    };
+  }
+  if (info.status === 422) {
+    return {
+      message: info.message || "Data purchase order belum valid. Periksa kembali isian Anda.",
+      requestId: info.requestId,
+    };
+  }
   return { message: info.message || fallback, requestId: info.requestId };
 }

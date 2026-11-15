@@ -72,3 +72,15 @@ export interface AdminUserWarehouse {
 }
 
 export type AdminWarehouse = WarehouseRecord;
+
+export interface ApprovalSettings {
+  po_l2_approval_threshold: string;
+  description: string | null;
+  updated_by: number | null;
+  updated_by_name: string | null;
+  updated_at: string | null;
+}
+
+export interface ApprovalSettingsUpdatePayload {
+  po_l2_approval_threshold: string | number;
+}

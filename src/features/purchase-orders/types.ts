@@ -1,7 +1,9 @@
-import type { Paginated } from "@/types/api";
+import type { ApprovalLog, Paginated } from "@/types/api";
 
 export type PurchaseOrderStatus =
   | "DRAFT"
+  | "WAITING_L1_APPROVAL"
+  | "WAITING_L2_APPROVAL"
   | "ISSUED"
   | "PARTIALLY_RECEIVED"
   | "RECEIVED"
@@ -25,6 +27,8 @@ export interface PurchaseOrderLine {
   uom_code: string;
   allow_decimal: boolean;
   qty_ordered: string;
+  unit_price?: string;
+  line_subtotal?: string;
   qty_received: string;
   qty_closed?: string;
   qty_remaining?: string;
@@ -65,6 +69,14 @@ export interface PurchaseOrder {
   revised_from_po_number?: string | null;
   notes: string | null;
   line_count: number;
+  total_amount?: string;
+  submitted_by?: number | null;
+  submitted_at?: string | null;
+  l1_approved_by?: number | null;
+  l1_approved_at?: string | null;
+  l2_approved_by?: number | null;
+  l2_approved_at?: string | null;
+  rejection_reason?: string | null;
   issued_at: string | null;
   issued_by: number | null;
   closed_reason: string | null;
@@ -74,6 +86,7 @@ export interface PurchaseOrder {
   created_at: string;
   updated_at: string;
   lines?: PurchaseOrderLine[];
+  approval_logs?: ApprovalLog[];
 }
 
 export type PurchaseOrderPage = Paginated<PurchaseOrder>;
@@ -103,6 +116,7 @@ export interface PurchaseOrderListParams {
 export interface PurchaseOrderLinePayload {
   item_id: number;
   qty_ordered: string;
+  unit_price?: string | null;
   notes?: string | null;
 }
 

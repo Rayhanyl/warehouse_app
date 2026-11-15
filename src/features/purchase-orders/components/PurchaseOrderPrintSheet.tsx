@@ -1,10 +1,13 @@
 import { ModularDocumentPrintSheet } from "@/components/print/ModularDocumentPrintSheet";
 import { useDocumentTemplate } from "@/features/document-templates/api";
 import type { DocumentTemplate } from "@/features/document-templates/types";
+import { formatCurrencyIdr } from "@/lib/utils";
 import type { PurchaseOrder, PurchaseOrderStatus } from "../types";
 
 const poStatusPrintLabels: Record<PurchaseOrderStatus, string> = {
   DRAFT: "DRAFT",
+  WAITING_L1_APPROVAL: "MENUNGGU APPROVAL L1",
+  WAITING_L2_APPROVAL: "MENUNGGU APPROVAL L2",
   ISSUED: "DITERBITKAN (ISSUED)",
   PARTIALLY_RECEIVED: "DITERIMA SEBAGIAN",
   RECEIVED: "SELESAI DITERIMA",
@@ -26,6 +29,13 @@ function formatPrintDateTime(value: string | null) {
   }).format(new Date(value));
 }
 
+const NON_PRINTABLE_PO_STATUSES = new Set<PurchaseOrderStatus>([
+  "DRAFT",
+  "WAITING_L1_APPROVAL",
+  "WAITING_L2_APPROVAL",
+  "CANCELLED",
+]);
+
 export function PurchaseOrderPrintSheet({
   purchaseOrder,
   visibleOnScreen = false,
@@ -37,6 +47,9 @@ export function PurchaseOrderPrintSheet({
 }) {
   const query = useDocumentTemplate("PURCHASE_ORDER", !templateOverride);
   const template = templateOverride ?? query.data;
+  if (NON_PRINTABLE_PO_STATUSES.has(purchaseOrder.status)) {
+    return null;
+  }
   const lines = purchaseOrder.lines ?? [];
 
   const rows = lines.map((line, index) => ({
@@ -146,6 +159,12 @@ export function PurchaseOrderPrintSheet({
       tableSummary={
         <>
           Total baris item pesanan: <strong>{lines.length}</strong> baris
+          {Number(purchaseOrder.total_amount ?? 0) > 0 && (
+            <>
+              {" · "}Total Estimasi PO:{" "}
+              <strong>{formatCurrencyIdr(purchaseOrder.total_amount)}</strong>
+            </>
+          )}
         </>
       }
       template={template}

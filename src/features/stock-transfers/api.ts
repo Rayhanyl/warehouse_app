@@ -132,7 +132,15 @@ export function useTransferReferences() {
 
 export function mapTransferError(error: unknown, fallback: string) {
   const info = extractApiErrorInfo(error);
-  if (info.status === 403) return "Anda tidak memiliki izin atau akses gudang untuk aksi ini.";
+  if (info.status === 403) {
+    if (info.details?.code === "SOD_VIOLATION") {
+      return (
+        info.message ||
+        "Pemisahan tugas (SoD): pembuat draft transfer tidak boleh menyetujui transfer-nya sendiri."
+      );
+    }
+    return info.message || "Anda tidak memiliki izin atau akses gudang untuk aksi ini.";
+  }
   if (info.status === 409) return info.message || "Status transfer atau saldo sudah berubah. Muat ulang data sebelum mencoba lagi.";
   if (info.status === 422) return info.message || "Data transfer belum valid. Periksa lokasi dan kuantitas.";
   return info.message || fallback;

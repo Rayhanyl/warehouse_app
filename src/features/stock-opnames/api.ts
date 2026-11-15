@@ -95,7 +95,15 @@ export function useOpnameReferences() {
 
 export function mapOpnameError(error: unknown, fallback: string) {
   const info = extractApiErrorInfo(error);
-  if (info.status === 403) return "Anda tidak memiliki izin atau akses gudang untuk aksi ini.";
+  if (info.status === 403) {
+    if (info.details?.code === "SOD_VIOLATION") {
+      return (
+        info.message ||
+        "Pemisahan tugas (SoD): petugas hitung, pengaju, atau approver Level 1 tidak dapat menyetujui sesi opname ini."
+      );
+    }
+    return info.message || "Anda tidak memiliki izin atau akses gudang untuk aksi ini.";
+  }
   if (info.status === 409) return info.message || "Status sesi atau lokasi sudah berubah. Muat ulang data sebelum mencoba lagi.";
   if (info.status === 422) return info.message || "Data stock opname belum valid.";
   return info.message || fallback;

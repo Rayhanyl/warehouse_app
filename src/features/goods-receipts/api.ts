@@ -132,7 +132,15 @@ export function useGoodsReceiptReferences() {
 
 export function mapGoodsReceiptError(error: unknown, fallback: string) {
   const info = extractApiErrorInfo(error);
-  if (info.status === 403) return "Anda tidak memiliki izin atau akses gudang untuk aksi ini.";
+  if (info.status === 403) {
+    if (info.details?.code === "SOD_VIOLATION") {
+      return (
+        info.message ||
+        "Pemisahan tugas (SoD): pembuat draft penerimaan barang tidak boleh memposting GR-nya sendiri."
+      );
+    }
+    return info.message || "Anda tidak memiliki izin atau akses gudang untuk aksi ini.";
+  }
   if (info.status === 409) return info.message || "Status dokumen atau kuantitas sudah berubah. Muat ulang data sebelum mencoba lagi.";
   if (info.status === 422) return info.message || "Data penerimaan belum valid. Periksa tanggal, lokasi, dan kuantitas.";
   return info.message || fallback;

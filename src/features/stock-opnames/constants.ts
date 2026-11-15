@@ -23,7 +23,8 @@ export const OPNAME_INITIAL_FILTERS: OpnameFilters = {
 export const OPNAME_STATUS_LABELS: Record<StockOpnameStatus, string> = {
   DRAFT: "Draft",
   IN_PROGRESS: "Sedang dihitung",
-  WAITING_APPROVAL: "Menunggu persetujuan",
+  WAITING_L1_APPROVAL: "Menunggu Approval L1",
+  WAITING_L2_APPROVAL: "Menunggu Approval L2",
   COMPLETED: "Selesai",
   CANCELLED: "Dibatalkan",
 };
@@ -31,7 +32,8 @@ export const OPNAME_STATUS_LABELS: Record<StockOpnameStatus, string> = {
 export const OPNAME_STATUS_CLASSES: Record<StockOpnameStatus, string> = {
   DRAFT: "bg-canvas-50 text-slate-700",
   IN_PROGRESS: "bg-amber-100 text-amber-800",
-  WAITING_APPROVAL: "bg-blue-100 text-blue-800",
+  WAITING_L1_APPROVAL: "bg-indigo-100 text-indigo-800",
+  WAITING_L2_APPROVAL: "bg-purple-100 text-purple-800",
   COMPLETED: "bg-teal-100 text-teal-800",
   CANCELLED: "bg-slate-200 text-slate-700",
 };

@@ -33,6 +33,8 @@ export const PO_CLOSE_REASON_PRESETS = [
 
 export const PO_STATUS_LABELS: Record<PurchaseOrderStatus, string> = {
   DRAFT: "Draft",
+  WAITING_L1_APPROVAL: "Menunggu Approval L1",
+  WAITING_L2_APPROVAL: "Menunggu Approval L2",
   ISSUED: "Diterbitkan",
   PARTIALLY_RECEIVED: "Diterima sebagian",
   RECEIVED: "Diterima",
@@ -42,6 +44,8 @@ export const PO_STATUS_LABELS: Record<PurchaseOrderStatus, string> = {
 
 export const PO_STATUS_CLASSES: Record<PurchaseOrderStatus, string> = {
   DRAFT: "bg-canvas-50 text-slate-700",
+  WAITING_L1_APPROVAL: "bg-indigo-100 text-indigo-800",
+  WAITING_L2_APPROVAL: "bg-purple-100 text-purple-800",
   ISSUED: "bg-blue-100 text-blue-700",
   PARTIALLY_RECEIVED: "bg-amber-100 text-amber-700",
   RECEIVED: "bg-teal-100 text-teal-700",

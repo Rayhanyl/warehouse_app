@@ -2,9 +2,12 @@ import { type FormEvent, useMemo, useState } from "react";
 import Decimal from "decimal.js";
 import { Edit3, Plus } from "lucide-react";
 import { toast } from "sonner";
+import { ApprovalTimeline } from "@/components/shared";
 import { BarcodeScanBar } from "@/components/ui/BarcodeScannerModal";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { useIsMobile } from "@/hooks/useIsMobile";
+import { usePermission } from "@/hooks/usePermission";
+import { evaluateSodGuard } from "@/lib/utils";
 import { validateDecimalQtyInput } from "@/lib/validation";
 import { mapOpnameError, useOpnameMutation, useOpnameReferences } from "../api";
 import {
@@ -55,6 +58,7 @@ export function OpnameDetailModal({
   const cancel = useOpnameMutation("cancel");
   const refs = useOpnameReferences();
   const isMobile = useIsMobile();
+  const { user } = usePermission();
 
   const [counts, setCounts] = useState<Record<number, CountDraft>>({});
   const [found, setFound] = useState<FoundDraft[]>([]);
@@ -81,6 +85,23 @@ export function OpnameDetailModal({
     [refs.data?.locations, opname?.warehouse_id],
   );
   const opnameLines = opname?.lines ?? [];
+  const lineCounterIds = opnameLines.map((line) => line.counted_by);
+  const l1Sod = evaluateSodGuard(
+    user,
+    [opname?.submitted_by, ...lineCounterIds],
+    "Aturan Pemisahan Tugas (SoD): petugas hitung atau pengaju laporan tidak dapat melakukan Approval Level 1.",
+  );
+  const l2Sod = evaluateSodGuard(
+    user,
+    [opname?.submitted_by, opname?.l1_approved_by, ...lineCounterIds],
+    "Aturan Pemisahan Tugas (SoD): petugas hitung, pengaju, atau approver Level 1 tidak dapat melakukan Approval Level 2.",
+  );
+  const activeOpnameSod =
+    opname?.status === "WAITING_L1_APPROVAL" && can("opname:approve_l1")
+      ? l1Sod
+      : opname?.status === "WAITING_L2_APPROVAL" && can("opname:approve_l2")
+        ? l2Sod
+        : null;
   const reportedLines = opnameLines.filter((line) => {
     const quantity = counts[line.id]?.qty || line.qty_physical || "";
     return isValidOpnameQty(quantity, line.allow_decimal);
@@ -313,6 +334,27 @@ export function OpnameDetailModal({
               <strong>Alasan penolakan:</strong> {opname.rejection_reason}
             </p>
           )}
+          {activeOpnameSod && (activeOpnameSod.isBlocked || activeOpnameSod.isOverride) && (
+            <div
+              className={`mt-4 rounded-[var(--radius-md)] border p-3 text-sm ${
+                activeOpnameSod.isBlocked
+                  ? "border-amber-300 bg-amber-50 text-amber-950"
+                  : "border-blue-300 bg-blue-50 text-blue-950"
+              }`}
+            >
+              <p className="font-semibold">
+                {activeOpnameSod.isOverride
+                  ? "Mode Override Super Admin"
+                  : "Pemisahan Tugas (Segregation of Duties)"}
+              </p>
+              <p className="mt-0.5 text-xs leading-5">
+                {activeOpnameSod.reason}
+                {activeOpnameSod.isOverride
+                  ? " Sebagai Super Admin Anda dapat melanjutkan, dan override akan dicatat di Audit Log."
+                  : ""}
+              </p>
+            </div>
+          )}
 
           {opname.status === "IN_PROGRESS" && can("opname:count") && (
             <section
@@ -422,6 +464,8 @@ export function OpnameDetailModal({
             </p>
           )}
 
+          <ApprovalTimeline logs={opname.approval_logs} />
+
           <div className="sticky bottom-[-1rem] z-10 -mx-4 mt-5 flex flex-wrap justify-end gap-2 border-t border-line-200 bg-surface-0 px-4 py-3 sm:-mx-6 sm:px-6">
             {opname.status === "DRAFT" && can("opname:manage") && (
               <button className={OPNAME_BUTTON_CLASS} onClick={() => onEdit(opname)} type="button">
@@ -470,22 +514,56 @@ export function OpnameDetailModal({
                 </button>
               </>
             )}
-            {opname.status === "WAITING_APPROVAL" && can("opname:approve") && (
+            {opname.status === "WAITING_L1_APPROVAL" && can("opname:approve_l1") && (
               <>
+                {!l1Sod.isBlocked && (
+                  <button
+                    className="inline-flex min-h-11 items-center justify-center rounded-[var(--radius-md)] bg-teal-600 px-4 font-semibold text-surface-0 hover:bg-teal-700 disabled:opacity-50"
+                    disabled={busy}
+                    onClick={() =>
+                      setConfirmation({
+                        action: "approve",
+                        title: "Setujui opname Level 1?",
+                        message: `Sesi ${opname.opname_number} akan diteruskan ke persetujuan final Level 2 (Manager).`,
+                      })
+                    }
+                    type="button"
+                  >
+                    Setujui Level 1
+                  </button>
+                )}
                 <button
-                  className="inline-flex min-h-11 items-center justify-center rounded-[var(--radius-md)] bg-teal-600 px-4 font-semibold text-surface-0 hover:bg-teal-700 disabled:opacity-50"
+                  className="inline-flex min-h-11 items-center justify-center rounded-[var(--radius-md)] border border-amber-700/40 px-4 font-semibold text-amber-800 hover:bg-amber-50"
                   disabled={busy}
-                  onClick={() =>
-                    setConfirmation({
-                      action: "approve",
-                      title: "Setujui selisih?",
-                      message: `Saldo stok ${opname.opname_number} akan disesuaikan dengan hasil hitung.`,
-                    })
-                  }
+                  onClick={() => {
+                    setRejectionReason("");
+                    setRejectionError("");
+                    setRejectionOpen(true);
+                  }}
                   type="button"
                 >
-                  Setujui selisih
+                  Tolak hasil hitung
                 </button>
+              </>
+            )}
+            {opname.status === "WAITING_L2_APPROVAL" && can("opname:approve_l2") && (
+              <>
+                {!l2Sod.isBlocked && (
+                  <button
+                    className="inline-flex min-h-11 items-center justify-center rounded-[var(--radius-md)] bg-teal-600 px-4 font-semibold text-surface-0 hover:bg-teal-700 disabled:opacity-50"
+                    disabled={busy}
+                    onClick={() =>
+                      setConfirmation({
+                        action: "approve",
+                        title: "Setujui selisih opname (Final L2)?",
+                        message: `Saldo stok ${opname.opname_number} akan disesuaikan permanen dan kunci rak dibuka.`,
+                      })
+                    }
+                    type="button"
+                  >
+                    Setujui Level 2 (Final)
+                  </button>
+                )}
                 <button
                   className="inline-flex min-h-11 items-center justify-center rounded-[var(--radius-md)] border border-amber-700/40 px-4 font-semibold text-amber-800 hover:bg-amber-50"
                   disabled={busy}

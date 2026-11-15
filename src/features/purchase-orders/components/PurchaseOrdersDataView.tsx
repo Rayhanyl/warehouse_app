@@ -1,5 +1,6 @@
 import { ChevronLeft, ChevronRight, Eye, Plus, RotateCcw } from "lucide-react";
 import { Link } from "react-router-dom";
+import { formatCurrencyIdr } from "@/lib/utils";
 import { mapPurchaseOrderError } from "../api";
 import { formatPoDate, PO_STATUS_CLASSES, PO_STATUS_LABELS } from "../constants";
 import type { PurchaseOrder } from "../types";
@@ -207,7 +208,14 @@ export function PurchaseOrdersDataView({
                       </p>
                     )}
                   </td>
-                  <td className="px-4 py-4 text-slate-700 tabular-nums">{po.line_count}</td>
+                  <td className="px-4 py-4 text-slate-700 tabular-nums">
+                    <span>{po.line_count}</span>
+                    {Number(po.total_amount ?? 0) > 0 && (
+                      <p className="mt-1 text-xs font-semibold text-ink-950">
+                        {formatCurrencyIdr(po.total_amount)}
+                      </p>
+                    )}
+                  </td>
                   <td className="px-4 py-4">
                     <div className="flex flex-wrap items-center gap-1.5">
                       <span

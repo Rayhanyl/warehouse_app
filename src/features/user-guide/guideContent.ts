@@ -167,15 +167,15 @@ export const GUIDE_FIELDS: GuideFieldSpec[] = [
   },
   {
     id: "po_status_issued",
-    fieldName: "Status PO (DRAFT vs ISSUED)",
-    label: "Kapan Memilih Simpan Draft vs Terbitkan (ISSUED)",
+    fieldName: "Status PO & Persetujuan Berjenjang (L1/L2)",
+    label: "Siklus DRAFT -> Approval L1/L2 -> ISSUED",
     appliesTo: ["Purchase Order"],
     description:
-      "Status DRAFT memungkinkan daftar barang & kuantitas pada PO masih diubah atau dibatalkan sebelum dikirim ke pemasok. Status ISSUED mengunci spesifikasi PO resmi agar bagian Receiving gudang dapat memproses penerimaan barang.",
+      "PO berstatus DRAFT dapat diedit atau diajukan ke persetujuan berjenjang (WAITING_L1_APPROVAL -> jika nilai melebihi ambang batas L2, berlanjut ke WAITING_L2_APPROVAL). Pencetakan dokumen hanya aktif setelah status ISSUED ke atas, dan penyetuju wajib berbeda dari pembuat (Segregation of Duties).",
     exampleValid:
-      "Gunakan DRAFT saat menunggu persetujuan harga internal; klik Terbitkan PO (ISSUED) sebelum barang dikirim vendor.",
+      "Ajukan DRAFT -> Supervisor/Manager menyetujui Level 1 (dan Procurement Manager Level 2 bila melewati ambang batas) -> ISSUED.",
     commonMistake:
-      "Mencoba membuat Goods Receipt untuk PO yang masih DRAFT -> PO tidak muncul karena belum berstatus ISSUED.",
+      "Mencoba mencetak PO atau membuat GR saat PO masih DRAFT / WAITING_L1_APPROVAL / WAITING_L2_APPROVAL, atau menyetujui PO buatan sendiri.",
   },
   {
     id: "location_id",
@@ -281,21 +281,21 @@ export const MODULE_GUIDES: Record<GuideModuleId, ModuleGuideContent> = {
     title: "Daftar & Kelola Purchase Order (PO)",
     category: "Operasional",
     summary:
-      "Mengelola siklus pengadaan pembelian barang ke pemasok dari status DRAFT, revisi sebelum penerimaan, pemantauan estimasi kirim (overdue), pemenuhan parsial via GR, hingga Short-Close per baris atau header.",
+      "Mengelola siklus pengadaan pembelian barang dari DRAFT, harga satuan estimasi, persetujuan berjenjang L1/L2 dengan aturan Pemisahan Tugas (SoD), revisi sebelum penerimaan, hingga Short-Close.",
     whenToUse:
-      "Saat membuat pesanan barang, mengubah draft, menyalin PO terbit menjadi draft revisi, menghentikan sisa barang yang tidak jadi dikirim, atau mencetak PO.",
+      "Saat membuat pesanan barang, mengajukan atau menyetujui PO L1/L2, menyalin PO terbit menjadi draft revisi, menghentikan sisa barang, atau mencetak PO resmi.",
     prerequisites: [
       "Data Pemasok aktif di Master Pemasok.",
       "Data Gudang tujuan & Master Barang (SKU) beserta UoM aktif.",
     ],
     stepByStep: [
-      "Klik Buat PO untuk menyusun daftar pesanan baru (lengkapi Estimasi Kirim jika ingin memantau keterlambatan).",
-      "Selama masih DRAFT, klik Ubah Draft PO pada modal detail untuk mengubah pemasok, tanggal, atau daftar barang.",
-      "Jika PO sudah ISSUED tetapi belum ada GR dan perlu diubah, gunakan Batalkan & Salin ke Draft Baru.",
-      "Jika supplier hanya mengirim sebagian barang dan sisa dibatalkan/tidak diproduksi lagi, klik Hentikan Sisa pada baris terkait atau Tutup PO (Short-Close) beserta alasannya.",
+      "Klik Buat PO, pilih pemasok/gudang, lalu isi SKU, kuantitas, serta Harga Satuan (opsional) untuk kalkulasi Level 2.",
+      "Selama DRAFT, klik Ajukan Persetujuan agar masuk antrean Approval Level 1 (po:approve_l1) dan bila melewati ambang batas berlanjut ke Level 2 (po:approve_l2).",
+      "Jika PO ditolak dengan alasan penolakan, perbaiki DRAFT lalu ajukan kembali; pembuat/pengaju tidak boleh menyetujui PO sendiri (SoD).",
+      "Setelah ISSUED, dokumen dapat dicetak/diterima via GR, disalin ke draft baru (jika belum ada GR), atau di-Short-Close bila ada sisa yang dibatalkan.",
     ],
     tips: [
-      "Gunakan filter 'Hanya PO terlambat dikirim (overdue)' untuk menindaklanjuti pesanan yang melewati Estimasi Kirim.",
+      "Tombol Cetak PO diblokir saat DRAFT, WAITING_L1_APPROVAL, WAITING_L2_APPROVAL, atau CANCELLED untuk mencegah PO tidak sah dicetak.",
       "PO otomatis berubah menjadi RECEIVED bila seluruh sisa diterima, atau CLOSED bila sebagian baris ditutup via Short-Close.",
     ],
     fieldIds: ["po_status_issued", "allow_decimal", "warehouse_scoping"],
@@ -328,20 +328,20 @@ export const MODULE_GUIDES: Record<GuideModuleId, ModuleGuideContent> = {
     title: "Penerimaan Barang (Goods Receipt / GRN)",
     category: "Operasional",
     summary:
-      "Mencatat penerimaan fisik barang dari PO yang sudah terbit, mengalokasikan ke lokasi rak penyimpanan, dan memposting penambahan saldo stok.",
+      "Mencatat penerimaan fisik barang dari PO yang sudah terbit (izin gr:create), mengalokasikan ke lokasi rak, serta verifikasi & posting penambahan saldo stok (izin gr:post) oleh petugas berbeda (SoD).",
     whenToUse: "Saat armada pemasok tiba membawa barang beserta surat jalan.",
     prerequisites: [
       "Terdapat PO tujuan berstatus ISSUED atau PARTIALLY_RECEIVED.",
       "Gudang tujuan memiliki minimal 1 Lokasi Simpan (Rak) aktif.",
     ],
     stepByStep: [
-      "Klik Buat penerimaan lalu pilih nomor PO yang sesuai dengan surat jalan pemasok.",
-      "Masukkan Qty Diterima atau pindai barcode kemasan menggunakan kotak scan barcode.",
-      "Pastikan setiap baris memiliki Lokasi Simpan / Rak di gudang tujuan.",
-      "Klik Posting GRN agar saldo stok bertambah resmi, lalu cetak Bukti Penerimaan Barang (GRN).",
+      "Klik Buat penerimaan (gr:create) lalu pilih nomor PO yang sesuai dengan surat jalan pemasok.",
+      "Masukkan Qty Diterima atau pindai barcode kemasan, lalu pastikan setiap baris memiliki Lokasi Simpan / Rak.",
+      "Simpan sebagai Draft GRN.",
+      "Supervisor/Manager atau petugas berizin gr:post yang bukan pembuat draft melakukan Posting GRN agar saldo stok bertambah resmi.",
     ],
     tips: [
-      "Penerimaan boleh dilakukan bertahap (parsial); sisa Qty tetap terbuka di PO hingga diterima seluruhnya.",
+      "Pemisahan tugas (SoD): pembuat draft GR tidak dapat memposting GR-nya sendiri (kecuali override Super Admin yang diaudit).",
       "Jika posting gagal dengan OVER_RECEIPT, periksa apakah ada GR draft/posted lain untuk PO yang sama.",
     ],
     fieldIds: ["qty_received", "location_id", "po_status_issued", "allow_decimal"],
@@ -419,11 +419,11 @@ export const MODULE_GUIDES: Record<GuideModuleId, ModuleGuideContent> = {
       "Buat sesi Stock Opname baru dan pilih lokasi rak yang akan diaudit.",
       "Mulai sesi (IN_PROGRESS): sistem mengambil snapshot saldo dan membekukan lokasi tersebut dari mutasi lain.",
       "Input Qty Hitung Fisik per baris (atau pindai barcode menggunakan scan bar untuk hitung +1 cepat).",
-      "Klik Ajukan (SUBMITTED), lalu Supervisor menyetujui (APPROVED) agar selisih otomatis tercatat ke Ledger dan kunci rak terbuka kembali.",
+      "Klik Ajukan -> Supervisor menyetujui Level 1 (WAITING_L1_APPROVAL -> WAITING_L2_APPROVAL) -> Warehouse Manager menyetujui Level 2 Final hingga COMPLETED dan kunci rak terbuka kembali.",
     ],
     tips: [
-      "Selalu selesaikan (APPROVED) atau batalkan (CANCELLED) sesi opname yang sudah selesai agar rak kembali bisa dipakai GR/Transfer.",
-      "Barang fisik tak terduga yang tidak ada di snapshot awal tetap dapat ditambahkan sebagai item temuan selama masih di sesi opname.",
+      "Pemisahan tugas (SoD): petugas yang menghitung/mengajukan opname tidak dapat menyetujui Level 1 atau Level 2 sendiri (dan approver L1 tidak dapat menyetujui L2).",
+      "Jika hasil hitung ditolak pada L1 atau L2, sesi kembali ke IN_PROGRESS untuk dihitung ulang sesuai alasan penolakan.",
     ],
     fieldIds: ["location_id", "barcode_sku", "allow_negative_stock", "allow_decimal"],
   },
@@ -527,15 +527,15 @@ export const MODULE_GUIDES: Record<GuideModuleId, ModuleGuideContent> = {
   },
   administration: {
     id: "administration",
-    title: "Administrasi Pengguna, Peran & Menu",
+    title: "Administrasi Pengguna, Peran, Menu & Pengaturan",
     category: "Administrasi",
-    summary: "Mengatur akun staf, peran RBAC beserta hak akses permission, penugasan gudang per user, dan susunan menu navigasi.",
-    whenToUse: "Saat mendaftarkan staf baru, membatasi akses gudang operator, atau mengelola permission role.",
-    prerequisites: ["Role Superadmin atau akun berizin user:manage."],
+    summary: "Mengatur akun staf, peran RBAC (termasuk Warehouse Supervisor & Procurement Manager) beserta permission granular, penugasan gudang, navigasi menu, dan ambang batas approval PO.",
+    whenToUse: "Saat mendaftarkan staf baru, mengatur peran persetujuan berjenjang, membatasi akses gudang, atau mengubah ambang batas nilai PO Level 2.",
+    prerequisites: ["Role Super Admin atau akun berizin user:manage / settings:manage."],
     stepByStep: [
       "Di tab Pengguna: tambah pengguna, pilih Role, lalu atur daftar Gudang yang ditugaskan.",
-      "Di tab Peran dan permission: atur matriks permission granular setiap role.",
-      "Di tab Menu: kelola tampilan navigasi sidebar tanpa menghapus data historis.",
+      "Di tab Peran dan permission: atur izin granular seperti gr:create, gr:post, po:approve_l1/l2, opname:approve_l1/l2, dan settings:manage.",
+      "Di tab Pengaturan Approval: tetapkan ambang batas nominal PO (po_l2_approval_threshold) yang wajib disetujui Procurement Manager (Level 2).",
     ],
     tips: ["Selalu berikan penugasan gudang minimal 1 gudang kepada staf operasional agar bisa memproses dokumen."],
     fieldIds: ["warehouse_scoping"],

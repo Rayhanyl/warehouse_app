@@ -28,14 +28,15 @@ export function GoodsReceiptsPage({
   const location = useLocation();
   const isCreateRoute = location.pathname.endsWith("/new") || initialOpenCreate;
   const { can } = usePermission();
-  const canManage = can("gr:manage");
+  const canCreate = can("gr:create");
+  const canPost = can("gr:post");
   const { resolveEffectiveWarehouseFilter } = useWarehouseScope();
   const [params, setParams] = useState(GR_INITIAL_PARAMS);
   const [draftParams, setDraftParams] = useState(GR_INITIAL_PARAMS);
   const [detailId, setDetailId] = useState<number | null>(null);
-  const [formOpen, setFormOpen] = useState(isCreateRoute && canManage);
+  const [formOpen, setFormOpen] = useState(isCreateRoute && canCreate);
   const [initialCreateDismissed, setInitialCreateDismissed] = useState(false);
-  const showForm = formOpen || (isCreateRoute && canManage && !initialCreateDismissed);
+  const showForm = formOpen || (isCreateRoute && canCreate && !initialCreateDismissed);
 
   const effectiveWarehouseId = resolveEffectiveWarehouseFilter(params.warehouse_id);
   const effectiveParams = { ...params, warehouse_id: effectiveWarehouseId };
@@ -47,7 +48,7 @@ export function GoodsReceiptsPage({
   const cancelMutation = useGoodsReceiptMutation("cancel");
   const isMobile = useIsMobile();
 
-  if (isCreateRoute && !canManage) {
+  if (isCreateRoute && !canCreate) {
     const fallbackPath = location.pathname.startsWith("/purchasing")
       ? "/purchasing/goods-receipts"
       : "/goods-receipts";
@@ -126,7 +127,7 @@ export function GoodsReceiptsPage({
       <div className="no-print">
         <PageHeader
           action={
-            canManage ? (
+            canCreate ? (
               <button
                 className="inline-flex min-h-11 items-center gap-2 rounded-[var(--radius-md)] bg-teal-600 px-4 text-sm font-semibold text-surface-0 hover:bg-teal-700"
                 onClick={() => setFormOpen(true)}
@@ -147,7 +148,7 @@ export function GoodsReceiptsPage({
 
         <GoodsReceiptsDataView
           activeFilterCount={activeFilterCount}
-          canManage={canManage}
+          canManage={canCreate}
           draftParams={draftParams}
           hasFilters={hasFilters}
           isError={isError}
@@ -178,7 +179,8 @@ export function GoodsReceiptsPage({
 
       {detailId !== null && (
         <GoodsReceiptDetailModal
-          canManage={canManage}
+          canCreate={canCreate}
+          canPost={canPost}
           isLoading={detail.isLoading}
           isMutating={postMutation.isPending || cancelMutation.isPending}
           onAction={runAction}

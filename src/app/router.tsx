@@ -151,6 +151,10 @@ export const router = createBrowserRouter([
             element: <AdministrationPage />,
           },
           {
+            path: "/admin/settings",
+            element: <AdministrationPage />,
+          },
+          {
             path: "/document-templates",
             element: <AdministrationPage />,
           },

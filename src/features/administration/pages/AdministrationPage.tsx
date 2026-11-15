@@ -16,6 +16,7 @@ import {
   useAdminWarehouses,
 } from "../api";
 import { AdminState } from "../components/AdminShared";
+import { ApprovalSettingsPanel } from "../components/ApprovalSettingsPanel";
 import { MenuFormDialog } from "../components/MenuFormDialog";
 import { MenusPanel } from "../components/MenusPanel";
 import { RolesPanel } from "../components/RolesPanel";
@@ -27,10 +28,11 @@ const userInitial: UserParams = { limit: 25, offset: 0, search: "", is_active: "
 const menuInitial: MenuParams = { limit: 25, offset: 0, search: "", is_active: "" };
 
 const ADMIN_SECTIONS = [
-  ["/admin/users", "users", "Pengguna"],
-  ["/admin/roles", "roles", "Peran dan permission"],
-  ["/admin/menus", "menus", "Menu"],
-  ["/admin/document-templates", "document-templates", "Template dokumen"],
+  ["/admin/users", "users", "Pengguna", "user:manage"],
+  ["/admin/roles", "roles", "Peran dan permission", "user:manage"],
+  ["/admin/menus", "menus", "Menu", "user:manage"],
+  ["/admin/document-templates", "document-templates", "Template dokumen", "user:manage"],
+  ["/admin/settings", "settings", "Pengaturan Approval", "settings:manage"],
 ] as const;
 
 const SECTION_TITLES = {
@@ -38,19 +40,27 @@ const SECTION_TITLES = {
   roles: "Peran dan permission",
   menus: "Menu",
   "document-templates": "Template dokumen cetak",
+  settings: "Pengaturan Approval",
 } as const;
 
 export function AdministrationPage() {
   const { can } = usePermission();
   const { pathname } = useLocation();
-  const activeSection = pathname.includes("/document-templates")
-    ? "document-templates"
-    : pathname.includes("/menus")
-      ? "menus"
-      : pathname.includes("/roles")
-        ? "roles"
-        : "users";
-  const canManage = can("user:manage");
+  const canManageUsers = can("user:manage");
+  const canManageSettings = can("settings:manage");
+  const canAccessAny = canManageUsers || canManageSettings;
+  const activeSection = pathname.includes("/settings")
+    ? "settings"
+    : pathname.includes("/document-templates")
+      ? "document-templates"
+      : pathname.includes("/menus")
+        ? "menus"
+        : pathname.includes("/roles")
+          ? "roles"
+          : !canManageUsers && canManageSettings
+            ? "settings"
+            : "users";
+  const canManage = activeSection === "settings" ? canManageSettings : canManageUsers;
   const [userFormOpen, setUserFormOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<AdminUser | null>(null);
   const [menuFormOpen, setMenuFormOpen] = useState(false);
@@ -58,18 +68,18 @@ export function AdministrationPage() {
   const [userParams, setUserParams] = useState(userInitial);
   const [menuParams, setMenuParams] = useState(menuInitial);
 
-  const users = useAdminUsers(userParams, activeSection === "users" && canManage);
-  const roles = useAdminRoles((activeSection === "roles" || userFormOpen) && canManage);
-  const permissions = useAdminPermissions(activeSection === "roles" && canManage);
-  const menus = useAdminMenus(menuParams, activeSection === "menus" && canManage);
-  const menuPermissions = useAdminPermissions(activeSection === "menus" && canManage);
-  const warehouses = useAdminWarehouses(userFormOpen && canManage);
+  const users = useAdminUsers(userParams, activeSection === "users" && canManageUsers);
+  const roles = useAdminRoles((activeSection === "roles" || userFormOpen) && canManageUsers);
+  const permissions = useAdminPermissions(activeSection === "roles" && canManageUsers);
+  const menus = useAdminMenus(menuParams, activeSection === "menus" && canManageUsers);
+  const menuPermissions = useAdminPermissions(activeSection === "menus" && canManageUsers);
+  const warehouses = useAdminWarehouses(userFormOpen && canManageUsers);
   const assignedWarehouses = useAdminUserWarehouses(
     editingUser?.id ?? null,
-    userFormOpen && canManage,
+    userFormOpen && canManageUsers,
   );
 
-  if (!canManage) {
+  if (!canAccessAny || !canManage) {
     return (
       <AdminState
         error
@@ -77,6 +87,8 @@ export function AdministrationPage() {
       />
     );
   }
+
+  const visibleSections = ADMIN_SECTIONS.filter(([, , , perm]) => can(perm));
 
   const headerAction =
     activeSection === "users" ? (
@@ -111,7 +123,7 @@ export function AdministrationPage() {
       />
       <RouteTabNav
         ariaLabel="Administrasi"
-        items={ADMIN_SECTIONS.map(([path, key, label]) => ({
+        items={visibleSections.map(([path, key, label]) => ({
           to: path,
           label,
           active: activeSection === key,
@@ -148,6 +160,7 @@ export function AdministrationPage() {
         />
       )}
       {activeSection === "document-templates" && <DocumentTemplateSettingsPanel />}
+      {activeSection === "settings" && <ApprovalSettingsPanel enabled={canManageSettings} />}
 
       {userFormOpen && (
         <UserFormDialog
