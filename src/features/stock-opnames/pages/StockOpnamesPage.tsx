@@ -66,6 +66,7 @@ export function StockOpnamesPage() {
   async function createSession(payload: StockOpnameCreatePayload) {
     try {
       const result = await create.mutateAsync({ payload });
+      setParams((prev) => ({ ...prev, offset: 0 }));
       setFormOpen(false);
       setDetailId(result.id);
       toast.success(`Draft ${result.opname_number} berhasil dibuat.`);

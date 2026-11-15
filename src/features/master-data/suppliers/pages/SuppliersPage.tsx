@@ -4,6 +4,8 @@ import { toast } from "sonner";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Button } from "@/components/ui/button";
 import { usePermission } from "@/hooks/usePermission";
+import { queryClient } from "@/lib/query-client";
+import { invalidateMasterDependentCaches } from "@/lib/query-invalidation";
 import { MasterNoticeBanner } from "../../components/MasterNoticeBanner";
 import type { MasterFormSubmitError } from "../../errors";
 import { downloadMasterCsv, type MasterPageNotice } from "../../utils";
@@ -144,7 +146,12 @@ export function SuppliersPage() {
       if (formState.mode === "create") {
         const created = await createSupplier(payload);
         setRecords((current) => [created, ...current]);
+        setSearch("");
+        setDraftSearch("");
+        setStatusFilter("all");
+        setDraftStatus("all");
         setFormState({ isOpen: false, mode: "create", supplier: null });
+        void invalidateMasterDependentCaches(queryClient);
         notifySuccess(`Pemasok "${created.name}" berhasil ditambahkan.`);
         return;
       }
@@ -160,6 +167,7 @@ export function SuppliersPage() {
       );
       setDetailTarget((current) => (current?.id === targetId ? updated : current));
       setFormState({ isOpen: false, mode: "create", supplier: null });
+      void invalidateMasterDependentCaches(queryClient);
       notifySuccess(`Pemasok "${updated.name}" berhasil diperbarui.`);
     } catch (error) {
       const mapped = mapSupplierApiError(
@@ -190,6 +198,7 @@ export function SuppliersPage() {
         current?.id === supplier.id ? updated : current,
       );
       setConfirmTarget(null);
+      void invalidateMasterDependentCaches(queryClient);
       notifySuccess(
         updated.is_active
           ? `Pemasok "${updated.name}" berhasil diaktifkan kembali.`
@@ -246,6 +255,7 @@ export function SuppliersPage() {
         sort_dir: "asc",
       });
       setRecords(page.items);
+      void invalidateMasterDependentCaches(queryClient);
     } catch {
       setNotice({
         type: "error",

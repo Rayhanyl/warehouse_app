@@ -72,7 +72,7 @@ export function UserGuideModal() {
         onMouseDown={(event) => event.stopPropagation()}
         role="dialog"
       >
-        <div className="flex items-start justify-between gap-3 border-b border-line-200 bg-surface-0 px-4 py-3.5 sm:px-6">
+        <div className="flex shrink-0 items-start justify-between gap-3 border-b border-line-200 bg-surface-0 px-4 py-3.5 sm:px-6">
           <div className="min-w-0">
             <div className="flex items-center gap-2 text-xs font-semibold text-teal-700">
               <Sparkles aria-hidden="true" size={14} />
@@ -97,7 +97,7 @@ export function UserGuideModal() {
 
         <nav
           aria-label="Tab panduan pengguna"
-          className="flex gap-1 overflow-x-auto border-b border-line-200 bg-surface-50 px-3 pt-2 sm:px-6"
+          className="flex shrink-0 flex-nowrap gap-1 overflow-x-auto overflow-y-hidden border-b border-line-200 bg-surface-50 px-3 pt-2 sm:flex-wrap sm:overflow-x-visible sm:px-6"
           role="tablist"
         >
           {GUIDE_TABS.map(({ key, label, icon: Icon }) => {
@@ -148,7 +148,7 @@ export function UserGuideModal() {
           {activeTab === "barcode-sim" && <BarcodeSimulationTab />}
         </div>
 
-        <div className="flex flex-wrap items-center justify-between gap-2 border-t border-line-200 bg-surface-50 px-4 py-3 text-xs text-slate-600 sm:px-6">
+        <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-t border-line-200 bg-surface-50 px-4 py-3 text-xs text-slate-600 sm:px-6">
           <span>
             Tekan{" "}
             <kbd className="rounded border border-line-200 bg-surface-0 px-1.5 py-0.5 font-mono text-[11px]">

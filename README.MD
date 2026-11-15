@@ -411,6 +411,6 @@ Baseline aplikasi telah terverifikasi pada pengujian terakhir:
 ```text
 npm run typecheck  ✅ lulus (tsc -b)
 npm run lint       ✅ lulus (eslint ., 0 error / 0 warning)
-npm test           ✅ lulus (22 test file / 101 test Vitest)
+npm test           ✅ lulus (22 test file / 102 test Vitest)
 npm run build      ✅ lulus (tsc -b && vite build)
 ```

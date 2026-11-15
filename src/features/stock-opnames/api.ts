@@ -1,6 +1,7 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api-client";
 import { extractApiErrorInfo } from "@/lib/errors";
+import { invalidateAndRefetchAll } from "@/lib/query-invalidation";
 import type { OpnameItemReference, OpnameReference, StockOpname, StockOpnameCreatePayload, StockOpnamePage, StockOpnameUpdatePayload } from "./types";
 
 export const opnameKeys = {
@@ -67,9 +68,13 @@ export function useOpnameMutation(action: "create" | "update" | "start" | "count
       }
       return opnameAction(id!, action, payload);
     },
-    onSuccess: (opname) => {
+    onSuccess: async (opname) => {
       queryClient.setQueryData(opnameKeys.detail(opname.id), opname);
-      void queryClient.invalidateQueries({ queryKey: opnameKeys.lists() });
+      await invalidateAndRefetchAll(queryClient, [
+        opnameKeys.lists(),
+        ["stock"],
+        ["dashboard"],
+      ]);
     },
   });
 }

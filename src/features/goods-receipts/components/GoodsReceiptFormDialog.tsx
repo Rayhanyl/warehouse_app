@@ -69,7 +69,18 @@ export function GoodsReceiptFormDialog({
       return;
     }
 
-    const remaining = Number(matchedLine.qty_ordered) - Number(matchedLine.qty_received);
+    const remaining = Math.max(
+      0,
+      Number(matchedLine.qty_ordered) -
+        Number(matchedLine.qty_received) -
+        Number(matchedLine.qty_closed ?? 0),
+    );
+    if (matchedLine.line_status === "CLOSED" || remaining <= 0) {
+      toast.error(
+        `Baris ${matchedLine.item_sku} sudah ditutup / selesai diterima pada PO ${purchaseOrder.po_number}.`,
+      );
+      return;
+    }
     const currentQty = Number(quantities[matchedLine.id] || 0);
     if (currentQty >= remaining) {
       toast.error(`Kuantitas ${matchedLine.item_sku} sudah mencapai sisa PO (${remaining}).`);
@@ -110,7 +121,16 @@ export function GoodsReceiptFormDialog({
         nextLineErrors[line.id] = "Isi kuantitas terima atau kosongkan pilihan lokasi.";
         continue;
       }
-      const remaining = Math.max(0, Number(line.qty_ordered) - Number(line.qty_received));
+      const remaining = Math.max(
+        0,
+        Number(line.qty_ordered) -
+          Number(line.qty_received) -
+          Number(line.qty_closed ?? 0),
+      );
+      if (line.line_status === "CLOSED" || remaining <= 0) {
+        nextLineErrors[line.id] = `Baris ${line.item_sku} sudah ditutup / tidak memiliki sisa PO.`;
+        continue;
+      }
       const qtyErr = validateDecimalQtyInput(rawQty, {
         label: `Kuantitas ${line.item_sku}`,
         allowZero: false,
@@ -258,7 +278,13 @@ export function GoodsReceiptFormDialog({
                   {isMobile ? (
                     <div className="space-y-3">
                       {(purchaseOrder.lines ?? []).map((line) => {
-                        const remaining = Number(line.qty_ordered) - Number(line.qty_received);
+                        const remaining = Math.max(
+                          0,
+                          Number(line.qty_ordered) -
+                            Number(line.qty_received) -
+                            Number(line.qty_closed ?? 0),
+                        );
+                        const isSettled = line.line_status === "CLOSED" || remaining <= 0;
                         const rowError = lineErrors[line.id];
                         return (
                           <div
@@ -275,8 +301,14 @@ export function GoodsReceiptFormDialog({
                                   {line.item_barcode ? ` · BC: ${line.item_barcode}` : ""}
                                 </p>
                               </div>
-                              <span className="shrink-0 rounded-full bg-canvas-100 px-2.5 py-1 text-xs font-semibold text-slate-700 tabular-nums">
-                                Sisa: {remaining}
+                              <span
+                                className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold tabular-nums ${
+                                  isSettled
+                                    ? "bg-amber-100 text-amber-800"
+                                    : "bg-canvas-100 text-slate-700"
+                                }`}
+                              >
+                                {line.line_status === "CLOSED" ? "Ditutup" : `Sisa: ${remaining}`}
                               </span>
                             </div>
                             {rowError && (
@@ -290,11 +322,12 @@ export function GoodsReceiptFormDialog({
                                 <input
                                   aria-invalid={Boolean(rowError)}
                                   aria-label={`Kuantitas terima ${line.item_sku}`}
-                                  className={`mt-1.5 h-11 w-full rounded-[var(--radius-md)] border px-3 text-sm tabular-nums focus:outline-none focus:ring-2 ${
+                                  className={`mt-1.5 h-11 w-full rounded-[var(--radius-md)] border px-3 text-sm tabular-nums focus:outline-none focus:ring-2 disabled:bg-canvas-100 disabled:text-slate-500 ${
                                     rowError
                                       ? "border-red-600 focus:ring-red-600/20"
                                       : "border-line-500 focus:border-teal-600 focus:ring-teal-600/20"
                                   }`}
+                                  disabled={isSettled}
                                   min="0"
                                   onChange={(event) => {
                                     setQuantities((current) => ({
@@ -312,7 +345,8 @@ export function GoodsReceiptFormDialog({
                                 Lokasi penyimpanan
                                 <select
                                   aria-label={`Lokasi terima ${line.item_sku}`}
-                                  className="mt-1.5 h-11 w-full rounded-[var(--radius-md)] border border-line-500 bg-surface-0 px-3 text-sm text-ink-950 focus:border-teal-600 focus:outline-none focus:ring-2 focus:ring-teal-600/20"
+                                  className="mt-1.5 h-11 w-full rounded-[var(--radius-md)] border border-line-500 bg-surface-0 px-3 text-sm text-ink-950 focus:border-teal-600 focus:outline-none focus:ring-2 focus:ring-teal-600/20 disabled:bg-canvas-100 disabled:text-slate-500"
+                                  disabled={isSettled}
                                   onChange={(event) => {
                                     setLocations((current) => ({
                                       ...current,
@@ -351,11 +385,16 @@ export function GoodsReceiptFormDialog({
                         </thead>
                         <tbody className="divide-y divide-line-200">
                           {(purchaseOrder.lines ?? []).map((line) => {
-                            const remaining =
-                              Number(line.qty_ordered) - Number(line.qty_received);
+                            const remaining = Math.max(
+                              0,
+                              Number(line.qty_ordered) -
+                                Number(line.qty_received) -
+                                Number(line.qty_closed ?? 0),
+                            );
+                            const isSettled = line.line_status === "CLOSED" || remaining <= 0;
                             const rowError = lineErrors[line.id];
                             return (
-                              <tr key={line.id}>
+                              <tr className={isSettled ? "bg-canvas-50/70 opacity-75" : ""} key={line.id}>
                                 <td className="px-3 py-3">
                                   <p className="font-semibold text-ink-950">
                                     {line.item_sku} · {line.item_name}
@@ -370,16 +409,25 @@ export function GoodsReceiptFormDialog({
                                     </p>
                                   )}
                                 </td>
-                                <td className="px-3 py-3 tabular-nums">{remaining}</td>
+                                <td className="px-3 py-3 tabular-nums">
+                                  {line.line_status === "CLOSED" ? (
+                                    <span className="inline-flex rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-800">
+                                      Ditutup (0)
+                                    </span>
+                                  ) : (
+                                    remaining
+                                  )}
+                                </td>
                                 <td className="px-3 py-3">
                                   <input
                                     aria-invalid={Boolean(rowError)}
                                     aria-label={`Kuantitas terima ${line.item_sku}`}
-                                    className={`h-11 w-36 rounded-[var(--radius-md)] border px-3 text-sm tabular-nums focus:outline-none focus:ring-2 ${
+                                    className={`h-11 w-36 rounded-[var(--radius-md)] border px-3 text-sm tabular-nums focus:outline-none focus:ring-2 disabled:bg-canvas-100 disabled:text-slate-500 ${
                                       rowError
                                         ? "border-red-600 focus:ring-red-600/20"
                                         : "border-line-500 focus:border-teal-600 focus:ring-teal-600/20"
                                     }`}
+                                    disabled={isSettled}
                                     min="0"
                                     onChange={(event) => {
                                       setQuantities((current) => ({
@@ -396,7 +444,8 @@ export function GoodsReceiptFormDialog({
                                 <td className="px-3 py-3">
                                   <select
                                     aria-label={`Lokasi terima ${line.item_sku}`}
-                                    className="h-11 min-w-52 rounded-[var(--radius-md)] border border-line-500 bg-surface-0 px-3 text-sm text-ink-950 focus:border-teal-600 focus:outline-none focus:ring-2 focus:ring-teal-600/20"
+                                    className="h-11 min-w-52 rounded-[var(--radius-md)] border border-line-500 bg-surface-0 px-3 text-sm text-ink-950 focus:border-teal-600 focus:outline-none focus:ring-2 focus:ring-teal-600/20 disabled:bg-canvas-100 disabled:text-slate-500"
+                                    disabled={isSettled}
                                     onChange={(event) => {
                                       setLocations((current) => ({
                                         ...current,

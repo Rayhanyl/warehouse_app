@@ -32,6 +32,8 @@ export interface WarehouseStockBalance {
   category_name: string;
   uom_id: number;
   uom_code: string;
+  min_stock?: DecimalString;
+  is_critical?: boolean;
   qty_on_hand: DecimalString;
   qty_in_transit: DecimalString;
 }
@@ -45,6 +47,8 @@ export interface StockSummary {
   category_name: string;
   uom_id: number;
   uom_code: string;
+  min_stock?: DecimalString;
+  is_critical?: boolean;
   qty_on_hand: DecimalString;
   qty_in_transit: DecimalString;
 }
@@ -81,6 +85,7 @@ export interface StockListParams {
   location_id: string;
   item_id: string;
   category_id: string;
+  critical_only: boolean;
   date_from: string;
   date_to: string;
   movement_type: string;

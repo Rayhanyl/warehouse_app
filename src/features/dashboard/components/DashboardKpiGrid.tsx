@@ -82,8 +82,8 @@ export function DashboardKpiGrid({
       id: "low-stock",
       title: "Perhatian Stok Kritis",
       value: lowStockCount.toLocaleString("id-ID"),
-      subtitle: "Barang dengan saldo nol atau kritis",
-      to: "/stock",
+      subtitle: "Barang dengan stok <= Min. Stok",
+      to: "/stock/by-warehouse?critical=true",
       icon: AlertTriangle,
       cardHoverClass: "hover:border-rose-500",
       iconContainerClass:

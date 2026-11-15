@@ -127,14 +127,21 @@ export function WarehouseBalanceTable({
           {items.map((item) => (
             <li className="space-y-2.5 p-4" key={`${item.warehouse_id}-${item.item_id}`}>
               <div>
-                <p className="font-semibold text-ink-950">{item.item_name}</p>
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className="font-semibold text-ink-950">{item.item_name}</p>
+                  {item.is_critical && (
+                    <span className="rounded-full bg-rose-100 px-2 py-0.5 text-[11px] font-semibold text-rose-700">
+                      Kritis
+                    </span>
+                  )}
+                </div>
                 <p className="text-xs text-slate-600">
                   {item.item_sku} · {item.uom_code}
                   {item.item_barcode ? ` · BC: ${item.item_barcode}` : ""}
                 </p>
               </div>
-              <div className="grid grid-cols-2 gap-2 rounded-[var(--radius-md)] bg-canvas-50/70 p-3 text-xs">
-                <div className="col-span-2">
+              <div className="grid grid-cols-3 gap-2 rounded-[var(--radius-md)] bg-canvas-50/70 p-3 text-xs">
+                <div className="col-span-3">
                   <p className="text-slate-600">Gudang</p>
                   <p className="mt-0.5 font-semibold text-ink-950">
                     {item.warehouse_code} · {item.warehouse_name}
@@ -144,6 +151,12 @@ export function WarehouseBalanceTable({
                   <p className="text-slate-600">Saldo</p>
                   <p className="mt-0.5 font-semibold text-ink-950 tabular-nums">
                     {formatStockQuantity(item.qty_on_hand)}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-slate-600">Min. Stok</p>
+                  <p className="mt-0.5 font-semibold text-ink-950 tabular-nums">
+                    {formatStockQuantity(item.min_stock ?? "0")}
                   </p>
                 </div>
                 <div>
@@ -167,6 +180,7 @@ export function WarehouseBalanceTable({
           <StockTh>Barang</StockTh>
           <StockTh>Gudang</StockTh>
           <StockTh align="right">Saldo</StockTh>
+          <StockTh align="right">Min. Stok</StockTh>
           <StockTh align="right">Dalam perjalanan</StockTh>
         </tr>
       </thead>
@@ -174,7 +188,14 @@ export function WarehouseBalanceTable({
         {items.map((item) => (
           <tr key={`${item.warehouse_id}-${item.item_id}`}>
             <td className="px-4 py-4">
-              <p className="font-semibold text-ink-950">{item.item_name}</p>
+              <div className="flex flex-wrap items-center gap-2">
+                <p className="font-semibold text-ink-950">{item.item_name}</p>
+                {item.is_critical && (
+                  <span className="rounded-full bg-rose-100 px-2 py-0.5 text-[11px] font-semibold text-rose-700">
+                    Kritis
+                  </span>
+                )}
+              </div>
               <p className="text-xs text-slate-600">
                 {item.item_sku} · {item.uom_code}
                 {item.item_barcode ? ` · BC: ${item.item_barcode}` : ""}
@@ -185,6 +206,9 @@ export function WarehouseBalanceTable({
             </td>
             <td className="px-4 py-4 text-right tabular-nums">
               {formatStockQuantity(item.qty_on_hand)}
+            </td>
+            <td className="px-4 py-4 text-right tabular-nums text-slate-600">
+              {formatStockQuantity(item.min_stock ?? "0")}
             </td>
             <td className="px-4 py-4 text-right tabular-nums">
               {formatStockQuantity(item.qty_in_transit)}
@@ -210,17 +234,30 @@ export function SummaryTable({
           {items.map((item) => (
             <li className="space-y-2.5 p-4" key={item.item_id}>
               <div>
-                <p className="font-semibold text-ink-950">{item.item_name}</p>
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className="font-semibold text-ink-950">{item.item_name}</p>
+                  {item.is_critical && (
+                    <span className="rounded-full bg-rose-100 px-2 py-0.5 text-[11px] font-semibold text-rose-700">
+                      Kritis
+                    </span>
+                  )}
+                </div>
                 <p className="text-xs text-slate-600">
                   {item.item_sku} · {item.uom_code}
                   {item.item_barcode ? ` · BC: ${item.item_barcode}` : ""}
                 </p>
               </div>
-              <div className="grid grid-cols-2 gap-2 rounded-[var(--radius-md)] bg-canvas-50/70 p-3 text-xs">
+              <div className="grid grid-cols-3 gap-2 rounded-[var(--radius-md)] bg-canvas-50/70 p-3 text-xs">
                 <div>
                   <p className="text-slate-600">Saldo</p>
                   <p className="mt-0.5 font-semibold text-ink-950 tabular-nums">
                     {formatStockQuantity(item.qty_on_hand)}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-slate-600">Min. Stok</p>
+                  <p className="mt-0.5 font-semibold text-ink-950 tabular-nums">
+                    {formatStockQuantity(item.min_stock ?? "0")}
                   </p>
                 </div>
                 <div>
@@ -243,6 +280,7 @@ export function SummaryTable({
         <tr>
           <StockTh>Barang</StockTh>
           <StockTh align="right">Saldo</StockTh>
+          <StockTh align="right">Min. Stok</StockTh>
           <StockTh align="right">Dalam perjalanan</StockTh>
         </tr>
       </thead>
@@ -250,7 +288,14 @@ export function SummaryTable({
         {items.map((item) => (
           <tr key={item.item_id}>
             <td className="px-4 py-4">
-              <p className="font-semibold text-ink-950">{item.item_name}</p>
+              <div className="flex flex-wrap items-center gap-2">
+                <p className="font-semibold text-ink-950">{item.item_name}</p>
+                {item.is_critical && (
+                  <span className="rounded-full bg-rose-100 px-2 py-0.5 text-[11px] font-semibold text-rose-700">
+                    Kritis
+                  </span>
+                )}
+              </div>
               <p className="text-xs text-slate-600">
                 {item.item_sku} · {item.uom_code}
                 {item.item_barcode ? ` · BC: ${item.item_barcode}` : ""}
@@ -258,6 +303,9 @@ export function SummaryTable({
             </td>
             <td className="px-4 py-4 text-right tabular-nums">
               {formatStockQuantity(item.qty_on_hand)}
+            </td>
+            <td className="px-4 py-4 text-right tabular-nums text-slate-600">
+              {formatStockQuantity(item.min_stock ?? "0")}
             </td>
             <td className="px-4 py-4 text-right tabular-nums">
               {formatStockQuantity(item.qty_in_transit)}

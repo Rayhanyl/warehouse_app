@@ -1,8 +1,11 @@
 import { useEffect } from "react";
 import {
+  Building2,
   Calendar,
   CheckCircle2,
+  CreditCard,
   Edit3,
+  FileText,
   Mail,
   MapPin,
   Phone,
@@ -159,6 +162,73 @@ export function SupplierDetailDialog({
                 </dd>
               </div>
             </div>
+
+            <div className="flex items-start gap-2.5">
+              <Phone
+                aria-hidden="true"
+                className="mt-0.5 shrink-0 text-slate-600"
+                size={16}
+              />
+              <div>
+                <dt className="text-xs font-medium text-slate-600">Nomor fax</dt>
+                <dd className="mt-0.5 font-semibold text-ink-950 tabular-nums">
+                  {supplier.fax || "Belum dicantumkan"}
+                </dd>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-2.5">
+              <FileText
+                aria-hidden="true"
+                className="mt-0.5 shrink-0 text-slate-600"
+                size={16}
+              />
+              <div>
+                <dt className="text-xs font-medium text-slate-600">NPWP &amp; Termin</dt>
+                <dd className="mt-0.5 font-semibold text-ink-950">
+                  {supplier.npwp || "-"}
+                  {supplier.payment_terms ? ` · ${supplier.payment_terms}` : ""}
+                </dd>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-2.5 sm:col-span-2">
+              <CreditCard
+                aria-hidden="true"
+                className="mt-0.5 shrink-0 text-teal-700"
+                size={16}
+              />
+              <div>
+                <dt className="text-xs font-medium text-slate-600">Rekening bank pemasok</dt>
+                <dd className="mt-0.5 font-semibold text-ink-950">
+                  {supplier.bank_name || supplier.bank_account_number ? (
+                    <>
+                      {supplier.bank_name || "Bank"} ·{" "}
+                      <span className="tabular-nums">{supplier.bank_account_number || "-"}</span>
+                      {supplier.bank_account_holder
+                        ? ` (a.n. ${supplier.bank_account_holder})`
+                        : ""}
+                    </>
+                  ) : (
+                    "Belum dicantumkan"
+                  )}
+                </dd>
+              </div>
+            </div>
+
+            {supplier.notes && (
+              <div className="flex items-start gap-2.5 sm:col-span-2">
+                <Building2
+                  aria-hidden="true"
+                  className="mt-0.5 shrink-0 text-slate-600"
+                  size={16}
+                />
+                <div>
+                  <dt className="text-xs font-medium text-slate-600">Catatan pemasok</dt>
+                  <dd className="mt-0.5 leading-6 text-ink-950">{supplier.notes}</dd>
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="grid gap-3 text-xs text-slate-600 sm:grid-cols-2">

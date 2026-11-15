@@ -6,6 +6,7 @@ import {
 } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api-client";
 import { extractApiErrorInfo } from "@/lib/errors";
+import { invalidateAndRefetchAll } from "@/lib/query-invalidation";
 import type {
   PurchaseOrder,
   PurchaseOrderCreatePayload,
@@ -36,6 +37,7 @@ function toQueryParams(params: PurchaseOrderListParams): URLSearchParams {
   if (params.warehouse_id) query.set("warehouse_id", String(params.warehouse_id));
   if (params.date_from) query.set("date_from", params.date_from);
   if (params.date_to) query.set("date_to", params.date_to);
+  if (params.overdue_only) query.set("overdue_only", "true");
   return query;
 }
 
@@ -73,12 +75,24 @@ export async function updatePurchaseOrder(
 
 export async function runPurchaseOrderAction(
   id: number,
-  action: "issue" | "cancel" | "close",
+  action: "issue" | "cancel" | "close" | "revise-draft",
   closedReason?: string,
 ): Promise<PurchaseOrder> {
   const { data } = await apiClient.post<PurchaseOrder>(
     `/purchase-orders/${id}/${action}`,
     action === "close" ? { closed_reason: closedReason?.trim() } : undefined,
+  );
+  return data;
+}
+
+export async function closePurchaseOrderLine(
+  poId: number,
+  poLineId: number,
+  closedReason: string,
+): Promise<PurchaseOrder> {
+  const { data } = await apiClient.post<PurchaseOrder>(
+    `/purchase-orders/${poId}/lines/${poLineId}/close`,
+    { closed_reason: closedReason.trim() },
   );
   return data;
 }
@@ -110,27 +124,37 @@ export function usePurchaseOrder(id: number | null) {
 }
 
 export function usePurchaseOrderMutation(
-  action: "create" | "update" | "issue" | "cancel" | "close",
+  action: "create" | "update" | "issue" | "cancel" | "close" | "revise-draft" | "close-line",
 ) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({
       id,
+      poLineId,
       payload,
       closedReason,
     }: {
       id?: number;
+      poLineId?: number;
       payload?: PurchaseOrderCreatePayload | PurchaseOrderUpdatePayload;
       closedReason?: string;
     }) => {
       if (action === "create") return createPurchaseOrder(payload as PurchaseOrderCreatePayload);
       if (!id) throw new Error("ID purchase order tidak tersedia.");
       if (action === "update") return updatePurchaseOrder(id, payload as PurchaseOrderUpdatePayload);
+      if (action === "close-line") {
+        if (!poLineId) throw new Error("ID baris purchase order tidak tersedia.");
+        return closePurchaseOrderLine(id, poLineId, closedReason ?? "");
+      }
       return runPurchaseOrderAction(id, action, closedReason);
     },
-    onSuccess: (purchaseOrder) => {
+    onSuccess: async (purchaseOrder) => {
       queryClient.setQueryData(purchaseOrderKeys.detail(purchaseOrder.id), purchaseOrder);
-      void queryClient.invalidateQueries({ queryKey: purchaseOrderKeys.lists() });
+      await invalidateAndRefetchAll(queryClient, [
+        purchaseOrderKeys.lists(),
+        ["goods-receipts", "references"],
+        ["dashboard"],
+      ]);
     },
   });
 }

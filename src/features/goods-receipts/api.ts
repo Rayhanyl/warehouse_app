@@ -1,6 +1,7 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api-client";
 import { extractApiErrorInfo } from "@/lib/errors";
+import { invalidateAndRefetchAll } from "@/lib/query-invalidation";
 import type {
   GoodsReceipt,
   GoodsReceiptCreatePayload,
@@ -90,9 +91,15 @@ export function useGoodsReceiptMutation(action: "create" | "update" | "post" | "
       if (action === "update") return updateGoodsReceipt(id, payload as GoodsReceiptUpdatePayload);
       return runGoodsReceiptAction(id, action);
     },
-    onSuccess: (receipt) => {
+    onSuccess: async (receipt) => {
       queryClient.setQueryData(goodsReceiptKeys.detail(receipt.id), receipt);
-      void queryClient.invalidateQueries({ queryKey: goodsReceiptKeys.lists() });
+      await invalidateAndRefetchAll(queryClient, [
+        goodsReceiptKeys.lists(),
+        [...goodsReceiptKeys.all, "references"],
+        ["purchase-orders"],
+        ["stock"],
+        ["dashboard"],
+      ]);
     },
   });
 }

@@ -138,6 +138,11 @@ describe("Tahap 18: Fitur Tutorial & Panduan Input Data Interaktif", () => {
     ).toBeInTheDocument();
 
     // Pindah ke tab Kamus Field & Contoh dan filter kata kunci
+    const tabList = within(dialog).getByRole("tablist", {
+      name: "Tab panduan pengguna",
+    });
+    expect(tabList).toHaveClass("shrink-0", "overflow-y-hidden");
+
     fireEvent.click(
       within(dialog).getByRole("tab", { name: /Kamus Field & Contoh/i }),
     );
@@ -151,6 +156,14 @@ describe("Tahap 18: Fitur Tutorial & Panduan Input Data Interaktif", () => {
     expect(
       within(dialog).queryByText("Kebijakan Stok Negatif per Gudang"),
     ).not.toBeInTheDocument();
+
+    // Pastikan kembali ke tab Panduan Halaman tetap berfungsi dari Kamus Field & Contoh
+    fireEvent.click(within(dialog).getByRole("tab", { name: /Panduan Halaman/i }));
+    expect(
+      within(dialog).getByText(
+        "Formulir Input Penerimaan Barang & Scan Barcode",
+      ),
+    ).toBeInTheDocument();
 
     // Pindah ke tab Simulasi Scan
     fireEvent.click(within(dialog).getByRole("tab", { name: /Simulasi Scan/i }));

@@ -10,6 +10,7 @@ export interface StockItem {
   uom_code: string;
   uom_name: string;
   allow_decimal: boolean;
+  min_stock?: string;
   is_active: boolean;
   created_by: number | null;
   created_at: string;
@@ -29,6 +30,7 @@ export interface StockFormPayload {
   uom_code: string;
   uom_name: string;
   allow_decimal: boolean;
+  min_stock?: string;
   is_active: boolean;
 }
 
@@ -39,6 +41,7 @@ export interface StockCreatePayload {
   description?: string | null;
   category_id: number;
   uom_id: number;
+  min_stock?: string;
   is_active?: boolean;
 }
 
@@ -49,6 +52,7 @@ export interface StockUpdatePayload {
   description?: string | null;
   category_id?: number;
   uom_id?: number;
+  min_stock?: string;
   is_active?: boolean;
 }
 

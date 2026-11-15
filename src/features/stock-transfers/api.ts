@@ -1,6 +1,7 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api-client";
 import { extractApiErrorInfo } from "@/lib/errors";
+import { invalidateAndRefetchAll } from "@/lib/query-invalidation";
 import type { StockTransfer, StockTransferCreatePayload, StockTransferPage, StockTransferUpdatePayload, TransferReceiveLinePayload, TransferReference } from "./types";
 
 export const transferKeys = {
@@ -95,9 +96,13 @@ export function useTransferMutation(action: "create" | "update" | "approve" | "s
       if (!id) throw new Error("ID transfer tidak tersedia.");
       return transferAction(id, action, lines);
     },
-    onSuccess: (transfer) => {
+    onSuccess: async (transfer) => {
       queryClient.setQueryData(transferKeys.detail(transfer.id), transfer);
-      void queryClient.invalidateQueries({ queryKey: transferKeys.lists() });
+      await invalidateAndRefetchAll(queryClient, [
+        transferKeys.lists(),
+        ["stock"],
+        ["dashboard"],
+      ]);
     },
   });
 }

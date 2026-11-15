@@ -22,6 +22,7 @@ export interface StockFormErrors {
   description?: string;
   category?: string;
   uom?: string;
+  minStock?: string;
 }
 
 interface ValidateStockInput {
@@ -33,6 +34,7 @@ interface ValidateStockInput {
   description: string;
   categoryId: number;
   uomId: number;
+  minStock?: string;
   isActive: boolean;
   existingItems: StockItem[];
   categoryOptions: StockCategoryOption[];
@@ -50,6 +52,7 @@ export function validateAndBuildStockPayload(
     description: input.description,
     category_id: input.categoryId,
     uom_id: input.uomId,
+    min_stock: input.minStock ?? "0",
     is_active: input.isActive,
   });
 
@@ -62,6 +65,7 @@ export function validateAndBuildStockPayload(
         description: parsed.fieldErrors.description,
         category: parsed.fieldErrors.category_id,
         uom: parsed.fieldErrors.uom_id,
+        minStock: parsed.fieldErrors.min_stock,
       };
 
   const trimmedSku = input.sku.trim();
@@ -128,6 +132,7 @@ export function validateAndBuildStockPayload(
       uom_code: selectedUom.code,
       uom_name: selectedUom.name,
       allow_decimal: selectedUom.allow_decimal,
+      min_stock: parsed.data.min_stock || "0",
       is_active: parsed.data.is_active,
     },
   };

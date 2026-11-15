@@ -1,5 +1,5 @@
-import { useMemo } from "react";
-import { Key, Warehouse } from "lucide-react";
+import { useMemo, useState } from "react";
+import { ChevronDown, ChevronRight, Key, Search, Warehouse } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import {
@@ -96,6 +96,30 @@ export function ProfileWarehousePermissionsCard({
     [user?.permissions],
   );
   const totalPermissions = user?.permissions?.length ?? 0;
+  const [permSearch, setPermSearch] = useState("");
+  const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({});
+
+  const filteredPermissionGroups = useMemo(() => {
+    const query = permSearch.trim().toLowerCase();
+    if (!query) return permissionGroups;
+    return permissionGroups
+      .map((group) => {
+        const labelMatches = group.label.toLowerCase().includes(query);
+        const matchingCodes = labelMatches
+          ? group.codes
+          : group.codes.filter((code) => code.toLowerCase().includes(query));
+        if (matchingCodes.length === 0) return null;
+        return { ...group, codes: matchingCodes };
+      })
+      .filter((item): item is PermissionGroup => item !== null);
+  }, [permSearch, permissionGroups]);
+
+  function toggleGroupCollapse(groupKey: string) {
+    setCollapsedGroups((prev) => ({
+      ...prev,
+      [groupKey]: !prev[groupKey],
+    }));
+  }
 
   return (
     <Card aria-labelledby="profile-access-title" className="gap-5 py-5 sm:py-6">
@@ -155,7 +179,7 @@ export function ProfileWarehousePermissionsCard({
           aria-labelledby="profile-permissions-heading"
           className="space-y-3 border-t border-border pt-4"
         >
-          <div className="flex items-center justify-between gap-2">
+          <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="flex items-center gap-2">
               <Key aria-hidden="true" className="size-4 text-teal-700" />
               <h3
@@ -164,39 +188,79 @@ export function ProfileWarehousePermissionsCard({
               >
                 Hak Akses Modul
               </h3>
+              <Badge className="tabular-nums" variant="secondary">
+                {totalPermissions} permission
+              </Badge>
             </div>
-            <Badge className="tabular-nums" variant="secondary">
-              {totalPermissions} permission
-            </Badge>
+            {permissionGroups.length > 4 && (
+              <div className="relative w-full sm:w-64">
+                <Search
+                  aria-hidden="true"
+                  className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-slate-500"
+                />
+                <input
+                  aria-label="Cari modul atau kode hak akses"
+                  className="h-9 w-full rounded-[var(--radius-md)] border border-line-200 bg-surface-0 pr-3 pl-8 text-xs text-ink-950 placeholder:text-slate-500 focus:border-teal-600 focus:outline-none focus:ring-2 focus:ring-teal-600/20"
+                  onChange={(event) => setPermSearch(event.target.value)}
+                  placeholder="Cari modul atau permission..."
+                  type="search"
+                  value={permSearch}
+                />
+              </div>
+            )}
           </div>
 
           {permissionGroups.length === 0 ? (
             <p className="text-sm text-slate-600">
               Belum ada hak akses yang ditetapkan untuk peran akun ini.
             </p>
+          ) : filteredPermissionGroups.length === 0 ? (
+            <p className="rounded-lg border border-dashed border-border p-4 text-center text-xs text-slate-600">
+              Tidak ada modul atau permission yang cocok dengan kata kunci &ldquo;{permSearch}&rdquo;.
+            </p>
           ) : (
-            <div className="space-y-3">
-              {permissionGroups.map((group) => (
-                <div
-                  className="rounded-lg border border-border bg-muted/40 p-3"
-                  key={group.key}
-                >
-                  <p className="text-xs font-semibold text-ink-950">
-                    {group.label}
-                  </p>
-                  <div className="mt-2 flex flex-wrap gap-1.5">
-                    {group.codes.map((code) => (
-                      <Badge
-                        className="border-border bg-card font-mono text-[11px] font-normal text-slate-700"
-                        key={code}
-                        variant="outline"
-                      >
-                        {code}
-                      </Badge>
-                    ))}
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {filteredPermissionGroups.map((group) => {
+                const isCollapsed = Boolean(collapsedGroups[group.key]) && !permSearch.trim();
+                return (
+                  <div
+                    className="flex flex-col rounded-lg border border-border bg-muted/40 p-3"
+                    key={group.key}
+                  >
+                    <button
+                      aria-expanded={!isCollapsed}
+                      className="flex w-full items-center justify-between gap-2 text-left"
+                      onClick={() => toggleGroupCollapse(group.key)}
+                      type="button"
+                    >
+                      <span className="text-xs font-semibold text-ink-950">
+                        {group.label}
+                      </span>
+                      <span className="inline-flex shrink-0 items-center gap-1 text-[11px] font-medium text-slate-600 tabular-nums">
+                        <span>{group.codes.length}</span>
+                        {isCollapsed ? (
+                          <ChevronRight aria-hidden="true" className="size-3.5" />
+                        ) : (
+                          <ChevronDown aria-hidden="true" className="size-3.5" />
+                        )}
+                      </span>
+                    </button>
+                    {!isCollapsed && (
+                      <div className="mt-2.5 flex flex-wrap gap-1.5">
+                        {group.codes.map((code) => (
+                          <Badge
+                            className="border-border bg-card font-mono text-[11px] font-normal text-slate-700"
+                            key={code}
+                            variant="outline"
+                          >
+                            {code}
+                          </Badge>
+                        ))}
+                      </div>
+                    )}
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </section>

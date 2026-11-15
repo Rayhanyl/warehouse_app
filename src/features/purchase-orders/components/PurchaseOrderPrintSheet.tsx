@@ -71,9 +71,37 @@ export function PurchaseOrderPrintSheet({
         {
           label: "Pemasok (Supplier)",
           value: (
-            <span className="font-bold">
-              {purchaseOrder.supplier_code} · {purchaseOrder.supplier_name}
-            </span>
+            <div className="space-y-0.5">
+              <div className="font-bold">
+                {purchaseOrder.supplier_code} · {purchaseOrder.supplier_name}
+              </div>
+              {(purchaseOrder.supplier_phone || purchaseOrder.supplier_fax) && (
+                <div className="text-[11px] font-normal text-slate-700">
+                  {purchaseOrder.supplier_phone ? `Telp: ${purchaseOrder.supplier_phone}` : ""}
+                  {purchaseOrder.supplier_phone && purchaseOrder.supplier_fax ? " · " : ""}
+                  {purchaseOrder.supplier_fax ? `Fax: ${purchaseOrder.supplier_fax}` : ""}
+                </div>
+              )}
+              {(purchaseOrder.supplier_bank_name ||
+                purchaseOrder.supplier_bank_account_number) && (
+                <div className="text-[11px] font-normal text-slate-700">
+                  Rekening: {purchaseOrder.supplier_bank_name ?? "-"}{" "}
+                  {purchaseOrder.supplier_bank_account_number ?? ""}
+                  {purchaseOrder.supplier_bank_account_holder
+                    ? ` (a.n. ${purchaseOrder.supplier_bank_account_holder})`
+                    : ""}
+                </div>
+              )}
+              {(purchaseOrder.supplier_npwp || purchaseOrder.supplier_payment_terms) && (
+                <div className="text-[11px] font-normal text-slate-700">
+                  {purchaseOrder.supplier_npwp ? `NPWP: ${purchaseOrder.supplier_npwp}` : ""}
+                  {purchaseOrder.supplier_npwp && purchaseOrder.supplier_payment_terms ? " · " : ""}
+                  {purchaseOrder.supplier_payment_terms
+                    ? `Termin: ${purchaseOrder.supplier_payment_terms}`
+                    : ""}
+                </div>
+              )}
+            </div>
           ),
         },
         {

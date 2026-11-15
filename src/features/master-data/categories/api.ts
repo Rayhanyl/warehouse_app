@@ -6,6 +6,10 @@ import {
 } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api-client";
 import { extractApiErrorInfo, extractApiFieldErrors } from "@/lib/errors";
+import {
+  invalidateAndRefetchAll,
+  invalidateMasterDependentCaches,
+} from "@/lib/query-invalidation";
 import type {
   Category,
   CategoryCreatePayload,
@@ -105,9 +109,10 @@ export function useCreateCategory() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (payload: CategoryCreatePayload) => createCategory(payload),
-    onSuccess: (created) => {
+    onSuccess: async (created) => {
       queryClient.setQueryData(categoryKeys.detail(created.id), created);
-      void queryClient.invalidateQueries({ queryKey: categoryKeys.lists() });
+      await invalidateAndRefetchAll(queryClient, [categoryKeys.lists()]);
+      await invalidateMasterDependentCaches(queryClient);
     },
   });
 }
@@ -122,9 +127,10 @@ export function useUpdateCategory() {
       categoryId: number;
       payload: CategoryUpdatePayload;
     }) => updateCategory(categoryId, payload),
-    onSuccess: (updated) => {
+    onSuccess: async (updated) => {
       queryClient.setQueryData(categoryKeys.detail(updated.id), updated);
-      void queryClient.invalidateQueries({ queryKey: categoryKeys.lists() });
+      await invalidateAndRefetchAll(queryClient, [categoryKeys.lists()]);
+      await invalidateMasterDependentCaches(queryClient);
     },
   });
 }

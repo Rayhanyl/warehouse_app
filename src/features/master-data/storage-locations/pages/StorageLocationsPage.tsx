@@ -5,6 +5,8 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { Button } from "@/components/ui/button";
 import { usePermission } from "@/hooks/usePermission";
 import { useWarehouseScope } from "@/hooks/useWarehouseScope";
+import { queryClient } from "@/lib/query-client";
+import { invalidateMasterDependentCaches } from "@/lib/query-invalidation";
 import { MasterNoticeBanner } from "../../components/MasterNoticeBanner";
 import type { MasterFormSubmitError } from "../../errors";
 import { downloadMasterCsv, type MasterPageNotice } from "../../utils";
@@ -174,7 +176,11 @@ export function StorageLocationsPage() {
           is_active: payload.is_active,
         });
         setLocations((prev) => [created, ...prev]);
+        setSearchQuery("");
+        setWarehouseFilter("all");
+        setStatusFilter("all");
         setFormState({ open: false, mode: "create", record: null });
+        void invalidateMasterDependentCaches(queryClient);
         const message = `Lokasi penyimpanan "${created.name}" (${created.code}) berhasil ditambahkan.`;
         setBanner({ type: "success", message });
         toast.success(message);
@@ -194,6 +200,7 @@ export function StorageLocationsPage() {
           prev && prev.id === updated.id ? updated : prev,
         );
         setFormState({ open: false, mode: "create", record: null });
+        void invalidateMasterDependentCaches(queryClient);
         const message = `Lokasi penyimpanan "${updated.name}" (${updated.code}) berhasil diperbarui.`;
         setBanner({ type: "success", message });
         toast.success(message);
@@ -224,6 +231,7 @@ export function StorageLocationsPage() {
         prev && prev.id === updated.id ? updated : prev,
       );
       setDeleteTarget(null);
+      void invalidateMasterDependentCaches(queryClient);
       const message = `Lokasi penyimpanan "${updated.name}" berhasil dinonaktifkan.`;
       setBanner({ type: "success", message });
       toast.success(message);
@@ -251,6 +259,7 @@ export function StorageLocationsPage() {
       setDetailTarget((prev) =>
         prev && prev.id === updated.id ? updated : prev,
       );
+      void invalidateMasterDependentCaches(queryClient);
       const message = `Lokasi penyimpanan "${updated.name}" berhasil diaktifkan kembali.`;
       setBanner({ type: "success", message });
       toast.success(message);

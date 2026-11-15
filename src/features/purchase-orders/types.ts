@@ -8,6 +8,12 @@ export type PurchaseOrderStatus =
   | "CLOSED"
   | "CANCELLED";
 
+export type PurchaseOrderLineStatus =
+  | "OPEN"
+  | "PARTIALLY_RECEIVED"
+  | "RECEIVED"
+  | "CLOSED";
+
 export interface PurchaseOrderLine {
   id: number;
   po_id: number;
@@ -20,6 +26,12 @@ export interface PurchaseOrderLine {
   allow_decimal: boolean;
   qty_ordered: string;
   qty_received: string;
+  qty_closed?: string;
+  qty_remaining?: string;
+  line_status?: PurchaseOrderLineStatus;
+  line_closed_reason?: string | null;
+  line_closed_at?: string | null;
+  line_closed_by?: number | null;
   notes: string | null;
   created_by: number | null;
   created_at: string;
@@ -32,11 +44,25 @@ export interface PurchaseOrder {
   supplier_id: number;
   supplier_code: string;
   supplier_name: string;
+  supplier_phone?: string | null;
+  supplier_fax?: string | null;
+  supplier_email?: string | null;
+  supplier_address?: string | null;
+  supplier_npwp?: string | null;
+  supplier_bank_name?: string | null;
+  supplier_bank_account_number?: string | null;
+  supplier_bank_account_holder?: string | null;
+  supplier_payment_terms?: string | null;
   warehouse_id: number;
   warehouse_code: string;
   warehouse_name: string;
   status: PurchaseOrderStatus;
   order_date: string;
+  expected_delivery_date?: string | null;
+  is_overdue?: boolean;
+  days_overdue?: number;
+  revised_from_po_id?: number | null;
+  revised_from_po_number?: string | null;
   notes: string | null;
   line_count: number;
   issued_at: string | null;
@@ -55,6 +81,7 @@ export type PurchaseOrderSortField =
   | "id"
   | "po_number"
   | "order_date"
+  | "expected_delivery_date"
   | "status"
   | "created_at";
 export type SortDirection = "asc" | "desc";
@@ -68,6 +95,7 @@ export interface PurchaseOrderListParams {
   warehouse_id: number | null;
   date_from: string;
   date_to: string;
+  overdue_only?: boolean;
   sort_by: PurchaseOrderSortField;
   sort_dir: SortDirection;
 }
@@ -82,6 +110,7 @@ export interface PurchaseOrderCreatePayload {
   supplier_id: number;
   warehouse_id: number;
   order_date: string;
+  expected_delivery_date?: string | null;
   notes?: string | null;
   lines: PurchaseOrderLinePayload[];
 }

@@ -4,6 +4,7 @@ import { useWarehouseScope } from "@/hooks/useWarehouseScope";
 import { mapApiFormError } from "@/lib/errors";
 import { validateDecimalQtyInput } from "@/lib/validation";
 import type {
+  PurchaseOrder,
   PurchaseOrderCreatePayload,
   PurchaseOrderLinePayload,
   ReferenceOption,
@@ -11,6 +12,8 @@ import type {
 
 export function PurchaseOrderCreateForm({
   references,
+  initialPurchaseOrder,
+  submitLabel,
   isSubmitting,
   isReferencesLoading,
   isReferencesError,
@@ -23,6 +26,8 @@ export function PurchaseOrderCreateForm({
     warehouses: ReferenceOption[];
     items: ReferenceOption[];
   };
+  initialPurchaseOrder?: PurchaseOrder;
+  submitLabel?: string;
   isSubmitting: boolean;
   isReferencesLoading: boolean;
   isReferencesError: boolean;
@@ -34,11 +39,26 @@ export function PurchaseOrderCreateForm({
   const scopedWarehouses = filterWarehouseChoices(references?.warehouses ?? []).filter(
     (item) => item.is_active,
   );
-  const [supplierId, setSupplierId] = useState("");
-  const [warehouseId, setWarehouseId] = useState("");
-  const [orderDate, setOrderDate] = useState(new Date().toISOString().slice(0, 10));
-  const [notes, setNotes] = useState("");
-  const [lines, setLines] = useState<PurchaseOrderLinePayload[]>([]);
+  const [supplierId, setSupplierId] = useState(
+    initialPurchaseOrder ? String(initialPurchaseOrder.supplier_id) : "",
+  );
+  const [warehouseId, setWarehouseId] = useState(
+    initialPurchaseOrder ? String(initialPurchaseOrder.warehouse_id) : "",
+  );
+  const [orderDate, setOrderDate] = useState(
+    initialPurchaseOrder?.order_date ?? new Date().toISOString().slice(0, 10),
+  );
+  const [expectedDeliveryDate, setExpectedDeliveryDate] = useState(
+    initialPurchaseOrder?.expected_delivery_date ?? "",
+  );
+  const [notes, setNotes] = useState(initialPurchaseOrder?.notes ?? "");
+  const [lines, setLines] = useState<PurchaseOrderLinePayload[]>(
+    initialPurchaseOrder?.lines?.map((line) => ({
+      item_id: line.item_id,
+      qty_ordered: line.qty_ordered,
+      notes: line.notes ?? null,
+    })) ?? [],
+  );
   const [error, setError] = useState("");
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
@@ -77,6 +97,10 @@ export function PurchaseOrderCreateForm({
     if (!supplierId) nextFieldErrors.supplier_id = "Pilih pemasok aktif.";
     if (!effectiveWarehouseId) nextFieldErrors.warehouse_id = "Pilih gudang tujuan aktif.";
     if (!orderDate) nextFieldErrors.order_date = "Tanggal pesanan wajib diisi.";
+    if (expectedDeliveryDate && orderDate && expectedDeliveryDate < orderDate) {
+      nextFieldErrors.expected_delivery_date =
+        "Estimasi tanggal pengiriman tidak boleh lebih awal dari tanggal pesanan.";
+    }
 
     const seenItems = new Set<number>();
     lines.forEach((line, index) => {
@@ -114,6 +138,7 @@ export function PurchaseOrderCreateForm({
         supplier_id: Number(supplierId),
         warehouse_id: Number(effectiveWarehouseId),
         order_date: orderDate,
+        expected_delivery_date: expectedDeliveryDate.trim() || null,
         notes: notes.trim() || null,
         lines: lines.map((line) => ({
           ...line,
@@ -161,7 +186,7 @@ export function PurchaseOrderCreateForm({
       <form className="mt-5 space-y-5" noValidate onSubmit={(event) => void submit(event)}>
         <section
           aria-label="Informasi pesanan"
-          className="grid gap-4 rounded-[var(--radius-md)] bg-canvas-50 p-4 sm:grid-cols-2 xl:grid-cols-3"
+          className="grid gap-4 rounded-[var(--radius-md)] bg-canvas-50 p-4 sm:grid-cols-2 xl:grid-cols-4"
         >
           <SelectField
             error={fieldErrors.supplier_id}
@@ -205,6 +230,28 @@ export function PurchaseOrderCreateForm({
             {fieldErrors.order_date && (
               <span className="mt-1 block text-xs font-medium text-red-700" role="alert">
                 {fieldErrors.order_date}
+              </span>
+            )}
+          </label>
+          <label className="text-sm font-semibold text-ink-950">
+            Estimasi tanggal kirim <span className="font-normal text-slate-600">(opsional)</span>
+            <input
+              aria-invalid={Boolean(fieldErrors.expected_delivery_date)}
+              className={`mt-2 h-11 w-full rounded-[var(--radius-md)] border bg-surface-0 px-3 text-sm text-ink-950 focus:outline-none focus:ring-2 ${
+                fieldErrors.expected_delivery_date
+                  ? "border-red-600 focus:ring-red-600/20"
+                  : "border-line-500 focus:border-teal-600 focus:ring-teal-600/20"
+              }`}
+              onChange={(event) => {
+                setExpectedDeliveryDate(event.target.value);
+                setFieldErrors((prev) => ({ ...prev, expected_delivery_date: "" }));
+              }}
+              type="date"
+              value={expectedDeliveryDate}
+            />
+            {fieldErrors.expected_delivery_date && (
+              <span className="mt-1 block text-xs font-medium text-red-700" role="alert">
+                {fieldErrors.expected_delivery_date}
               </span>
             )}
           </label>
@@ -368,7 +415,9 @@ export function PurchaseOrderCreateForm({
             disabled={isSubmitting || isReferencesLoading || isReferencesError}
             type="submit"
           >
-            {isSubmitting ? "Menyimpan draft PO..." : "Simpan draft PO"}
+            {isSubmitting
+              ? "Menyimpan..."
+              : (submitLabel ?? "Simpan draft PO")}
           </button>
         </div>
       </form>

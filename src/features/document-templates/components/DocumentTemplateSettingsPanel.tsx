@@ -1,5 +1,5 @@
 import { ChangeEvent, FormEvent, useMemo, useRef, useState } from "react";
-import { RotateCcw, Save } from "lucide-react";
+import { Building2, Columns3, FileSliders, PenTool, RotateCcw, Save } from "lucide-react";
 import { toast } from "sonner";
 import { mapApiFormError } from "@/lib/errors";
 import {
@@ -91,6 +91,43 @@ export function DocumentTemplateSettingsPanel() {
   );
 }
 
+type TemplateEditorTab = "identity" | "paper" | "structure" | "signatures";
+
+const TEMPLATE_EDITOR_TABS: Array<{
+  key: TemplateEditorTab;
+  label: string;
+  icon: typeof Building2;
+}> = [
+  { key: "identity", label: "Kop & Logo", icon: Building2 },
+  { key: "paper", label: "Kertas & Info", icon: FileSliders },
+  { key: "structure", label: "Urutan & Kolom", icon: Columns3 },
+  { key: "signatures", label: "Tanda Tangan", icon: PenTool },
+];
+
+function resolveTabForFieldErrors(errors: Record<string, string>): TemplateEditorTab | null {
+  const keys = Object.keys(errors);
+  if (keys.length === 0) return null;
+  if (
+    keys.some((k) =>
+      ["document_title", "company_name", "company_address", "company_contact", "logo_url"].includes(
+        k,
+      ),
+    )
+  ) {
+    return "identity";
+  }
+  if (keys.some((k) => ["margin_mm", "paper_size", "orientation", "header_notes", "footer_notes"].includes(k))) {
+    return "paper";
+  }
+  if (keys.some((k) => ["section_order", "table_columns"].includes(k))) {
+    return "structure";
+  }
+  if (keys.some((k) => k.startsWith("signature"))) {
+    return "signatures";
+  }
+  return "identity";
+}
+
 function DocumentTemplateEditorForm({
   initialTemplate,
 }: {
@@ -100,6 +137,7 @@ function DocumentTemplateEditorForm({
   const uploadLogo = useUploadDocumentLogo();
   const logoInputRef = useRef<HTMLInputElement | null>(null);
 
+  const [activeEditorTab, setActiveEditorTab] = useState<TemplateEditorTab>("identity");
   const [draft, setDraft] = useState<DocumentTemplate>(() =>
     cloneDocumentTemplate(initialTemplate),
   );
@@ -157,6 +195,10 @@ function DocumentTemplateEditorForm({
     if (!validation.ok) {
       setFieldErrors(validation.fieldErrors);
       setFormError(validation.formError);
+      const targetTab = resolveTabForFieldErrors(validation.fieldErrors);
+      if (targetTab) {
+        setActiveEditorTab(targetTab);
+      }
       return;
     }
 
@@ -176,16 +218,52 @@ function DocumentTemplateEditorForm({
       );
       setFieldErrors(mapped.fieldErrors);
       setFormError(mapped.formMessage);
+      const targetTab = resolveTabForFieldErrors(mapped.fieldErrors);
+      if (targetTab) {
+        setActiveEditorTab(targetTab);
+      }
     }
   };
 
+  const errorTab = resolveTabForFieldErrors(fieldErrors);
+
   return (
-    <div className="grid grid-cols-1 gap-6 xl:grid-cols-12">
+    <div className="grid grid-cols-1 gap-6 xl:grid-cols-12 xl:items-start">
       <form
-        className="space-y-5 xl:col-span-5"
+        className="space-y-4 xl:col-span-5"
         noValidate
         onSubmit={handleSubmit}
       >
+        <div
+          aria-label="Bagian pengaturan template"
+          className="grid grid-cols-2 gap-1.5 rounded-[var(--radius-lg)] border border-line-200 bg-surface-0 p-1.5 sm:grid-cols-4"
+          role="tablist"
+        >
+          {TEMPLATE_EDITOR_TABS.map(({ key, label, icon: Icon }) => {
+            const selected = activeEditorTab === key;
+            const hasError = errorTab === key;
+            return (
+              <button
+                aria-selected={selected}
+                className={`inline-flex min-h-10 items-center justify-center gap-1.5 rounded-[var(--radius-md)] px-2.5 py-2 text-xs font-semibold transition ${
+                  selected
+                    ? "bg-teal-600 text-surface-0 shadow-xs"
+                    : hasError
+                      ? "bg-red-50 text-red-700 ring-1 ring-red-300"
+                      : "text-slate-700 hover:bg-canvas-50 hover:text-ink-950"
+                }`}
+                key={key}
+                onClick={() => setActiveEditorTab(key)}
+                role="tab"
+                type="button"
+              >
+                <Icon aria-hidden="true" className="shrink-0" size={14} />
+                <span className="truncate">{label}</span>
+              </button>
+            );
+          })}
+        </div>
+
         {formError && (
           <div
             className="rounded-[var(--radius-md)] border border-red-200 bg-red-50 px-3.5 py-2.5 text-sm text-red-700"
@@ -195,40 +273,49 @@ function DocumentTemplateEditorForm({
           </div>
         )}
 
-        <DocumentIdentityLogoSection
-          draft={draft}
-          fieldErrors={fieldErrors}
-          logoInputRef={logoInputRef}
-          logoPreviewUrl={logoPreviewUrl}
-          onLogoUpload={handleLogoUpload}
-          onUpdateField={updateField}
-          uploadingLogo={uploadLogo.isPending}
-        />
+        {activeEditorTab === "identity" && (
+          <DocumentIdentityLogoSection
+            draft={draft}
+            fieldErrors={fieldErrors}
+            logoInputRef={logoInputRef}
+            logoPreviewUrl={logoPreviewUrl}
+            onLogoUpload={handleLogoUpload}
+            onUpdateField={updateField}
+            uploadingLogo={uploadLogo.isPending}
+          />
+        )}
 
-        <DocumentPaperVisibilitySection
-          draft={draft}
-          fieldErrors={fieldErrors}
-          onUpdateField={updateField}
-        />
+        {activeEditorTab === "paper" && (
+          <DocumentPaperVisibilitySection
+            draft={draft}
+            fieldErrors={fieldErrors}
+            onUpdateField={updateField}
+          />
+        )}
 
-        <DocumentSectionOrderCard
-          onChange={(nextOrder) => updateField("section_order", nextOrder)}
-          sectionOrder={draft.section_order}
-        />
+        {activeEditorTab === "structure" && (
+          <div className="space-y-4">
+            <DocumentSectionOrderCard
+              onChange={(nextOrder) => updateField("section_order", nextOrder)}
+              sectionOrder={draft.section_order}
+            />
+            <DocumentTableColumnsCard
+              columns={draft.table_columns}
+              onChange={(nextColumns) => updateField("table_columns", nextColumns)}
+            />
+          </div>
+        )}
 
-        <DocumentTableColumnsCard
-          columns={draft.table_columns}
-          onChange={(nextColumns) => updateField("table_columns", nextColumns)}
-        />
+        {activeEditorTab === "signatures" && (
+          <DocumentSignatureLayoutCard
+            onChange={(nextSignatures) =>
+              updateField("signature_layout", nextSignatures)
+            }
+            signatures={draft.signature_layout}
+          />
+        )}
 
-        <DocumentSignatureLayoutCard
-          onChange={(nextSignatures) =>
-            updateField("signature_layout", nextSignatures)
-          }
-          signatures={draft.signature_layout}
-        />
-
-        <div className="flex flex-wrap items-center justify-between gap-2 rounded-[var(--radius-lg)] border border-line-200 bg-surface-0 p-4">
+        <div className="sticky bottom-3 z-10 flex flex-wrap items-center justify-between gap-2 rounded-[var(--radius-lg)] border border-line-200 bg-surface-0/95 p-4 shadow-[var(--shadow-2)] backdrop-blur-xs">
           <button
             className="inline-flex min-h-10 items-center gap-1.5 rounded-[var(--radius-md)] border border-line-200 px-3 text-xs font-semibold text-slate-700 hover:bg-surface-50"
             onClick={handleResetDefault}

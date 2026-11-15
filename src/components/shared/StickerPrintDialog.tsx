@@ -86,7 +86,10 @@ export function StickerPrintDialog({
           </Button>
         </DialogHeader>
 
-        <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-5 print:overflow-visible print:p-0">
+        <div
+          className="min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-5 print:overflow-visible print:p-0"
+          data-slot="sticker-dialog-body"
+        >
           <div className="no-print" data-slot="sticker-dialog-metadata">
             {metadataSection}
           </div>

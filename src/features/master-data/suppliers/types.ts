@@ -6,8 +6,15 @@ export interface Supplier {
   name: string;
   contact_person: string | null;
   phone: string | null;
+  fax?: string | null;
   email: string | null;
   address: string | null;
+  bank_name?: string | null;
+  bank_account_number?: string | null;
+  bank_account_holder?: string | null;
+  npwp?: string | null;
+  payment_terms?: string | null;
+  notes?: string | null;
   is_active: boolean;
   created_by: number | null;
   created_at: string;
@@ -34,8 +41,15 @@ export interface SupplierFormPayload {
   name: string;
   contact_person: string | null;
   phone: string | null;
+  fax?: string | null;
   email: string | null;
   address: string | null;
+  bank_name?: string | null;
+  bank_account_number?: string | null;
+  bank_account_holder?: string | null;
+  npwp?: string | null;
+  payment_terms?: string | null;
+  notes?: string | null;
   is_active: boolean;
 }
 

@@ -13,12 +13,12 @@ export function ProfilePage() {
         description="Lihat informasi akun, peran kerja, cakupan gudang, hak akses, dan kelola kata sandi Anda."
         title="Profil"
       />
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-        <div className="space-y-6">
-          <ProfileIdentityCard user={user} />
+      <div className="grid gap-6 lg:grid-cols-2 lg:items-start">
+        <ProfileIdentityCard user={user} />
+        <ChangePasswordCard />
+        <div className="lg:col-span-2">
           <ProfileWarehousePermissionsCard user={user} />
         </div>
-        <ChangePasswordCard />
       </div>
     </>
   );

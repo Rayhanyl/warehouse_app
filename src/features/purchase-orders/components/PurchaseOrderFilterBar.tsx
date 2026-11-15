@@ -135,6 +135,7 @@ export function PurchaseOrderFilterBar({
             <option value="id">ID purchase order</option>
             <option value="po_number">Nomor dokumen</option>
             <option value="order_date">Tanggal pesanan</option>
+            <option value="expected_delivery_date">Estimasi kirim</option>
             <option value="status">Status</option>
             <option value="created_at">Waktu dibuat</option>
           </select>
@@ -156,6 +157,23 @@ export function PurchaseOrderFilterBar({
             <option value="asc">Terlama</option>
           </select>
         </label>
+
+        <div className="flex items-end md:col-span-2 lg:col-span-4">
+          <label className="inline-flex min-h-11 cursor-pointer items-center gap-2.5 rounded-[var(--radius-md)] border border-line-300 bg-canvas-50/70 px-3.5 py-2 text-sm font-semibold text-ink-950">
+            <input
+              checked={Boolean(draftParams.overdue_only)}
+              className="h-4 w-4 rounded border-line-500 text-teal-600 focus:ring-teal-600"
+              onChange={(event) =>
+                onDraftChange((current) => ({
+                  ...current,
+                  overdue_only: event.target.checked,
+                }))
+              }
+              type="checkbox"
+            />
+            Hanya PO terlambat dikirim (overdue)
+          </label>
+        </div>
 
         <div className="flex flex-wrap items-center gap-2 md:col-span-2 lg:col-span-4">
           <button

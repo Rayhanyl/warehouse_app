@@ -5,6 +5,11 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { Button } from "@/components/ui/button";
 import { usePermission } from "@/hooks/usePermission";
 import { useWarehouseScope } from "@/hooks/useWarehouseScope";
+import { queryClient } from "@/lib/query-client";
+import {
+  invalidateAndRefetchAll,
+  invalidateMasterDependentCaches,
+} from "@/lib/query-invalidation";
 import { MasterNoticeBanner } from "../../components/MasterNoticeBanner";
 import type { MasterFormSubmitError } from "../../errors";
 import { downloadMasterCsv, type MasterPageNotice } from "../../utils";
@@ -154,7 +159,13 @@ export function WarehousesPage() {
       if (formState.mode === "create") {
         const created = await createWarehouse(payload);
         setRecords((current) => [created, ...current]);
+        setSearch("");
+        setDraftSearch("");
+        setStatusFilter("all");
+        setDraftStatus("all");
         setFormState({ isOpen: false, mode: "create", warehouse: null });
+        void invalidateMasterDependentCaches(queryClient);
+        void invalidateAndRefetchAll(queryClient, [["administration", "warehouses"]]);
         notifySuccess(`Gudang "${created.name} (${created.code})" berhasil ditambahkan.`);
         return;
       }
@@ -171,6 +182,8 @@ export function WarehousesPage() {
         current && current.id === updated.id ? updated : current,
       );
       setFormState({ isOpen: false, mode: "create", warehouse: null });
+      void invalidateMasterDependentCaches(queryClient);
+      void invalidateAndRefetchAll(queryClient, [["administration", "warehouses"]]);
       notifySuccess(`Gudang "${updated.name} (${updated.code})" berhasil diperbarui.`);
     } catch (error) {
       const mapped = mapWarehouseApiError(error, "Gagal menyimpan gudang.");
@@ -196,6 +209,8 @@ export function WarehousesPage() {
         current && current.id === updated.id ? updated : current,
       );
       setConfirmTarget(null);
+      void invalidateMasterDependentCaches(queryClient);
+      void invalidateAndRefetchAll(queryClient, [["administration", "warehouses"]]);
       notifySuccess(
         nextActive
           ? `Gudang "${updated.name}" berhasil diaktifkan kembali.`

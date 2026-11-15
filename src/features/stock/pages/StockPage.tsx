@@ -1,5 +1,5 @@
 import { type FormEvent, useState } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useSearchParams } from "react-router-dom";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { RouteTabNav } from "@/components/shared/RouteTabNav";
 import { StockLookupModal } from "@/components/ui/StockLookupModal";
@@ -30,6 +30,7 @@ const initialParams: StockListParams = {
   location_id: "",
   item_id: "",
   category_id: "",
+  critical_only: false,
   date_from: "",
   date_to: "",
   movement_type: "",
@@ -38,13 +39,34 @@ const initialParams: StockListParams = {
 };
 
 export function StockPage() {
+  const [searchParams] = useSearchParams();
+  const criticalFromQuery = searchParams.get("critical") === "true";
+  return (
+    <StockPageContent
+      criticalFromQuery={criticalFromQuery}
+      key={criticalFromQuery ? "critical" : "normal"}
+    />
+  );
+}
+
+function StockPageContent({
+  criticalFromQuery,
+}: {
+  criticalFromQuery: boolean;
+}) {
   const { pathname } = useLocation();
   const { can } = usePermission();
   const { canAccessAllWarehouses, resolveEffectiveWarehouseFilter, warehouseOptions } =
     useWarehouseScope();
   const canReadLedger = can("ledger:read");
-  const [params, setParams] = useState(initialParams);
-  const [draft, setDraft] = useState(initialParams);
+  const [params, setParams] = useState<StockListParams>(() => ({
+    ...initialParams,
+    critical_only: criticalFromQuery,
+  }));
+  const [draft, setDraft] = useState<StockListParams>(() => ({
+    ...initialParams,
+    critical_only: criticalFromQuery,
+  }));
   const [lookupOpen, setLookupOpen] = useState(false);
 
   const isWarehouseView =
@@ -85,6 +107,7 @@ export function StockPage() {
     params.location_id,
     params.item_id,
     params.category_id,
+    params.critical_only ? "critical" : "",
     params.date_from,
     params.date_to,
     params.movement_type,

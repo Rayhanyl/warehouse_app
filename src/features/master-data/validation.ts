@@ -68,6 +68,12 @@ export const supplierFormSchema = z.object({
       (val) => !val || (PHONE_REGEX.test(val) && hasMinimumDigits(val, 6)),
       "Nomor telepon harus berisi 6 sampai 30 karakter dan minimal 6 digit.",
     ),
+  fax: z
+    .string()
+    .trim()
+    .max(50, "Nomor fax maksimal terdiri dari 50 karakter.")
+    .optional()
+    .default(""),
   email: z
     .string()
     .trim()
@@ -77,6 +83,42 @@ export const supplierFormSchema = z.object({
     .string()
     .trim()
     .max(1000, "Alamat maksimal terdiri dari 1.000 karakter."),
+  bank_name: z
+    .string()
+    .trim()
+    .max(120, "Nama bank maksimal terdiri dari 120 karakter.")
+    .optional()
+    .default(""),
+  bank_account_number: z
+    .string()
+    .trim()
+    .max(60, "Nomor rekening maksimal terdiri dari 60 karakter.")
+    .optional()
+    .default(""),
+  bank_account_holder: z
+    .string()
+    .trim()
+    .max(150, "Nama pemilik rekening maksimal terdiri dari 150 karakter.")
+    .optional()
+    .default(""),
+  npwp: z
+    .string()
+    .trim()
+    .max(40, "NPWP maksimal terdiri dari 40 karakter.")
+    .optional()
+    .default(""),
+  payment_terms: z
+    .string()
+    .trim()
+    .max(120, "Termin pembayaran maksimal terdiri dari 120 karakter.")
+    .optional()
+    .default(""),
+  notes: z
+    .string()
+    .trim()
+    .max(500, "Catatan pemasok maksimal terdiri dari 500 karakter.")
+    .optional()
+    .default(""),
   is_active: z.boolean(),
 });
 
@@ -151,5 +193,15 @@ export const itemFormSchema = z.object({
     .max(1000, "Deskripsi barang maksimal terdiri dari 1.000 karakter."),
   category_id: z.number().int().positive("Pilih kategori aktif."),
   uom_id: z.number().int().positive("Pilih satuan ukur aktif."),
+  min_stock: z
+    .string()
+    .trim()
+    .optional()
+    .default("0")
+    .refine((val) => {
+      if (!val) return true;
+      const parsed = Number(val);
+      return Number.isFinite(parsed) && parsed >= 0;
+    }, "Stok minimum harus berupa angka non-negatif (>= 0)."),
   is_active: z.boolean(),
 });

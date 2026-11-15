@@ -166,6 +166,19 @@ export function StockFilterBar({
               type="number"
               value={draft.category_id}
             />
+            {(isWarehouseView || isSummaryView) && (
+              <label className="flex min-h-11 cursor-pointer items-center gap-2 rounded-[var(--radius-md)] border border-line-200 bg-surface-0 px-3 text-xs font-semibold text-ink-950 sm:col-span-2">
+                <input
+                  checked={draft.critical_only}
+                  className="h-4 w-4 accent-rose-600"
+                  onChange={(event) =>
+                    onDraftChange({ ...draft, critical_only: event.target.checked })
+                  }
+                  type="checkbox"
+                />
+                <span>Hanya stok kritis (&lt;= Min. Stok)</span>
+              </label>
+            )}
           </>
         )}
 

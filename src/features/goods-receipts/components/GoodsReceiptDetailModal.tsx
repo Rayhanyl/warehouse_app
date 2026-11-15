@@ -91,7 +91,10 @@ export function GoodsReceiptDetailModal({
               </button>
             </div>
 
-            <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-6 print:overflow-visible print:p-0">
+            <div
+              className="min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-6 print:overflow-visible print:p-0"
+              data-slot="document-dialog-body"
+            >
               <div className="no-print">
                 <dl className="grid gap-4 pb-5 text-sm sm:grid-cols-2 lg:grid-cols-4">
                   <div>

@@ -5,8 +5,8 @@ import type { StockTransfer, StockTransferStatus } from "../types";
 
 const printStatusLabels: Record<StockTransferStatus, string> = {
   DRAFT: "DRAFT",
-  APPROVED: "DISETUJUI (SIAP KIRIM)",
-  SHIPPED: "DIKIRIM (IN-TRANSIT)",
+  APPROVED: "DISETUJUI (PERSIAPAN KIRIM)",
+  SHIPPED: "DIKIRIM (SURAT JALAN RESMI)",
   RECEIVED: "DITERIMA (SELESAI)",
   CANCELLED: "DIBATALKAN",
 };

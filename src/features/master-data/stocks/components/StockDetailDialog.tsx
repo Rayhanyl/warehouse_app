@@ -242,7 +242,17 @@ function StockDetailDialogContent({
               </div>
             </div>
 
-            <div className="flex items-start gap-2.5 sm:col-span-2">
+            <div className="flex items-start gap-2.5">
+              <Layers aria-hidden="true" className="mt-0.5 shrink-0 text-amber-700" size={16} />
+              <div>
+                <dt className="text-xs font-medium text-slate-600">Batas stok kritis (Min. Stok)</dt>
+                <dd className="mt-0.5 font-semibold text-ink-950 tabular-nums">
+                  {Number(item.min_stock ?? 0).toLocaleString("id-ID")} {item.uom_code}
+                </dd>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-2.5">
               <Calendar aria-hidden="true" className="mt-0.5 shrink-0 text-slate-600" size={16} />
               <div>
                 <dt className="text-xs font-medium text-slate-600">Terakhir diperbarui</dt>

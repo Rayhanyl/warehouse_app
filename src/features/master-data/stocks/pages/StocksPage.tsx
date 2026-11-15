@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { fetchCategories } from "@/features/master-data/categories/api";
 import { fetchUoms } from "@/features/master-data/uoms/api";
 import { usePermission } from "@/hooks/usePermission";
+import { queryClient } from "@/lib/query-client";
+import { invalidateMasterDependentCaches } from "@/lib/query-invalidation";
 import { MasterNoticeBanner } from "../../components/MasterNoticeBanner";
 import type { MasterFormSubmitError } from "../../errors";
 import { downloadMasterCsv, type MasterPageNotice } from "../../utils";
@@ -206,10 +208,16 @@ export function StocksPage() {
           description: payload.description,
           category_id: payload.category_id,
           uom_id: payload.uom_id,
+          min_stock: payload.min_stock ?? "0",
           is_active: payload.is_active,
         });
         setRecords((current) => [created, ...current]);
+        setSearch("");
+        setDraftSearch("");
+        setStatusFilter("all");
+        setDraftStatus("all");
         setFormState({ isOpen: false, mode: "create", item: null });
+        void invalidateMasterDependentCaches(queryClient);
         notifySuccess(`Barang "${created.name} (${created.sku})" berhasil ditambahkan.`);
         return;
       }
@@ -226,6 +234,7 @@ export function StocksPage() {
         description: payload.description,
         category_id: payload.category_id,
         uom_id: payload.uom_id,
+        min_stock: payload.min_stock ?? "0",
         is_active: payload.is_active,
       });
       setRecords((current) =>
@@ -233,6 +242,7 @@ export function StocksPage() {
       );
       setDetailTarget((current) => (current?.id === targetId ? updated : current));
       setFormState({ isOpen: false, mode: "create", item: null });
+      void invalidateMasterDependentCaches(queryClient);
       notifySuccess(`Barang "${updated.name} (${updated.sku})" berhasil diperbarui.`);
     } catch (error) {
       const mapped = mapStockApiError(
@@ -261,6 +271,7 @@ export function StocksPage() {
       );
       setDetailTarget((current) => (current?.id === item.id ? updated : current));
       setConfirmTarget(null);
+      void invalidateMasterDependentCaches(queryClient);
       notifySuccess(
         updated.is_active
           ? `Barang "${updated.name}" berhasil diaktifkan kembali.`
@@ -320,6 +331,7 @@ export function StocksPage() {
         sort_dir: "asc",
       });
       setRecords(page.items);
+      void invalidateMasterDependentCaches(queryClient);
     } catch {
       setNotice({
         type: "error",

@@ -281,39 +281,41 @@ export const MODULE_GUIDES: Record<GuideModuleId, ModuleGuideContent> = {
     title: "Daftar & Kelola Purchase Order (PO)",
     category: "Operasional",
     summary:
-      "Mengelola siklus pengadaan pembelian barang ke pemasok dari status DRAFT, ISSUED, pemenuhan parsial via GR, hingga CLOSED/CANCELLED.",
-    whenToUse: "Saat membuat pesanan barang ke supplier, menerbitkan PO resmi, atau mencetak dokumen PO.",
+      "Mengelola siklus pengadaan pembelian barang ke pemasok dari status DRAFT, revisi sebelum penerimaan, pemantauan estimasi kirim (overdue), pemenuhan parsial via GR, hingga Short-Close per baris atau header.",
+    whenToUse:
+      "Saat membuat pesanan barang, mengubah draft, menyalin PO terbit menjadi draft revisi, menghentikan sisa barang yang tidak jadi dikirim, atau mencetak PO.",
     prerequisites: [
       "Data Pemasok aktif di Master Pemasok.",
       "Data Gudang tujuan & Master Barang (SKU) beserta UoM aktif.",
     ],
     stepByStep: [
-      "Klik Buat PO untuk menyusun daftar pesanan baru.",
-      "Pada detail PO berstatus DRAFT, periksa kembali barang & kuantitas lalu klik Terbitkan PO (ISSUED).",
-      "Gunakan tombol Pratinjau PO cetak atau Cetak Purchase Order untuk menerbitkan surat PO bermerek perusahaan.",
+      "Klik Buat PO untuk menyusun daftar pesanan baru (lengkapi Estimasi Kirim jika ingin memantau keterlambatan).",
+      "Selama masih DRAFT, klik Ubah Draft PO pada modal detail untuk mengubah pemasok, tanggal, atau daftar barang.",
+      "Jika PO sudah ISSUED tetapi belum ada GR dan perlu diubah, gunakan Batalkan & Salin ke Draft Baru.",
+      "Jika supplier hanya mengirim sebagian barang dan sisa dibatalkan/tidak diproduksi lagi, klik Hentikan Sisa pada baris terkait atau Tutup PO (Short-Close) beserta alasannya.",
     ],
     tips: [
-      "PO yang sudah diterbitkan (ISSUED) tidak bisa diedit langsung; batalkan/tutup sesuai prosedur jika ada perubahan besar.",
-      "PO akan otomatis berubah menjadi RECEIVED ketika seluruh baris sudah diterima lewat Goods Receipt.",
+      "Gunakan filter 'Hanya PO terlambat dikirim (overdue)' untuk menindaklanjuti pesanan yang melewati Estimasi Kirim.",
+      "PO otomatis berubah menjadi RECEIVED bila seluruh sisa diterima, atau CLOSED bila sebagian baris ditutup via Short-Close.",
     ],
     fieldIds: ["po_status_issued", "allow_decimal", "warehouse_scoping"],
   },
   "purchase-order-create": {
     id: "purchase-order-create",
-    title: "Formulir Pembuatan Purchase Order",
+    title: "Formulir Pembuatan & Perubahan Draft PO",
     category: "Operasional",
     summary:
-      "Panduan pengisian form pembuatan Purchase Order agar validasi pemasok, gudang, dan kuantitas UoM berjalan mulus.",
-    whenToUse: "Saat sedang menginput baris barang pada form Buat PO baru.",
+      "Panduan pengisian form pembuatan atau perubahan Draft Purchase Order agar validasi pemasok, estimasi kirim, dan kuantitas UoM berjalan akurat.",
+    whenToUse: "Saat sedang menginput atau mengubah baris barang pada formulir Draft PO.",
     prerequisites: [
       "Pemasok aktif sudah terdaftar.",
       "Pengguna memiliki permission po:create dan penugasan ke gudang tujuan.",
     ],
     stepByStep: [
       "Pilih Pemasok dan Gudang Tujuan Penerimaan terlebih dahulu.",
-      "Tentukan Tanggal Order yang valid.",
+      "Tentukan Tanggal Order serta Estimasi Tanggal Pengiriman (opsional, harus >= Tanggal Order).",
       "Tambahkan satu atau beberapa Barang (SKU) lalu isi Qty Pesanan sesuai aturan desimal UoM.",
-      "Klik Simpan Draft jika masih ingin diedit, atau langsung lanjut Terbitkan setelah tersimpan.",
+      "Klik Buat draft PO (atau Simpan perubahan PO saat edit), lalu Terbitkan setelah diverifikasi.",
     ],
     tips: [
       "Membuka panduan ini tidak akan menghapus atau mereset data PO yang sedang Anda ketik di formulir.",

@@ -1,4 +1,8 @@
-import type { PurchaseOrderListParams, PurchaseOrderStatus } from "./types";
+import type {
+  PurchaseOrderLineStatus,
+  PurchaseOrderListParams,
+  PurchaseOrderStatus,
+} from "./types";
 
 export const PO_INITIAL_PARAMS: PurchaseOrderListParams = {
   limit: 20,
@@ -9,9 +13,23 @@ export const PO_INITIAL_PARAMS: PurchaseOrderListParams = {
   warehouse_id: null,
   date_from: "",
   date_to: "",
+  overdue_only: false,
   sort_by: "id",
   sort_dir: "desc",
 };
+
+export const PO_LINE_STATUS_LABELS: Record<PurchaseOrderLineStatus, string> = {
+  OPEN: "Menunggu",
+  PARTIALLY_RECEIVED: "Sebagian",
+  RECEIVED: "Penuh",
+  CLOSED: "Ditutup (Short-Close)",
+};
+
+export const PO_CLOSE_REASON_PRESETS = [
+  "Stok pemasok habis / tidak diproduksi lagi (discontinued)",
+  "Pengiriman terlambat melewati batas tenggat (overdue)",
+  "Kesepakatan pembatalan sisa pesanan dengan pemasok",
+] as const;
 
 export const PO_STATUS_LABELS: Record<PurchaseOrderStatus, string> = {
   DRAFT: "Draft",

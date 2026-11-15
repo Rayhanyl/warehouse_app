@@ -51,6 +51,9 @@ export function StockFormDialog({
   const [uomId, setUomId] = useState(
     () => initialItem?.uom_id ?? uomOptions[0]?.id ?? 0,
   );
+  const [minStock, setMinStock] = useState(
+    () => (initialItem?.min_stock ? String(Number(initialItem.min_stock)) : "0"),
+  );
   const [isActive, setIsActive] = useState(
     () => initialItem?.is_active ?? true,
   );
@@ -83,6 +86,7 @@ export function StockFormDialog({
     description: errors.description ?? submitError?.fieldErrors?.description,
     category: errors.category ?? submitError?.fieldErrors?.category,
     uom: errors.uom ?? submitError?.fieldErrors?.uom,
+    minStock: errors.minStock ?? submitError?.fieldErrors?.min_stock,
   };
 
   if (!isOpen) {
@@ -108,6 +112,7 @@ export function StockFormDialog({
       description,
       categoryId,
       uomId,
+      minStock,
       isActive,
       existingItems,
       categoryOptions,
@@ -315,25 +320,56 @@ export function StockFormDialog({
               )}
             </div>
 
-            <div>
-              <label
-                className="text-sm font-semibold text-ink-950"
-                htmlFor="stock-status-select"
-              >
-                Status barang
-              </label>
-              <select
-                className="mt-2 h-12 w-full rounded-[var(--radius-md)] border border-line-500 bg-surface-0 px-3.5 text-sm font-medium text-ink-950 focus:border-teal-600 focus:outline-none focus:ring-2 focus:ring-teal-600/20 disabled:opacity-60"
-                disabled={isSubmitting}
-                id="stock-status-select"
-                onChange={(event) =>
-                  setIsActive(event.target.value === "active")
-                }
-                value={isActive ? "active" : "inactive"}
-              >
-                <option value="active">Aktif</option>
-                <option value="inactive">Nonaktif</option>
-              </select>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <label
+                  className="text-sm font-semibold text-ink-950"
+                  htmlFor="stock-min-stock-input"
+                >
+                  Batas stok kritis (Min. Stok)
+                </label>
+                <input
+                  aria-invalid={Boolean(mergedErrors.minStock)}
+                  className="mt-2 h-12 w-full rounded-[var(--radius-md)] border border-line-500 bg-surface-0 px-3.5 text-sm text-ink-950 tabular-nums focus:border-teal-600 focus:outline-none focus:ring-2 focus:ring-teal-600/20 disabled:opacity-60"
+                  disabled={isSubmitting}
+                  id="stock-min-stock-input"
+                  min={0}
+                  onChange={(event) => setMinStock(event.target.value)}
+                  placeholder="0"
+                  step="any"
+                  type="number"
+                  value={minStock}
+                />
+                <p className="mt-1 text-xs text-slate-600">
+                  Barang masuk daftar perhatian kritis bila saldo gudang &lt;= nilai ini.
+                </p>
+                {mergedErrors.minStock && (
+                  <p className="mt-1.5 text-xs font-medium text-red-700">
+                    {mergedErrors.minStock}
+                  </p>
+                )}
+              </div>
+
+              <div>
+                <label
+                  className="text-sm font-semibold text-ink-950"
+                  htmlFor="stock-status-select"
+                >
+                  Status barang
+                </label>
+                <select
+                  className="mt-2 h-12 w-full rounded-[var(--radius-md)] border border-line-500 bg-surface-0 px-3.5 text-sm font-medium text-ink-950 focus:border-teal-600 focus:outline-none focus:ring-2 focus:ring-teal-600/20 disabled:opacity-60"
+                  disabled={isSubmitting}
+                  id="stock-status-select"
+                  onChange={(event) =>
+                    setIsActive(event.target.value === "active")
+                  }
+                  value={isActive ? "active" : "inactive"}
+                >
+                  <option value="active">Aktif</option>
+                  <option value="inactive">Nonaktif</option>
+                </select>
+              </div>
             </div>
           </div>
 

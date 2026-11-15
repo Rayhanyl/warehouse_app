@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { BarcodeVisual } from "@/components/ui/BarcodeVisual";
 import { resolveLogoAssetUrl } from "@/features/document-templates/api";
 import type {
@@ -29,6 +29,7 @@ export interface ModularDocumentPrintSheetProps {
   tableSummary?: ReactNode;
   documentNotes?: string | null;
   visibleOnScreen?: boolean;
+  compact?: boolean;
 }
 
 const LOGO_SIZE_CLASSES: Record<LogoSize, string> = {
@@ -81,7 +82,12 @@ export function ModularDocumentPrintSheet({
   tableSummary,
   documentNotes,
   visibleOnScreen = false,
+  compact,
 }: ModularDocumentPrintSheetProps) {
+  const [compactOverride, setCompactOverride] = useState<boolean | null>(null);
+  const isCompact = compact ?? compactOverride ?? rows.length >= 18;
+  const showDensityToggle = visibleOnScreen && compact === undefined && rows.length >= 10;
+
   const logoSrc = resolveLogoAssetUrl(template.logo_url);
   const logoSizeClass = LOGO_SIZE_CLASSES[template.logo_size] ?? LOGO_SIZE_CLASSES.MEDIUM;
   const visibleColumns = template.table_columns.filter(
@@ -90,10 +96,11 @@ export function ModularDocumentPrintSheet({
   const safeMarginMm = Number.isFinite(template.margin_mm)
     ? Math.min(40, Math.max(4, template.margin_mm))
     : 12;
+  const escapedDocLabel = documentNumberLabel.replace(/["\\]/g, "");
 
   const pageCss = `@media print { @page { size: ${resolvePaperCss(
     template.paper_size,
-  )} ${template.orientation.toLowerCase()}; margin: ${safeMarginMm}mm; } }`;
+  )} ${template.orientation.toLowerCase()}; margin: ${safeMarginMm}mm; @bottom-left { content: "${escapedDocLabel}"; font-size: 9px; color: #4e5e5d; } @bottom-right { content: "Halaman " counter(page) " / " counter(pages); font-size: 9px; color: #4e5e5d; } } }`;
 
   const logoElement = logoSrc ? (
     <img
@@ -191,17 +198,18 @@ export function ModularDocumentPrintSheet({
     }
 
     if (sectionKey === "TABLE") {
+      const cellClass = isCompact ? "px-2 py-1 text-[11px] leading-snug" : "px-2.5 py-2";
       return (
         <div className="mt-4" key="TABLE">
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[540px] border-collapse border border-ink-950 text-left text-xs print:min-w-0">
+          <div className="overflow-x-auto print:overflow-visible">
+            <table className="printable-document-table w-full min-w-[540px] border-collapse border border-ink-950 text-left text-xs print:min-w-0">
               <thead>
                 <tr className="border-b border-ink-950 bg-canvas-50 font-bold text-ink-950">
                   {visibleColumns.map((col, idx) => (
                     <th
                       className={`${
                         idx < visibleColumns.length - 1 ? "border-r border-ink-950" : ""
-                      } px-2.5 py-2 ${getColumnAlignmentClass(col.key)}`}
+                      } ${cellClass} ${getColumnAlignmentClass(col.key)}`}
                       key={col.key}
                     >
                       {col.label}
@@ -216,7 +224,7 @@ export function ModularDocumentPrintSheet({
                       <td
                         className={`${
                           idx < visibleColumns.length - 1 ? "border-r border-ink-950" : ""
-                        } px-2.5 py-2 ${getColumnAlignmentClass(col.key)}`}
+                        } ${cellClass} ${getColumnAlignmentClass(col.key)}`}
                         key={col.key}
                       >
                         {row.cells[col.key] ?? "-"}
@@ -239,7 +247,7 @@ export function ModularDocumentPrintSheet({
         return null;
       }
       return (
-        <div className="mt-4 space-y-1.5 text-xs text-slate-700" key="NOTES">
+        <div className="print-notes-block mt-4 space-y-1.5 text-xs text-slate-700" key="NOTES">
           {documentNotes && (
             <p className="rounded border border-ink-950/20 bg-canvas-50 px-3 py-2 text-ink-950">
               <strong>Catatan Transaksi:</strong> {documentNotes}
@@ -269,7 +277,7 @@ export function ModularDocumentPrintSheet({
               {sig.subtitle && (
                 <p className="text-[11px] text-slate-600">{sig.subtitle}</p>
               )}
-              <div className="h-16" />
+              <div className={isCompact ? "h-12" : "h-16"} />
               <p className="border-t border-ink-950 pt-1 font-medium text-ink-950">
                 {sig.placeholder}
               </p>
@@ -288,11 +296,45 @@ export function ModularDocumentPrintSheet({
       className={`printable-document-sheet ${
         visibleOnScreen ? "mt-5 block" : "hidden"
       } rounded-[var(--radius-md)] border border-ink-950/30 bg-surface-0 text-ink-950 print:mt-0 print:block print:border-0 print:p-0`}
+      data-compact={isCompact ? "true" : "false"}
       data-orientation={template.orientation}
       data-paper-size={template.paper_size}
       style={{ padding: `${Math.min(24, Math.max(10, Math.round(safeMarginMm * 1.4)))}px` }}
     >
       <style>{pageCss}</style>
+      {showDensityToggle && (
+        <div className="no-print mb-3 flex flex-wrap items-center justify-between gap-2 rounded-[var(--radius-md)] border border-line-200 bg-canvas-50 px-3 py-2 text-xs">
+          <span className="font-medium text-slate-700">
+            Dokumen memiliki {rows.length} baris. Pilih kepadatan baris cetak:
+          </span>
+          <div className="inline-flex items-center gap-1 rounded border border-line-200 bg-surface-0 p-0.5 font-semibold">
+            <button
+              aria-pressed={!isCompact}
+              className={`rounded px-2.5 py-1 transition ${
+                !isCompact
+                  ? "bg-teal-600 text-surface-0"
+                  : "text-slate-700 hover:text-ink-950"
+              }`}
+              onClick={() => setCompactOverride(false)}
+              type="button"
+            >
+              Standar
+            </button>
+            <button
+              aria-pressed={isCompact}
+              className={`rounded px-2.5 py-1 transition ${
+                isCompact
+                  ? "bg-teal-600 text-surface-0"
+                  : "text-slate-700 hover:text-ink-950"
+              }`}
+              onClick={() => setCompactOverride(true)}
+              type="button"
+            >
+              Padat
+            </button>
+          </div>
+        </div>
+      )}
       {template.section_order.map((sectionKey) => renderSection(sectionKey))}
     </section>
   );

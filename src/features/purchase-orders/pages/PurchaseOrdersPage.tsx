@@ -1,6 +1,6 @@
 import { type FormEvent, useEffect, useState } from "react";
 import { ChevronLeft, Plus } from "lucide-react";
-import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
+import { Link, Navigate, useLocation, useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { useIsMobile } from "@/hooks/useIsMobile";
@@ -17,11 +17,17 @@ import { PurchaseOrderCreateForm } from "../components/PurchaseOrderCreateForm";
 import {
   PurchaseOrderActionDialog,
   PurchaseOrderDetailModal,
+  type PurchaseOrderActionType,
 } from "../components/PurchaseOrderDetailModal";
 import { PurchaseOrderFilterBar } from "../components/PurchaseOrderFilterBar";
 import { PurchaseOrdersDataView } from "../components/PurchaseOrdersDataView";
 import { PO_INITIAL_PARAMS } from "../constants";
-import type { PurchaseOrder, PurchaseOrderCreatePayload } from "../types";
+import type {
+  PurchaseOrder,
+  PurchaseOrderCreatePayload,
+  PurchaseOrderLine,
+  PurchaseOrderUpdatePayload,
+} from "../types";
 
 export function PurchaseOrdersPage() {
   const navigate = useNavigate();
@@ -42,8 +48,12 @@ export function PurchaseOrdersPage() {
       : null;
   const [detailId, setDetailId] = useState<number | null>(openPoIdFromState);
   const [actionTarget, setActionTarget] = useState<PurchaseOrder | null>(null);
-  const [actionType, setActionType] = useState<"issue" | "cancel" | "close" | null>(null);
+  const [actionLine, setActionLine] = useState<PurchaseOrderLine | null>(null);
+  const [actionType, setActionType] = useState<PurchaseOrderActionType | null>(null);
   const [closedReason, setClosedReason] = useState("");
+  const basePath = location.pathname.startsWith("/purchasing")
+    ? "/purchasing/purchase-orders"
+    : "/purchase-orders";
 
   const effectiveWarehouseId = resolveEffectiveWarehouseFilter(params.warehouse_id);
   const { data, isLoading, isError, error, refetch } = usePurchaseOrders({
@@ -68,7 +78,8 @@ export function PurchaseOrdersPage() {
       params.supplier_id ||
       params.warehouse_id ||
       params.date_from ||
-      params.date_to,
+      params.date_to ||
+      params.overdue_only,
   );
   const activeFilterCount = [
     params.search,
@@ -77,6 +88,7 @@ export function PurchaseOrdersPage() {
     params.warehouse_id,
     params.date_from,
     params.date_to,
+    params.overdue_only,
   ].filter(Boolean).length;
 
   function applyFilters(event: FormEvent<HTMLFormElement>) {
@@ -89,25 +101,40 @@ export function PurchaseOrdersPage() {
     setParams(PO_INITIAL_PARAMS);
   }
 
-  function openAction(po: PurchaseOrder, action: "issue" | "cancel" | "close") {
+  function openAction(
+    po: PurchaseOrder,
+    action: PurchaseOrderActionType,
+    poLine?: PurchaseOrderLine,
+  ) {
     setClosedReason("");
     setActionTarget(po);
+    setActionLine(poLine ?? null);
     setActionType(action);
   }
 
   async function submitAction() {
     if (!actionTarget || !actionType) return;
-    if (actionType === "close" && !closedReason.trim()) {
+    if ((actionType === "close" || actionType === "close-line") && !closedReason.trim()) {
       toast.error("Alasan penutupan wajib diisi.");
       return;
     }
     try {
       const updated = await actionMutation.mutateAsync({
         id: actionTarget.id,
+        poLineId: actionLine?.id,
         closedReason,
       });
+      const prevPoNumber = actionTarget.po_number;
+      const completedAction = actionType;
       setActionTarget(null);
+      setActionLine(null);
       setActionType(null);
+      if (completedAction === "revise-draft") {
+        setDetailId(null);
+        toast.success(`PO ${prevPoNumber} dibatalkan dan disalin ke draft ${updated.po_number}.`);
+        navigate(`${basePath}/${updated.id}/edit`);
+        return;
+      }
       toast.success(`Purchase order ${updated.po_number} berhasil diperbarui.`);
     } catch (actionError) {
       const mapped = mapPurchaseOrderError(actionError, "Aksi purchase order belum berhasil.");
@@ -170,10 +197,15 @@ export function PurchaseOrdersPage() {
         <PurchaseOrderDetailModal
           canCancel={canCancel || canCreate}
           canClose={canClose}
+          canEdit={canCreate}
           canIssue={canIssue}
           isLoading={detail.isLoading}
           onAction={openAction}
           onClose={() => setDetailId(null)}
+          onEdit={(po) => {
+            setDetailId(null);
+            navigate(`${basePath}/${po.id}/edit`);
+          }}
           purchaseOrder={detail.data}
         />
       )}
@@ -184,11 +216,13 @@ export function PurchaseOrdersPage() {
           isSubmitting={actionMutation.isPending}
           onClose={() => {
             setActionTarget(null);
+            setActionLine(null);
             setActionType(null);
           }}
           onReasonChange={setClosedReason}
           onSubmit={() => void submitAction()}
           purchaseOrder={actionTarget}
+          targetLine={actionLine}
         />
       )}
     </>
@@ -197,19 +231,23 @@ export function PurchaseOrdersPage() {
 
 export function PurchaseOrderCreatePage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { can } = usePermission();
   const references = usePurchaseOrderReferences();
   const createMutation = usePurchaseOrderMutation("create");
+  const basePath = location.pathname.startsWith("/purchasing")
+    ? "/purchasing/purchase-orders"
+    : "/purchase-orders";
 
   if (!can("po:create")) {
-    return <Navigate replace to="/purchase-orders" />;
+    return <Navigate replace to={basePath} />;
   }
 
   async function createDraft(payload: PurchaseOrderCreatePayload) {
     try {
       const created = await createMutation.mutateAsync({ payload });
       toast.success(`Draft ${created.po_number} berhasil dibuat.`);
-      navigate("/purchase-orders", { replace: true, state: { openPurchaseOrderId: created.id } });
+      navigate(basePath, { replace: true, state: { openPurchaseOrderId: created.id } });
     } catch (createError) {
       const mapped = mapPurchaseOrderError(createError, "Draft purchase order belum dapat dibuat.");
       toast.error(mapped.message);
@@ -223,7 +261,7 @@ export function PurchaseOrderCreatePage() {
         action={
           <Link
             className="inline-flex min-h-11 items-center gap-2 rounded-[var(--radius-md)] border border-line-500 bg-surface-0 px-4 text-sm font-semibold text-ink-950 hover:bg-canvas-50 focus:outline-none focus:ring-2 focus:ring-teal-600"
-            to="/purchase-orders"
+            to={basePath}
           >
             <ChevronLeft aria-hidden="true" size={17} />
             Kembali ke daftar
@@ -236,11 +274,102 @@ export function PurchaseOrderCreatePage() {
         isReferencesError={references.isError}
         isReferencesLoading={references.isLoading}
         isSubmitting={createMutation.isPending}
-        onClose={() => navigate("/purchase-orders")}
+        onClose={() => navigate(basePath)}
         onRetryReferences={() => void references.refetch()}
         onSubmit={createDraft}
         references={references.data}
       />
+    </>
+  );
+}
+
+export function PurchaseOrderEditPage() {
+  const { poId } = useParams<{ poId: string }>();
+  const parsedId = Number(poId);
+  const validId = Number.isInteger(parsedId) && parsedId > 0 ? parsedId : null;
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { can } = usePermission();
+  const references = usePurchaseOrderReferences();
+  const detail = usePurchaseOrder(validId);
+  const updateMutation = usePurchaseOrderMutation("update");
+  const basePath = location.pathname.startsWith("/purchasing")
+    ? "/purchasing/purchase-orders"
+    : "/purchase-orders";
+
+  if (!can("po:create") || validId === null) {
+    return <Navigate replace to={basePath} />;
+  }
+
+  async function updateDraft(payload: PurchaseOrderCreatePayload) {
+    if (!validId) return;
+    const updatePayload: PurchaseOrderUpdatePayload = {
+      supplier_id: payload.supplier_id,
+      warehouse_id: payload.warehouse_id,
+      order_date: payload.order_date,
+      expected_delivery_date: payload.expected_delivery_date ?? null,
+      notes: payload.notes,
+      lines: payload.lines,
+    };
+    try {
+      const updated = await updateMutation.mutateAsync({
+        id: validId,
+        payload: updatePayload,
+      });
+      toast.success(`Draft ${updated.po_number} berhasil diperbarui.`);
+      navigate(basePath, { replace: true, state: { openPurchaseOrderId: updated.id } });
+    } catch (updateError) {
+      const mapped = mapPurchaseOrderError(
+        updateError,
+        "Perubahan draft purchase order belum dapat disimpan.",
+      );
+      toast.error(mapped.message);
+      throw updateError;
+    }
+  }
+
+  return (
+    <>
+      <PageHeader
+        action={
+          <Link
+            className="inline-flex min-h-11 items-center gap-2 rounded-[var(--radius-md)] border border-line-500 bg-surface-0 px-4 text-sm font-semibold text-ink-950 hover:bg-canvas-50 focus:outline-none focus:ring-2 focus:ring-teal-600"
+            to={basePath}
+          >
+            <ChevronLeft aria-hidden="true" size={17} />
+            Kembali ke daftar
+          </Link>
+        }
+        description="Perbarui pemasok, gudang tujuan, estimasi kirim, atau baris barang selama purchase order masih berstatus Draft."
+        title={detail.data ? `Ubah Draft ${detail.data.po_number}` : "Ubah Draft Purchase Order"}
+      />
+      {detail.isLoading ? (
+        <div className="rounded-[var(--radius-lg)] border border-line-200 bg-surface-0 p-6 text-sm text-slate-700">
+          Memuat draft purchase order...
+        </div>
+      ) : detail.isError || !detail.data ? (
+        <div className="rounded-[var(--radius-lg)] border border-red-600/30 bg-red-50 p-6 text-sm text-red-700">
+          Draft purchase order tidak ditemukan atau gagal dimuat.
+        </div>
+      ) : detail.data.status !== "DRAFT" ? (
+        <div className="rounded-[var(--radius-lg)] border border-amber-600/30 bg-amber-50 p-6 text-sm text-amber-900">
+          PO {detail.data.po_number} berstatus {detail.data.status} sehingga tidak dapat diedit
+          langsung. Gunakan aksi &quot;Batalkan &amp; Salin ke Draft Baru&quot; pada detail PO
+          jika belum ada penerimaan barang.
+        </div>
+      ) : (
+        <PurchaseOrderCreateForm
+          initialPurchaseOrder={detail.data}
+          isReferencesError={references.isError}
+          isReferencesLoading={references.isLoading}
+          isSubmitting={updateMutation.isPending}
+          onClose={() => navigate(basePath)}
+          onRetryReferences={() => void references.refetch()}
+          onSubmit={updateDraft}
+          references={references.data}
+          submitLabel="Simpan perubahan PO"
+        />
+      )}
     </>
   );
 }

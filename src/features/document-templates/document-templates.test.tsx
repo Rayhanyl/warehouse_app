@@ -295,13 +295,11 @@ describe("Modular Document Templates (Tahap 17)", () => {
     ).toBeGreaterThan(0);
     expect(putSpy).not.toHaveBeenCalled();
 
-    // Perbaiki judul, ubah nama perusahaan, pakai preset 2 kolom, naikkan bagian 2, upload logo, lalu simpan
+    // Perbaiki judul, ubah nama perusahaan, upload logo di tab Kop & Logo, lalu pindah tab untuk preset tanda tangan & urutan bagian
     fireEvent.change(titleInput, { target: { value: "GRN GUDANG BARU" } });
     fireEvent.change(screen.getByLabelText("Nama Perusahaan / Gudang *"), {
       target: { value: "PT JAYA LOGISTIK" },
     });
-    fireEvent.click(screen.getByRole("button", { name: "Preset 2 Kolom" }));
-    fireEvent.click(screen.getByLabelText("Naikkan bagian METADATA"));
 
     const fileInput = screen.getByLabelText("Unggah file logo perusahaan");
     const pngFile = new File(["pngbytes"], "logo.png", { type: "image/png" });
@@ -314,6 +312,19 @@ describe("Modular Document Templates (Tahap 17)", () => {
         expect.any(Object),
       );
     });
+
+    fireEvent.click(screen.getByRole("tab", { name: /Tanda Tangan/i }));
+    fireEvent.click(screen.getByRole("button", { name: "Preset 2 Kolom" }));
+
+    fireEvent.click(screen.getByRole("tab", { name: /Urutan & Kolom/i }));
+    fireEvent.click(screen.getByLabelText("Naikkan bagian METADATA"));
+
+    // Uji tombol zoom pratinjau langsung
+    fireEvent.click(screen.getByRole("button", { name: "75%" }));
+    expect(screen.getByRole("button", { name: "75%" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
 
     fireEvent.click(screen.getByRole("button", { name: /Simpan Template/i }));
 
@@ -332,5 +343,81 @@ describe("Modular Document Templates (Tahap 17)", () => {
         }),
       );
     });
+  });
+
+  it("menyembunyikan tombol cetak pada Purchase Order berstatus DRAFT (Tahap 33) dan mendukung mode padat multi-halaman pada ModularDocumentPrintSheet (Tahap 32)", async () => {
+    const draftPo: PurchaseOrder = {
+      ...samplePo,
+      id: 89,
+      po_number: "PO-202611-0089",
+      status: "DRAFT",
+      issued_at: null,
+      issued_by: null,
+    };
+
+    vi.spyOn(apiClient, "get").mockImplementation(async (url: string) => {
+      if (url === "/purchase-orders") {
+        return { data: { items: [draftPo], total: 1, limit: 20, offset: 0 } };
+      }
+      if (url === "/purchase-orders/89") {
+        return { data: draftPo };
+      }
+      return { data: { items: [], total: 0, limit: 200, offset: 0 } };
+    });
+
+    render(
+      <QueryClientProvider client={createTestQueryClient()}>
+        <MemoryRouter initialEntries={["/purchase-orders"]}>
+          <PurchaseOrdersPage />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+
+    const draftPoLink = await screen.findByRole("button", {
+      name: "PO-202611-0089",
+    });
+    fireEvent.click(draftPoLink);
+
+    await screen.findByText(/Detail purchase order|Terbitkan purchase order/i);
+    expect(
+      screen.queryByRole("button", { name: /Cetak Purchase Order/i }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /Pratinjau PO cetak/i }),
+    ).not.toBeInTheDocument();
+
+    // Uji mode padat otomatis pada dokumen dengan 20 baris item
+    const manyRows = Array.from({ length: 20 }).map((_, index) => ({
+      id: index + 1,
+      cells: {
+        no: index + 1,
+        sku_barcode: `SKU-${index + 1}`,
+        item_name: `Barang Uji ${index + 1}`,
+        uom: "PCS",
+        qty_received: "10",
+        location: "RAK-A1",
+      },
+    }));
+
+    render(
+      <ModularDocumentPrintSheet
+        ariaLabel="Dokumen Banyak Baris"
+        documentBarcodeValue="GR-MANY-20"
+        documentNumberLabel="No. GR: GR-MANY-20"
+        metadata={[{ label: "Gudang", value: "WH-JKT" }]}
+        rows={manyRows}
+        statusLabel="Status: POSTED"
+        template={DEFAULT_DOCUMENT_TEMPLATES.GOODS_RECEIPT}
+        visibleOnScreen={true}
+      />,
+    );
+
+    const manySheet = screen.getByLabelText("Dokumen Banyak Baris");
+    expect(manySheet).toHaveAttribute("data-compact", "true");
+    expect(
+      screen.getByText(/Dokumen memiliki 20 baris/i),
+    ).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Standar" }));
+    expect(manySheet).toHaveAttribute("data-compact", "false");
   });
 });

@@ -123,13 +123,23 @@ export function PurchaseOrdersDataView({
                   </button>
                   <p className="mt-0.5 text-xs text-slate-600 tabular-nums">
                     ID #{po.id} · {formatPoDate(po.order_date)}
+                    {po.expected_delivery_date
+                      ? ` · Est. kirim ${formatPoDate(po.expected_delivery_date)}`
+                      : ""}
                   </p>
                 </div>
-                <span
-                  className={`inline-flex shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold ${PO_STATUS_CLASSES[po.status]}`}
-                >
-                  {PO_STATUS_LABELS[po.status]}
-                </span>
+                <div className="flex flex-col items-end gap-1">
+                  <span
+                    className={`inline-flex shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold ${PO_STATUS_CLASSES[po.status]}`}
+                  >
+                    {PO_STATUS_LABELS[po.status]}
+                  </span>
+                  {po.is_overdue && (
+                    <span className="inline-flex shrink-0 rounded-full bg-red-100 px-2 py-0.5 text-[11px] font-semibold text-red-700">
+                      Terlambat {po.days_overdue} hari
+                    </span>
+                  )}
+                </div>
               </div>
               <div className="grid grid-cols-2 gap-2 rounded-[var(--radius-md)] bg-canvas-50/70 p-3 text-xs">
                 <div>
@@ -190,15 +200,27 @@ export function PurchaseOrdersDataView({
                     <p className="mt-1 text-xs text-slate-600">{po.warehouse_code}</p>
                   </td>
                   <td className="px-4 py-4 text-slate-700 tabular-nums">
-                    {formatPoDate(po.order_date)}
+                    <p>{formatPoDate(po.order_date)}</p>
+                    {po.expected_delivery_date && (
+                      <p className="mt-1 text-xs text-slate-600">
+                        Est. kirim: {formatPoDate(po.expected_delivery_date)}
+                      </p>
+                    )}
                   </td>
                   <td className="px-4 py-4 text-slate-700 tabular-nums">{po.line_count}</td>
                   <td className="px-4 py-4">
-                    <span
-                      className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${PO_STATUS_CLASSES[po.status]}`}
-                    >
-                      {PO_STATUS_LABELS[po.status]}
-                    </span>
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <span
+                        className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${PO_STATUS_CLASSES[po.status]}`}
+                      >
+                        {PO_STATUS_LABELS[po.status]}
+                      </span>
+                      {po.is_overdue && (
+                        <span className="inline-flex rounded-full bg-red-100 px-2 py-0.5 text-[11px] font-semibold text-red-700">
+                          Terlambat {po.days_overdue} hari
+                        </span>
+                      )}
+                    </div>
                   </td>
                   <td className="px-4 py-4 text-right">
                     <button

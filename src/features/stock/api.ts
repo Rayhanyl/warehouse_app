@@ -26,6 +26,7 @@ function toParams(params: StockListParams) {
     location_id: params.location_id || undefined,
     item_id: params.item_id || undefined,
     category_id: params.category_id || undefined,
+    critical_only: params.critical_only ? true : undefined,
     date_from: params.date_from || undefined,
     date_to: params.date_to || undefined,
   };

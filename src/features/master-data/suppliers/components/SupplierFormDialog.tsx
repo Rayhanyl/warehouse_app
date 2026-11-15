@@ -32,8 +32,23 @@ export function SupplierFormDialog({
     () => initialSupplier?.contact_person ?? "",
   );
   const [phone, setPhone] = useState(() => initialSupplier?.phone ?? "");
+  const [fax, setFax] = useState(() => initialSupplier?.fax ?? "");
   const [email, setEmail] = useState(() => initialSupplier?.email ?? "");
   const [address, setAddress] = useState(() => initialSupplier?.address ?? "");
+  const [bankName, setBankName] = useState(
+    () => initialSupplier?.bank_name ?? "",
+  );
+  const [bankAccountNumber, setBankAccountNumber] = useState(
+    () => initialSupplier?.bank_account_number ?? "",
+  );
+  const [bankAccountHolder, setBankAccountHolder] = useState(
+    () => initialSupplier?.bank_account_holder ?? "",
+  );
+  const [npwp, setNpwp] = useState(() => initialSupplier?.npwp ?? "");
+  const [paymentTerms, setPaymentTerms] = useState(
+    () => initialSupplier?.payment_terms ?? "",
+  );
+  const [notes, setNotes] = useState(() => initialSupplier?.notes ?? "");
   const [isActive, setIsActive] = useState(
     () => initialSupplier?.is_active ?? true,
   );
@@ -43,7 +58,14 @@ export function SupplierFormDialog({
     email?: string;
     contactPerson?: string;
     phone?: string;
+    fax?: string;
     address?: string;
+    bankName?: string;
+    bankAccountNumber?: string;
+    bankAccountHolder?: string;
+    npwp?: string;
+    paymentTerms?: string;
+    notes?: string;
   }>({});
   const codeInputRef = useRef<HTMLInputElement>(null);
 
@@ -72,8 +94,17 @@ export function SupplierFormDialog({
     contactPerson:
       errors.contactPerson ?? submitError?.fieldErrors?.contact_person,
     phone: errors.phone ?? submitError?.fieldErrors?.phone,
+    fax: errors.fax ?? submitError?.fieldErrors?.fax,
     email: errors.email ?? submitError?.fieldErrors?.email,
     address: errors.address ?? submitError?.fieldErrors?.address,
+    bankName: errors.bankName ?? submitError?.fieldErrors?.bank_name,
+    bankAccountNumber:
+      errors.bankAccountNumber ?? submitError?.fieldErrors?.bank_account_number,
+    bankAccountHolder:
+      errors.bankAccountHolder ?? submitError?.fieldErrors?.bank_account_holder,
+    npwp: errors.npwp ?? submitError?.fieldErrors?.npwp,
+    paymentTerms: errors.paymentTerms ?? submitError?.fieldErrors?.payment_terms,
+    notes: errors.notes ?? submitError?.fieldErrors?.notes,
   };
 
   if (!isOpen) {
@@ -87,8 +118,15 @@ export function SupplierFormDialog({
       name,
       contact_person: contactPerson,
       phone,
+      fax,
       email,
       address,
+      bank_name: bankName,
+      bank_account_number: bankAccountNumber,
+      bank_account_holder: bankAccountHolder,
+      npwp,
+      payment_terms: paymentTerms,
+      notes,
       is_active: isActive,
     });
     const nextErrors: typeof errors = parsed.ok
@@ -98,8 +136,15 @@ export function SupplierFormDialog({
           name: parsed.fieldErrors.name,
           contactPerson: parsed.fieldErrors.contact_person,
           phone: parsed.fieldErrors.phone,
+          fax: parsed.fieldErrors.fax,
           email: parsed.fieldErrors.email,
           address: parsed.fieldErrors.address,
+          bankName: parsed.fieldErrors.bank_name,
+          bankAccountNumber: parsed.fieldErrors.bank_account_number,
+          bankAccountHolder: parsed.fieldErrors.bank_account_holder,
+          npwp: parsed.fieldErrors.npwp,
+          paymentTerms: parsed.fieldErrors.payment_terms,
+          notes: parsed.fieldErrors.notes,
         };
 
     const trimmedCode = code.trim();
@@ -125,8 +170,15 @@ export function SupplierFormDialog({
       name: parsed.data.name,
       contact_person: parsed.data.contact_person || null,
       phone: parsed.data.phone || null,
+      fax: parsed.data.fax || null,
       email: parsed.data.email ? parsed.data.email.toLowerCase() : null,
       address: parsed.data.address || null,
+      bank_name: parsed.data.bank_name || null,
+      bank_account_number: parsed.data.bank_account_number || null,
+      bank_account_holder: parsed.data.bank_account_holder || null,
+      npwp: parsed.data.npwp || null,
+      payment_terms: parsed.data.payment_terms || null,
+      notes: parsed.data.notes || null,
       is_active: parsed.data.is_active,
     });
   }
@@ -334,6 +386,155 @@ export function SupplierFormDialog({
               value={address}
             />
             {mergedErrors.address && <p className="mt-1.5 text-xs font-medium text-red-700">{mergedErrors.address}</p>}
+          </div>
+
+          <div className="rounded-[var(--radius-md)] border border-line-200 bg-canvas-50/50 p-4 space-y-4">
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">
+              Informasi Pembayaran, Rekening &amp; Administrasi PO
+            </p>
+            <div className="grid gap-4 sm:grid-cols-3">
+              <div>
+                <label
+                  className="text-sm font-semibold text-ink-950"
+                  htmlFor="supplier-fax-input"
+                >
+                  Nomor fax
+                </label>
+                <input
+                  className="mt-2 h-12 w-full rounded-[var(--radius-md)] border border-line-500 bg-surface-0 px-3.5 text-sm text-ink-950 tabular-nums focus:border-teal-600 focus:outline-none focus:ring-2 focus:ring-teal-600/20 disabled:opacity-60"
+                  disabled={isSubmitting}
+                  id="supplier-fax-input"
+                  maxLength={50}
+                  onChange={(event) => setFax(event.target.value)}
+                  placeholder="Contoh: 021-5551299"
+                  type="text"
+                  value={fax}
+                />
+                {mergedErrors.fax && <p className="mt-1.5 text-xs font-medium text-red-700">{mergedErrors.fax}</p>}
+              </div>
+
+              <div>
+                <label
+                  className="text-sm font-semibold text-ink-950"
+                  htmlFor="supplier-npwp-input"
+                >
+                  NPWP
+                </label>
+                <input
+                  className="mt-2 h-12 w-full rounded-[var(--radius-md)] border border-line-500 bg-surface-0 px-3.5 text-sm text-ink-950 tabular-nums focus:border-teal-600 focus:outline-none focus:ring-2 focus:ring-teal-600/20 disabled:opacity-60"
+                  disabled={isSubmitting}
+                  id="supplier-npwp-input"
+                  maxLength={40}
+                  onChange={(event) => setNpwp(event.target.value)}
+                  placeholder="Contoh: 01.234.567.8-901.000"
+                  type="text"
+                  value={npwp}
+                />
+                {mergedErrors.npwp && <p className="mt-1.5 text-xs font-medium text-red-700">{mergedErrors.npwp}</p>}
+              </div>
+
+              <div>
+                <label
+                  className="text-sm font-semibold text-ink-950"
+                  htmlFor="supplier-terms-input"
+                >
+                  Termin pembayaran
+                </label>
+                <input
+                  className="mt-2 h-12 w-full rounded-[var(--radius-md)] border border-line-500 bg-surface-0 px-3.5 text-sm text-ink-950 focus:border-teal-600 focus:outline-none focus:ring-2 focus:ring-teal-600/20 disabled:opacity-60"
+                  disabled={isSubmitting}
+                  id="supplier-terms-input"
+                  maxLength={120}
+                  onChange={(event) => setPaymentTerms(event.target.value)}
+                  placeholder="Contoh: NET 30 / COD"
+                  type="text"
+                  value={paymentTerms}
+                />
+                {mergedErrors.paymentTerms && <p className="mt-1.5 text-xs font-medium text-red-700">{mergedErrors.paymentTerms}</p>}
+              </div>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-3">
+              <div>
+                <label
+                  className="text-sm font-semibold text-ink-950"
+                  htmlFor="supplier-bank-name-input"
+                >
+                  Nama bank
+                </label>
+                <input
+                  className="mt-2 h-12 w-full rounded-[var(--radius-md)] border border-line-500 bg-surface-0 px-3.5 text-sm text-ink-950 focus:border-teal-600 focus:outline-none focus:ring-2 focus:ring-teal-600/20 disabled:opacity-60"
+                  disabled={isSubmitting}
+                  id="supplier-bank-name-input"
+                  maxLength={120}
+                  onChange={(event) => setBankName(event.target.value)}
+                  placeholder="Contoh: BCA / Mandiri"
+                  type="text"
+                  value={bankName}
+                />
+                {mergedErrors.bankName && <p className="mt-1.5 text-xs font-medium text-red-700">{mergedErrors.bankName}</p>}
+              </div>
+
+              <div>
+                <label
+                  className="text-sm font-semibold text-ink-950"
+                  htmlFor="supplier-bank-acc-input"
+                >
+                  Nomor rekening
+                </label>
+                <input
+                  className="mt-2 h-12 w-full rounded-[var(--radius-md)] border border-line-500 bg-surface-0 px-3.5 text-sm text-ink-950 tabular-nums focus:border-teal-600 focus:outline-none focus:ring-2 focus:ring-teal-600/20 disabled:opacity-60"
+                  disabled={isSubmitting}
+                  id="supplier-bank-acc-input"
+                  maxLength={60}
+                  onChange={(event) => setBankAccountNumber(event.target.value)}
+                  placeholder="Contoh: 1234567890"
+                  type="text"
+                  value={bankAccountNumber}
+                />
+                {mergedErrors.bankAccountNumber && <p className="mt-1.5 text-xs font-medium text-red-700">{mergedErrors.bankAccountNumber}</p>}
+              </div>
+
+              <div>
+                <label
+                  className="text-sm font-semibold text-ink-950"
+                  htmlFor="supplier-bank-holder-input"
+                >
+                  Atas nama rekening
+                </label>
+                <input
+                  className="mt-2 h-12 w-full rounded-[var(--radius-md)] border border-line-500 bg-surface-0 px-3.5 text-sm text-ink-950 focus:border-teal-600 focus:outline-none focus:ring-2 focus:ring-teal-600/20 disabled:opacity-60"
+                  disabled={isSubmitting}
+                  id="supplier-bank-holder-input"
+                  maxLength={150}
+                  onChange={(event) => setBankAccountHolder(event.target.value)}
+                  placeholder="Contoh: PT Nusantara Elektronik"
+                  type="text"
+                  value={bankAccountHolder}
+                />
+                {mergedErrors.bankAccountHolder && <p className="mt-1.5 text-xs font-medium text-red-700">{mergedErrors.bankAccountHolder}</p>}
+              </div>
+            </div>
+
+            <div>
+              <label
+                className="text-sm font-semibold text-ink-950"
+                htmlFor="supplier-notes-input"
+              >
+                Catatan tambahan pemasok
+              </label>
+              <textarea
+                className="mt-2 w-full rounded-[var(--radius-md)] border border-line-500 bg-surface-0 p-3 text-sm leading-6 text-ink-950 focus:border-teal-600 focus:outline-none focus:ring-2 focus:ring-teal-600/20 disabled:opacity-60"
+                disabled={isSubmitting}
+                id="supplier-notes-input"
+                maxLength={500}
+                onChange={(event) => setNotes(event.target.value)}
+                placeholder="Catatan jadwal penerimaan, kontak darurat, atau instruksi faktur..."
+                rows={2}
+                value={notes}
+              />
+              {mergedErrors.notes && <p className="mt-1.5 text-xs font-medium text-red-700">{mergedErrors.notes}</p>}
+            </div>
           </div>
 
           </div>

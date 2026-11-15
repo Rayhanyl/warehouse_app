@@ -90,6 +90,7 @@ export function GoodsReceiptsPage({
   async function createReceipt(payload: GoodsReceiptCreatePayload) {
     try {
       const created = await createMutation.mutateAsync({ payload });
+      setParams((prev) => ({ ...prev, offset: 0 }));
       setFormOpen(false);
       setInitialCreateDismissed(true);
       setDetailId(created.id);

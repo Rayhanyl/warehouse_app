@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api-client";
+import { invalidateAndRefetchAll } from "@/lib/query-invalidation";
 import {
   DEFAULT_DOCUMENT_TEMPLATES,
   type DocumentTemplate,
@@ -85,12 +86,12 @@ export function useUpdateDocumentTemplate() {
           payload,
         )
       ).data,
-    onSuccess: (updated) => {
+    onSuccess: async (updated) => {
       client.setQueryData(
         documentTemplateKeys.detail(updated.document_type),
         updated,
       );
-      void client.invalidateQueries({ queryKey: documentTemplateKeys.all });
+      await invalidateAndRefetchAll(client, [documentTemplateKeys.all]);
     },
   });
 }

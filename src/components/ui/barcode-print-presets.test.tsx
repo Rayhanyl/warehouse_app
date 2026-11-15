@@ -224,6 +224,8 @@ describe("Tahap 16: Fleksibilitas Ukuran Cetak QR Code dan Barcode", () => {
     expect(footer).toHaveClass("no-print");
 
     const stickerSheet = dialog.querySelector('[data-slot="barcode-sticker-sheet"]');
+    const stickerBody = dialog.querySelector('[data-slot="sticker-dialog-body"]');
+    expect(stickerBody).not.toBeNull();
     expect(stickerSheet).not.toBeNull();
     expect(stickerSheet).toHaveClass("printable-sticker-sheet");
     expect(stickerSheet).not.toHaveClass("no-print");
