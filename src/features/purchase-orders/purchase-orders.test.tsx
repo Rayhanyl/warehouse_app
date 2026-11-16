@@ -1,17 +1,28 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
+import { useAuthStore } from "@/features/auth/store";
+import { apiClient } from "@/lib/api-client";
 import { PurchaseOrderCreateForm } from "./components/PurchaseOrderCreateForm";
 import {
   PurchaseOrderActionDialog,
   PurchaseOrderDetailModal,
 } from "./components/PurchaseOrderDetailModal";
 import { PO_CLOSE_REASON_PRESETS } from "./constants";
+import {
+  PurchaseOrderDetailPage,
+  PurchaseOrdersPage,
+} from "./pages/PurchaseOrdersPage";
 import type { PurchaseOrder } from "./types";
 
 function renderWithQuery(ui: React.ReactElement) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(<QueryClientProvider client={qc}>{ui}</QueryClientProvider>);
+  return render(
+    <QueryClientProvider client={qc}>
+      <MemoryRouter>{ui}</MemoryRouter>
+    </QueryClientProvider>,
+  );
 }
 
 const sampleDraftPo: PurchaseOrder = {
@@ -257,5 +268,133 @@ describe("Tahap 36 Purchase Order Enhancements", () => {
         expected_delivery_date: "2026-11-18",
       }),
     );
+  });
+
+  it("Tahap 41: navigates from PO list to dedicated PurchaseOrderDetailPage, renders related GR history & shortcut, and preserves filters on back", async () => {
+    act(() => {
+      useAuthStore.getState().setAuthenticated("token-po-41", {
+        id: 1,
+        username: "superadmin",
+        email: "admin@wms.local",
+        full_name: "Super Admin",
+        role_id: 1,
+        role_name: "Super Admin",
+        is_active: true,
+        has_all_warehouse_access: true,
+        permissions: [
+          "po:read",
+          "po:create",
+          "po:approve_l1",
+          "po:approve_l2",
+          "po:cancel",
+          "po:close",
+          "gr:read",
+          "gr:create",
+        ],
+        warehouse_ids: [3],
+      });
+    });
+
+    const issuedPo41: PurchaseOrder = {
+      ...sampleDraftPo,
+      status: "ISSUED",
+      total_amount: "2500000.00",
+    };
+
+    vi.spyOn(apiClient, "get").mockImplementation(async (url: string) => {
+      if (url === "/purchase-orders") {
+        return {
+          data: { items: [issuedPo41], total: 1, limit: 20, offset: 0 },
+        } as never;
+      }
+      if (url === "/purchase-orders/41") {
+        return { data: issuedPo41 } as never;
+      }
+      if (url === "/goods-receipts") {
+        return {
+          data: {
+            items: [
+              {
+                id: 301,
+                gr_number: "GR-202611-0301",
+                po_id: 41,
+                po_number: "PO-202611-0041",
+                supplier_id: 2,
+                supplier_code: "SUP-02",
+                supplier_name: "PT Pemasok Uji",
+                warehouse_id: 3,
+                warehouse_code: "WH-03",
+                warehouse_name: "Gudang Utama",
+                status: "POSTED",
+                received_date: "2026-11-11",
+                notes: "Penerimaan tahap pertama",
+                line_count: 1,
+                created_at: "2026-11-11T09:00:00Z",
+                updated_at: "2026-11-11T09:00:00Z",
+              },
+            ],
+            total: 1,
+            limit: 50,
+            offset: 0,
+          },
+        } as never;
+      }
+      return { data: { items: [], total: 0, limit: 200, offset: 0 } } as never;
+    });
+
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={qc}>
+        <MemoryRouter
+          initialEntries={["/purchase-orders?search=PO-202611&status=ISSUED"]}
+        >
+          <Routes>
+            <Route element={<PurchaseOrdersPage />} path="/purchase-orders" />
+            <Route
+              element={<PurchaseOrderDetailPage />}
+              path="/purchase-orders/:poId"
+            />
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+
+    const poBtn = await screen.findByRole("button", { name: "PO-202611-0041" });
+    fireEvent.click(poBtn);
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole("region", { name: "Header dan aksi purchase order" }),
+      ).toBeInTheDocument();
+    });
+
+    expect(
+      screen.getByRole("region", { name: "Riwayat penerimaan barang terkait PO" }),
+    ).toBeInTheDocument();
+    expect(await screen.findByText("GR-202611-0301")).toBeInTheDocument();
+
+    const createGrLink = screen.getByRole("link", {
+      name: /Buat Penerimaan \(GR\)/i,
+    });
+    expect(createGrLink).toHaveAttribute("href", "/goods-receipts/new?po_id=41");
+
+    const backLink = screen.getByRole("link", { name: /Kembali ke daftar/i });
+    expect(backLink).toHaveAttribute(
+      "href",
+      "/purchase-orders?search=PO-202611&status=ISSUED",
+    );
+    fireEvent.click(backLink);
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole("region", { name: /Filter daftar purchase order/i }),
+      ).toBeInTheDocument();
+    });
+    const searchInput = screen.getByPlaceholderText(
+      /Cari nomor, pemasok, atau catatan/i,
+    ) as HTMLInputElement;
+    expect(searchInput.value).toBe("PO-202611");
+
+    vi.restoreAllMocks();
   });
 });

@@ -12,10 +12,15 @@ import { UomsPage } from "@/features/master-data/uoms/pages/UomsPage";
 import { WarehousesPage } from "@/features/master-data/warehouses/pages/WarehousesPage";
 import {
   PurchaseOrderCreatePage,
+  PurchaseOrderDetailPage,
   PurchaseOrderEditPage,
   PurchaseOrdersPage,
 } from "@/features/purchase-orders/pages/PurchaseOrdersPage";
-import { GoodsReceiptCreatePage, GoodsReceiptsPage } from "@/features/goods-receipts/pages/GoodsReceiptsPage";
+import {
+  GoodsReceiptCreatePage,
+  GoodsReceiptEditPage,
+  GoodsReceiptsPage,
+} from "@/features/goods-receipts/pages/GoodsReceiptsPage";
 import { StockTransfersPage } from "@/features/stock-transfers/pages/StockTransfersPage";
 import { StockOpnamesPage } from "@/features/stock-opnames/pages/StockOpnamesPage";
 import { StockPage } from "@/features/stock/pages/StockPage";
@@ -167,6 +172,10 @@ export const router = createBrowserRouter([
             element: <PurchaseOrderEditPage />,
           },
           {
+            path: "/purchase-orders/:poId",
+            element: <PurchaseOrderDetailPage />,
+          },
+          {
             path: "/purchase-orders",
             element: <PurchaseOrdersPage />,
           },
@@ -179,6 +188,10 @@ export const router = createBrowserRouter([
             element: <PurchaseOrderEditPage />,
           },
           {
+            path: "/purchasing/purchase-orders/:poId",
+            element: <PurchaseOrderDetailPage />,
+          },
+          {
             path: "/purchasing/purchase-orders",
             element: <PurchaseOrdersPage />,
           },
@@ -187,12 +200,20 @@ export const router = createBrowserRouter([
             element: <GoodsReceiptCreatePage />,
           },
           {
+            path: "/goods-receipts/:grId/edit",
+            element: <GoodsReceiptEditPage />,
+          },
+          {
             path: "/goods-receipts",
             element: <GoodsReceiptsPage />,
           },
           {
             path: "/purchasing/goods-receipts/new",
             element: <GoodsReceiptCreatePage />,
+          },
+          {
+            path: "/purchasing/goods-receipts/:grId/edit",
+            element: <GoodsReceiptEditPage />,
           },
           {
             path: "/purchasing/goods-receipts",

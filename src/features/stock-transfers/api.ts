@@ -130,6 +130,63 @@ export function useTransferReferences() {
   });
 }
 
+export interface SourceLocationBalanceItem {
+  item_id: number;
+  qty_on_hand: string;
+  uom_code?: string;
+}
+
+export function useSourceLocationStock(
+  warehouseId: number | null,
+  locationId: number | null,
+) {
+  return useQuery({
+    queryKey: [...transferKeys.all, "source-stock", warehouseId, locationId],
+    enabled: Boolean(warehouseId && locationId),
+    queryFn: async () => {
+      const [balancesRes, opnamesRes] = await Promise.all([
+        apiClient.get<{ items: SourceLocationBalanceItem[] }>("/stock/by-location", {
+          params: {
+            warehouse_id: warehouseId,
+            location_id: locationId,
+            limit: 200,
+            offset: 0,
+          },
+        }),
+        apiClient
+          .get<{
+            items: {
+              id: number;
+              opname_number: string;
+              scope_type?: string;
+              location_ids?: number[];
+            }[];
+          }>("/stock-opnames", {
+            params: {
+              warehouse_id: warehouseId,
+              status: "IN_PROGRESS",
+              limit: 50,
+              offset: 0,
+            },
+          })
+          .catch(() => ({ data: { items: [] } })),
+      ]);
+
+      const activeOpnames = opnamesRes.data?.items ?? [];
+      const frozenOpname = activeOpnames.find(
+        (op) =>
+          op.scope_type === "WAREHOUSE" ||
+          (op.location_ids ?? []).includes(Number(locationId)),
+      );
+
+      return {
+        balances: balancesRes.data?.items ?? [],
+        frozenByOpname: frozenOpname?.opname_number ?? null,
+      };
+    },
+  });
+}
+
 export function mapTransferError(error: unknown, fallback: string) {
   const info = extractApiErrorInfo(error);
   if (info.status === 403) {

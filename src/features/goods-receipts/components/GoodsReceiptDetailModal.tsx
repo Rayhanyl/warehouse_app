@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Printer, X } from "lucide-react";
+import { Pencil, Printer, X } from "lucide-react";
 import { toast } from "sonner";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { usePermission } from "@/hooks/usePermission";
@@ -21,6 +21,7 @@ export function GoodsReceiptDetailModal({
   canManage,
   isMutating,
   onClose,
+  onEdit,
   onAction,
 }: {
   receipt?: GoodsReceipt;
@@ -30,6 +31,7 @@ export function GoodsReceiptDetailModal({
   canManage?: boolean;
   isMutating: boolean;
   onClose: () => void;
+  onEdit?: (receipt: GoodsReceipt) => void;
   onAction: (receipt: GoodsReceipt, action: "post" | "cancel") => Promise<void>;
 }) {
   const { user } = usePermission();
@@ -236,6 +238,17 @@ export function GoodsReceiptDetailModal({
                     Cetak Bukti Penerimaan
                   </button>
                 </>
+              )}
+              {receipt.status === "DRAFT" && allowCreate && onEdit && (
+                <button
+                  className="inline-flex min-h-11 items-center justify-center gap-2 whitespace-nowrap rounded-[var(--radius-md)] border border-line-500 bg-surface-0 px-4 text-sm font-semibold leading-5 text-ink-950 hover:bg-canvas-50 disabled:opacity-50"
+                  disabled={isMutating}
+                  onClick={() => onEdit(receipt)}
+                  type="button"
+                >
+                  <Pencil aria-hidden="true" size={16} />
+                  Ubah Draft
+                </button>
               )}
               {receipt.status === "DRAFT" && allowCreate && (
                 <button

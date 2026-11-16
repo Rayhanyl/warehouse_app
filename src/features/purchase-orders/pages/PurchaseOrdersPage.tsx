@@ -14,24 +14,20 @@ import {
   usePurchaseOrders,
 } from "../api";
 import { PurchaseOrderCreateForm } from "../components/PurchaseOrderCreateForm";
-import {
-  PurchaseOrderActionDialog,
-  PurchaseOrderDetailModal,
-  type PurchaseOrderActionType,
-} from "../components/PurchaseOrderDetailModal";
 import { PurchaseOrderFilterBar } from "../components/PurchaseOrderFilterBar";
 import { PurchaseOrdersDataView } from "../components/PurchaseOrdersDataView";
 import { PO_INITIAL_PARAMS } from "../constants";
 import type {
-  PurchaseOrder,
   PurchaseOrderCreatePayload,
-  PurchaseOrderLine,
   PurchaseOrderListParams,
   PurchaseOrderSortField,
   PurchaseOrderStatus,
   PurchaseOrderUpdatePayload,
   SortDirection,
 } from "../types";
+import { PurchaseOrderDetailPage } from "./PurchaseOrderDetailPage";
+
+export { PurchaseOrderDetailPage };
 
 function parsePoParamsFromSearch(searchParams: URLSearchParams): PurchaseOrderListParams {
   const offset = Number(searchParams.get("offset") ?? PO_INITIAL_PARAMS.offset);
@@ -79,11 +75,6 @@ export function PurchaseOrdersPage() {
     resolveEffectiveWarehouseFilter,
   } = useWarehouseScope();
   const canCreate = can("po:create");
-  const canApproveL1 = can("po:approve_l1");
-  const canApproveL2 = can("po:approve_l2");
-  const canIssue = canApproveL1;
-  const canCancel = can("po:cancel");
-  const canClose = can("po:close");
 
   const [params, setParams] = useState<PurchaseOrderListParams>(() =>
     parsePoParamsFromSearch(searchParams),
@@ -96,14 +87,13 @@ export function PurchaseOrdersPage() {
     "number"
       ? (location.state as { openPurchaseOrderId: number }).openPurchaseOrderId
       : null;
-  const [detailId, setDetailId] = useState<number | null>(openPoIdFromState);
-  const [actionTarget, setActionTarget] = useState<PurchaseOrder | null>(null);
-  const [actionLine, setActionLine] = useState<PurchaseOrderLine | null>(null);
-  const [actionType, setActionType] = useState<PurchaseOrderActionType | null>(null);
-  const [closedReason, setClosedReason] = useState("");
   const basePath = location.pathname.startsWith("/purchasing")
     ? "/purchasing/purchase-orders"
     : "/purchase-orders";
+  const directDetailMatch = /^\/(?:purchasing\/)?purchase-orders\/(\d+)$/.exec(
+    location.pathname,
+  );
+  const directDetailId = directDetailMatch ? Number(directDetailMatch[1]) : null;
 
   const effectiveWarehouseId = resolveEffectiveWarehouseFilter(params.warehouse_id);
   const { data, isLoading, isError, error, refetch } = usePurchaseOrders({
@@ -111,14 +101,19 @@ export function PurchaseOrdersPage() {
     warehouse_id: effectiveWarehouseId,
   });
   const references = usePurchaseOrderReferences();
-  const detail = usePurchaseOrder(detailId);
-  const actionMutation = usePurchaseOrderMutation(actionType ?? "issue");
   const isMobile = useIsMobile();
 
   useEffect(() => {
     if (openPoIdFromState === null) return;
-    navigate(`${location.pathname}${location.search}`, { replace: true, state: null });
-  }, [location.pathname, location.search, navigate, openPoIdFromState]);
+    navigate(`${basePath}/${openPoIdFromState}${location.search}`, {
+      replace: true,
+      state: null,
+    });
+  }, [basePath, location.search, navigate, openPoIdFromState]);
+
+  if (directDetailId !== null) {
+    return <PurchaseOrderDetailPage poIdOverride={directDetailId} />;
+  }
 
   const items = data?.items ?? [];
   const total = data?.total ?? 0;
@@ -167,144 +162,62 @@ export function PurchaseOrdersPage() {
     setSearchParams(new URLSearchParams(), { replace: true });
   }
 
-  function openAction(
-    po: PurchaseOrder,
-    action: PurchaseOrderActionType,
-    poLine?: PurchaseOrderLine,
-  ) {
-    setClosedReason("");
-    setActionTarget(po);
-    setActionLine(poLine ?? null);
-    setActionType(action);
-  }
-
-  async function submitAction() {
-    if (!actionTarget || !actionType) return;
-    if ((actionType === "close" || actionType === "close-line") && !closedReason.trim()) {
-      toast.error("Alasan penutupan wajib diisi.");
-      return;
-    }
-    if (actionType === "reject" && !closedReason.trim()) {
-      toast.error("Alasan penolakan wajib diisi.");
-      return;
-    }
-    try {
-      const updated = await actionMutation.mutateAsync({
-        id: actionTarget.id,
-        poLineId: actionLine?.id,
-        closedReason,
-      });
-      const prevPoNumber = actionTarget.po_number;
-      const completedAction = actionType;
-      setActionTarget(null);
-      setActionLine(null);
-      setActionType(null);
-      if (completedAction === "revise-draft") {
-        setDetailId(null);
-        toast.success(`PO ${prevPoNumber} dibatalkan dan disalin ke draft ${updated.po_number}.`);
-        navigate(`${basePath}/${updated.id}/edit`);
-        return;
-      }
-      toast.success(`Purchase order ${updated.po_number} berhasil diperbarui.`);
-    } catch (actionError) {
-      const mapped = mapPurchaseOrderError(actionError, "Aksi purchase order belum berhasil.");
-      toast.error(mapped.message);
-    }
-  }
-
   return (
-    <>
-      <div className="no-print">
-        <PageHeader
-          action={
-            canCreate ? (
-              <Link
-                className="inline-flex min-h-11 items-center gap-2 rounded-[var(--radius-md)] bg-teal-600 px-4 text-sm font-semibold text-surface-0 transition hover:bg-teal-700"
-                to="/purchase-orders/new"
-              >
-                <Plus aria-hidden="true" size={17} />
-                Buat purchase order
-              </Link>
-            ) : (
-              <span className="inline-flex min-h-11 items-center rounded-[var(--radius-md)] border border-line-200 bg-surface-0 px-3 text-xs font-semibold text-slate-600">
-                Mode baca saja
-              </span>
-            )
-          }
-          description="Catat pesanan barang ke pemasok dan pantau status penerimaannya per gudang."
-          title="Purchase order"
-        />
+    <div className="no-print">
+      <PageHeader
+        action={
+          canCreate ? (
+            <Link
+              className="inline-flex min-h-11 items-center gap-2 rounded-[var(--radius-md)] bg-teal-600 px-4 text-sm font-semibold text-surface-0 transition hover:bg-teal-700"
+              to={`${basePath}/new`}
+            >
+              <Plus aria-hidden="true" size={17} />
+              Buat purchase order
+            </Link>
+          ) : (
+            <span className="inline-flex min-h-11 items-center rounded-[var(--radius-md)] border border-line-200 bg-surface-0 px-3 text-xs font-semibold text-slate-600">
+              Mode baca saja
+            </span>
+          )
+        }
+        description="Catat pesanan barang ke pemasok dan pantau status penerimaannya per gudang."
+        title="Purchase order"
+      />
 
-        <PurchaseOrderFilterBar
-          activeCount={activeFilterCount}
-          draftParams={draftParams}
-          effectiveWarehouseId={effectiveWarehouseId}
-          isTopbarWarehouseLocked={isTopbarWarehouseLocked}
-          onDraftChange={setDraftParams}
-          onReset={resetFilters}
-          onSubmit={applyFilters}
-          showWarehouseFilter={showWarehouseFilter}
-          suppliers={references.data?.suppliers ?? []}
-          warehouses={filterWarehouseChoices(references.data?.warehouses ?? [])}
-        />
+      <PurchaseOrderFilterBar
+        activeCount={activeFilterCount}
+        draftParams={draftParams}
+        effectiveWarehouseId={effectiveWarehouseId}
+        isTopbarWarehouseLocked={isTopbarWarehouseLocked}
+        onDraftChange={setDraftParams}
+        onReset={resetFilters}
+        onSubmit={applyFilters}
+        showWarehouseFilter={showWarehouseFilter}
+        suppliers={references.data?.suppliers ?? []}
+        warehouses={filterWarehouseChoices(references.data?.warehouses ?? [])}
+      />
 
-        <PurchaseOrdersDataView
-          canCreate={canCreate}
-          error={error}
-          hasFilters={hasFilters}
-          isError={isError}
-          isLoading={isLoading}
-          isMobile={isMobile}
-          items={items}
-          limit={params.limit}
-          offset={params.offset}
-          onPageChange={(nextOffset) => {
-            const nextParams = { ...params, offset: nextOffset };
-            setParams(nextParams);
-            setSearchParams(buildPoSearchParams(nextParams), { replace: true });
-          }}
-          onResetFilters={resetFilters}
-          onRetry={() => void refetch()}
-          onSelectDetail={setDetailId}
-          total={total}
-        />
-      </div>
-
-      {detailId !== null && (
-        <PurchaseOrderDetailModal
-          canApproveL1={canApproveL1}
-          canApproveL2={canApproveL2}
-          canCancel={canCancel || canCreate}
-          canClose={canClose}
-          canEdit={canCreate}
-          canIssue={canIssue}
-          isLoading={detail.isLoading}
-          onAction={openAction}
-          onClose={() => setDetailId(null)}
-          onEdit={(po) => {
-            setDetailId(null);
-            navigate(`${basePath}/${po.id}/edit${location.search}`);
-          }}
-          purchaseOrder={detail.data}
-        />
-      )}
-      {actionTarget && actionType && (
-        <PurchaseOrderActionDialog
-          action={actionType}
-          closedReason={closedReason}
-          isSubmitting={actionMutation.isPending}
-          onClose={() => {
-            setActionTarget(null);
-            setActionLine(null);
-            setActionType(null);
-          }}
-          onReasonChange={setClosedReason}
-          onSubmit={() => void submitAction()}
-          purchaseOrder={actionTarget}
-          targetLine={actionLine}
-        />
-      )}
-    </>
+      <PurchaseOrdersDataView
+        canCreate={canCreate}
+        error={error}
+        hasFilters={hasFilters}
+        isError={isError}
+        isLoading={isLoading}
+        isMobile={isMobile}
+        items={items}
+        limit={params.limit}
+        offset={params.offset}
+        onPageChange={(nextOffset) => {
+          const nextParams = { ...params, offset: nextOffset };
+          setParams(nextParams);
+          setSearchParams(buildPoSearchParams(nextParams), { replace: true });
+        }}
+        onResetFilters={resetFilters}
+        onRetry={() => void refetch()}
+        onSelectDetail={(id) => navigate(`${basePath}/${id}${location.search}`)}
+        total={total}
+      />
+    </div>
   );
 }
 
@@ -326,7 +239,7 @@ export function PurchaseOrderCreatePage() {
     try {
       const created = await createMutation.mutateAsync({ payload });
       toast.success(`Draft ${created.po_number} berhasil dibuat.`);
-      navigate(basePath, { replace: true, state: { openPurchaseOrderId: created.id } });
+      navigate(`${basePath}/${created.id}`, { replace: true });
     } catch (createError) {
       const mapped = mapPurchaseOrderError(createError, "Draft purchase order belum dapat dibuat.");
       toast.error(mapped.message);
@@ -397,7 +310,7 @@ export function PurchaseOrderEditPage() {
         payload: updatePayload,
       });
       toast.success(`Draft ${updated.po_number} berhasil diperbarui.`);
-      navigate(returnListPath, { replace: true, state: { openPurchaseOrderId: updated.id } });
+      navigate(`${basePath}/${updated.id}${location.search}`, { replace: true });
     } catch (updateError) {
       const mapped = mapPurchaseOrderError(
         updateError,

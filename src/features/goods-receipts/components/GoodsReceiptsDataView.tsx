@@ -1,5 +1,5 @@
 import type { FormEvent } from "react";
-import { ChevronLeft, ChevronRight, Eye, Plus, RotateCcw, Search } from "lucide-react";
+import { ChevronLeft, ChevronRight, Eye, Pencil, Plus, RotateCcw, Search } from "lucide-react";
 import { CollapsibleFilterPanel } from "@/components/ui/CollapsibleFilterPanel";
 import { formatGrDate, GR_STATUS_CLASSES, GR_STATUS_LABELS } from "../constants";
 import type { GoodsReceipt, GoodsReceiptListParams, GoodsReceiptStatus } from "../types";
@@ -25,6 +25,7 @@ export function GoodsReceiptsDataView({
   onResetFilters,
   onRetry,
   onOpenCreate,
+  onEditDraft,
   onSelectDetail,
   onPageChange,
 }: {
@@ -50,6 +51,7 @@ export function GoodsReceiptsDataView({
   onResetFilters: () => void;
   onRetry: () => void;
   onOpenCreate: () => void;
+  onEditDraft?: (receipt: GoodsReceipt) => void;
   onSelectDetail: (id: number) => void;
   onPageChange: (nextOffset: number) => void;
 }) {
@@ -266,15 +268,28 @@ export function GoodsReceiptsDataView({
                       </p>
                     </div>
                   </div>
-                  <button
-                    aria-label={`Lihat detail penerimaan ${receipt.gr_number}`}
-                    className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-[var(--radius-md)] border border-line-500 px-3 text-sm font-semibold text-ink-950 hover:bg-canvas-50"
-                    onClick={() => onSelectDetail(receipt.id)}
-                    type="button"
-                  >
-                    <Eye size={16} />
-                    Detail
-                  </button>
+                  <div className="flex flex-wrap gap-2">
+                    {receipt.status === "DRAFT" && canManage && onEditDraft && (
+                      <button
+                        aria-label={`Ubah draft penerimaan ${receipt.gr_number}`}
+                        className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-[var(--radius-md)] border border-line-500 px-3 text-sm font-semibold text-ink-950 hover:bg-canvas-50"
+                        onClick={() => onEditDraft(receipt)}
+                        type="button"
+                      >
+                        <Pencil size={15} />
+                        Ubah Draft
+                      </button>
+                    )}
+                    <button
+                      aria-label={`Lihat detail penerimaan ${receipt.gr_number}`}
+                      className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-[var(--radius-md)] border border-line-500 px-3 text-sm font-semibold text-ink-950 hover:bg-canvas-50"
+                      onClick={() => onSelectDetail(receipt.id)}
+                      type="button"
+                    >
+                      <Eye size={16} />
+                      Detail
+                    </button>
+                  </div>
                 </li>
               ))}
             </ul>
@@ -323,15 +338,28 @@ export function GoodsReceiptsDataView({
                         </span>
                       </td>
                       <td className="px-4 py-4 text-right">
-                        <button
-                          aria-label={`Lihat detail penerimaan ${receipt.gr_number}`}
-                          className="inline-flex min-h-11 items-center gap-2 rounded-[var(--radius-md)] border border-line-500 px-3 text-sm font-semibold text-ink-950 hover:bg-canvas-50"
-                          onClick={() => onSelectDetail(receipt.id)}
-                          type="button"
-                        >
-                          <Eye size={16} />
-                          Detail
-                        </button>
+                        <div className="inline-flex items-center justify-end gap-2">
+                          {receipt.status === "DRAFT" && canManage && onEditDraft && (
+                            <button
+                              aria-label={`Ubah draft penerimaan ${receipt.gr_number}`}
+                              className="inline-flex min-h-11 items-center gap-1.5 rounded-[var(--radius-md)] border border-line-500 px-3 text-sm font-semibold text-ink-950 hover:bg-canvas-50"
+                              onClick={() => onEditDraft(receipt)}
+                              type="button"
+                            >
+                              <Pencil size={15} />
+                              Ubah Draft
+                            </button>
+                          )}
+                          <button
+                            aria-label={`Lihat detail penerimaan ${receipt.gr_number}`}
+                            className="inline-flex min-h-11 items-center gap-2 rounded-[var(--radius-md)] border border-line-500 px-3 text-sm font-semibold text-ink-950 hover:bg-canvas-50"
+                            onClick={() => onSelectDetail(receipt.id)}
+                            type="button"
+                          >
+                            <Eye size={16} />
+                            Detail
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
