@@ -84,5 +84,6 @@ export interface TransferReference {
   name: string;
   warehouse_id?: number;
   is_active: boolean;
+  uom_code?: string;
   allow_decimal?: boolean;
 }

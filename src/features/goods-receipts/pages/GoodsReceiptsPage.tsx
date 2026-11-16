@@ -58,20 +58,20 @@ export function GoodsReceiptsPage({
   );
   const editGrId = editMatch ? Number(editMatch[1]) : null;
 
+  const effectiveDetailId = detailId ?? openGrIdFromState;
   const effectiveWarehouseId = resolveEffectiveWarehouseFilter(
     params.warehouse_id,
   );
   const effectiveParams = { ...params, warehouse_id: effectiveWarehouseId };
   const { data, isLoading, isError, refetch } = useGoodsReceipts(effectiveParams);
   const references = useGoodsReceiptReferences();
-  const detail = useGoodsReceipt(detailId);
+  const detail = useGoodsReceipt(effectiveDetailId);
   const postMutation = useGoodsReceiptMutation("post");
   const cancelMutation = useGoodsReceiptMutation("cancel");
   const isMobile = useIsMobile();
 
   useEffect(() => {
     if (openGrIdFromState === null) return;
-    setDetailId(openGrIdFromState);
     navigate(`${location.pathname}${location.search}`, {
       replace: true,
       state: null,
@@ -198,7 +198,7 @@ export function GoodsReceiptsPage({
         />
       </div>
 
-      {detailId !== null && (
+      {effectiveDetailId !== null && (
         <GoodsReceiptDetailModal
           canCreate={canCreate}
           canPost={canPost}
