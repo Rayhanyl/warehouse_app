@@ -247,7 +247,7 @@ describe("Tahap 25: Filter Gudang Top Bar & Cakupan Role", () => {
     expect(screen.queryByRole("option", { name: /WH-2/i })).not.toBeInTheDocument();
   });
 
-  it("Multi-gudang Non-Super Admin dapat memilih di antara gudang miliknya tanpa opsi 'Semua gudang', dan StorageLocations memfilter sesuai hak akses", async () => {
+  it("Multi-gudang Non-Super Admin dapat memilih 'Semua gudang saya' atau gudang miliknya, dan StorageLocations memfilter sesuai hak akses", async () => {
     useAuthStore.setState({
       status: "authenticated",
       accessToken: "mgr-token",
@@ -280,22 +280,32 @@ describe("Tahap 25: Filter Gudang Top Bar & Cakupan Role", () => {
     );
 
     const select = (await screen.findByLabelText("Pilih gudang aktif")) as HTMLSelectElement;
+    expect(select.value).toBe("");
+    expect(screen.getByRole("option", { name: "Semua gudang saya" })).toBeInTheDocument();
     expect(screen.queryByRole("option", { name: "Semua gudang" })).not.toBeInTheDocument();
     expect(screen.getByRole("option", { name: "WH-1 - Gudang Utama" })).toBeInTheDocument();
     expect(screen.getByRole("option", { name: "WH-2 - Gudang Cabang" })).toBeInTheDocument();
     expect(screen.queryByRole("option", { name: "WH-3 - Gudang Timur" })).not.toBeInTheDocument();
 
+    // Mode "Semua gudang saya": tampilkan lokasi dari WH-1 dan WH-2
     await waitFor(() => {
       expect(screen.getByText("Rak Utama A")).toBeInTheDocument();
+      expect(screen.getByText("Rak Cabang B")).toBeInTheDocument();
     });
-    expect(screen.queryByText("Rak Cabang B")).not.toBeInTheDocument();
 
     fireEvent.change(select, { target: { value: "2" } });
 
     await waitFor(() => {
       expect(screen.getByText("Rak Cabang B")).toBeInTheDocument();
+      expect(screen.queryByText("Rak Utama A")).not.toBeInTheDocument();
     });
-    expect(screen.queryByText("Rak Utama A")).not.toBeInTheDocument();
+
+    fireEvent.change(select, { target: { value: "1" } });
+
+    await waitFor(() => {
+      expect(screen.getByText("Rak Utama A")).toBeInTheDocument();
+      expect(screen.queryByText("Rak Cabang B")).not.toBeInTheDocument();
+    });
   });
 
   it("Mereset warehouse scope store saat user logout", () => {

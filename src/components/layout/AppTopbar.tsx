@@ -120,7 +120,11 @@ export function AppTopbar({
               }}
               value={activeWarehouseId !== null ? String(activeWarehouseId) : ""}
             >
-              {canAccessAllWarehouses ? <option value="">Semua gudang</option> : null}
+              {canAccessAllWarehouses ? (
+                <option value="">Semua gudang</option>
+              ) : warehouseOptions.length > 1 ? (
+                <option value="">Semua gudang saya</option>
+              ) : null}
               {warehouseOptions.map((warehouse) => (
                 <option key={warehouse.id} value={warehouse.id}>
                   {formatWarehouseScopeLabel(warehouse)}

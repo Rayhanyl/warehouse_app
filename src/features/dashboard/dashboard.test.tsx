@@ -342,4 +342,46 @@ describe("AC-38 & DSH-F01: Dashboard Summary Integration", () => {
     expect(screen.getByRole("link", { name: /PO Siap Diterima/i })).toHaveClass("min-h-12");
     expect(container.textContent).not.toMatch(/[—–]/);
   });
+
+  it("memperbarui label dan tautan kartu KPI secara kontekstual ketika pergantian filter gudang terjadi", async () => {
+    vi.mocked(apiClient.get).mockImplementation((async (url: string) => {
+      if (url === "/dashboard/summary") {
+        return { data: mockSummaryData };
+      }
+      if (url === "/menus/my-menu") {
+        return { data: [] };
+      }
+      return { data: null };
+    }) as typeof apiClient.get);
+
+    renderDashboard(queryClient);
+
+    await waitFor(() => {
+      expect(screen.getByText("Barang aktif tercatat")).toBeInTheDocument();
+    });
+    expect(screen.getByRole("link", { name: /Total Katalog SKU/i })).toHaveAttribute(
+      "href",
+      "/master/items",
+    );
+    expect(screen.getByText("Unit transfer in-transit")).toBeInTheDocument();
+
+    act(() => {
+      useWarehouseScopeStore.getState().setSelectedWarehouseId(2);
+    });
+
+    await waitFor(() => {
+      expect(apiClient.get).toHaveBeenCalledWith("/dashboard/summary", {
+        params: { warehouse_id: 2 },
+      });
+    });
+
+    expect(await screen.findByText("SKU aktif di gudang ini")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Total Katalog SKU/i })).toHaveAttribute(
+      "href",
+      "/stock/by-warehouse",
+    );
+    expect(screen.getByText("Unit saldo fisik gudang ini")).toBeInTheDocument();
+    expect(screen.getByText("Unit menuju gudang ini")).toBeInTheDocument();
+    expect(screen.getByText("Filter aktif: WH-B - Gudang Cabang B")).toBeInTheDocument();
+  });
 });

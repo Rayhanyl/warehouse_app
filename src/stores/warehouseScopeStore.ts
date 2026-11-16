@@ -11,7 +11,7 @@ interface WarehouseScopeState {
    */
   syncWithAllowedWarehouses: (
     allowedWarehouseIds: readonly number[],
-    isSuperAdmin: boolean,
+    canAccessAllWarehouses: boolean,
   ) => void;
   reset: () => void;
 }
@@ -27,9 +27,9 @@ export const useWarehouseScopeStore = create<WarehouseScopeState>((set) => ({
         ? state
         : { selectedWarehouseId: warehouseId },
     ),
-  syncWithAllowedWarehouses: (allowedWarehouseIds, isSuperAdmin) =>
+  syncWithAllowedWarehouses: (allowedWarehouseIds, canAccessAllWarehouses) =>
     set((state) => {
-      if (isSuperAdmin) {
+      if (canAccessAllWarehouses) {
         if (
           state.selectedWarehouseId !== null &&
           allowedWarehouseIds.length > 0 &&
@@ -46,14 +46,21 @@ export const useWarehouseScopeStore = create<WarehouseScopeState>((set) => ({
           : { selectedWarehouseId: null };
       }
 
+      if (allowedWarehouseIds.length === 1) {
+        return state.selectedWarehouseId === allowedWarehouseIds[0]
+          ? state
+          : { selectedWarehouseId: allowedWarehouseIds[0] };
+      }
+
+      // Multi-gudang operasional: izinkan null ("Semua gudang saya") maupun ID gudang yang ditugaskan
       if (
-        state.selectedWarehouseId !== null &&
+        state.selectedWarehouseId === null ||
         allowedWarehouseIds.includes(state.selectedWarehouseId)
       ) {
         return state;
       }
 
-      return { selectedWarehouseId: allowedWarehouseIds[0] };
+      return { selectedWarehouseId: null };
     }),
   reset: () => set({ selectedWarehouseId: null }),
 }));

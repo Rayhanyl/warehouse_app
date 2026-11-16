@@ -15,6 +15,7 @@ import type { DashboardStockSummary } from "../types";
 
 export interface DashboardKpiGridProps {
   stockSummary?: DashboardStockSummary;
+  activeWarehouseId?: number | null;
   isLoading: boolean;
   isError: boolean;
   onRetry?: () => void;
@@ -37,19 +38,21 @@ interface KpiCardDescriptor {
  */
 export function DashboardKpiGrid({
   stockSummary,
+  activeWarehouseId = null,
   isLoading,
   isError,
   onRetry,
 }: DashboardKpiGridProps) {
   const lowStockCount = stockSummary?.low_stock_items_count ?? 0;
+  const isScopedWarehouse = activeWarehouseId !== null && activeWarehouseId !== undefined;
 
   const cards: KpiCardDescriptor[] = [
     {
       id: "total-sku",
       title: "Total Katalog SKU",
       value: stockSummary?.total_active_items.toLocaleString("id-ID") ?? "0",
-      subtitle: "Barang aktif tercatat",
-      to: "/master/items",
+      subtitle: isScopedWarehouse ? "SKU aktif di gudang ini" : "Barang aktif tercatat",
+      to: isScopedWarehouse ? "/stock/by-warehouse" : "/master/items",
       icon: Boxes,
       cardHoverClass: "hover:border-teal-500",
       iconContainerClass:
@@ -59,7 +62,7 @@ export function DashboardKpiGrid({
       id: "on-hand",
       title: "Total Stok Fisik",
       value: stockSummary ? formatDecimal(stockSummary.total_qty_on_hand) : "0",
-      subtitle: "Unit saldo on-hand",
+      subtitle: isScopedWarehouse ? "Unit saldo fisik gudang ini" : "Unit saldo on-hand",
       to: "/stock",
       icon: Layers,
       cardHoverClass: "hover:border-emerald-500",
@@ -72,7 +75,7 @@ export function DashboardKpiGrid({
       value: stockSummary
         ? formatDecimal(stockSummary.total_qty_in_transit)
         : "0",
-      subtitle: "Unit transfer in-transit",
+      subtitle: isScopedWarehouse ? "Unit menuju gudang ini" : "Unit transfer in-transit",
       to: "/stock-transfers",
       icon: Truck,
       cardHoverClass: "hover:border-sky-500",

@@ -56,6 +56,7 @@ export function DashboardPage() {
       />
 
       <DashboardKpiGrid
+        activeWarehouseId={activeWarehouseId}
         isError={isError}
         isLoading={isLoading}
         onRetry={() => void refetch()}

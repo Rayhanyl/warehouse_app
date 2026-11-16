@@ -189,6 +189,8 @@ describe("AppShell, Sidebar, DashboardPage, & ProfilePage", () => {
     expect(mobileMenuButton).toHaveAttribute("aria-expanded", "false");
 
     const warehouseSelect = screen.getByLabelText("Pilih gudang aktif") as HTMLSelectElement;
+    expect(warehouseSelect.value).toBe("");
+    fireEvent.change(warehouseSelect, { target: { value: "1" } });
     expect(warehouseSelect.value).toBe("1");
     fireEvent.change(warehouseSelect, { target: { value: "2" } });
     expect(warehouseSelect.value).toBe("2");

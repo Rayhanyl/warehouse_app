@@ -69,13 +69,12 @@ export function useWarehouseScope() {
     if (!isAuthenticatedUser) return selectedWarehouseId;
     if (canAccessAllWarehouses) return selectedWarehouseId;
     if (allowedWarehouseIds.length === 0) return null;
-    if (
-      selectedWarehouseId !== null &&
-      allowedWarehouseIds.includes(selectedWarehouseId)
-    ) {
+    if (allowedWarehouseIds.length === 1) return allowedWarehouseIds[0];
+    if (selectedWarehouseId === null) return null;
+    if (allowedWarehouseIds.includes(selectedWarehouseId)) {
       return selectedWarehouseId;
     }
-    return allowedWarehouseIds[0];
+    return null;
   }, [
     allowedWarehouseIds,
     canAccessAllWarehouses,
@@ -100,7 +99,9 @@ export function useWarehouseScope() {
     ? formatWarehouseScopeLabel(activeWarehouse)
     : canAccessAllWarehouses
       ? "Semua gudang"
-      : "Belum ada gudang ditugaskan";
+      : allowedWarehouseIds.length > 1
+        ? "Semua gudang saya"
+        : "Belum ada gudang ditugaskan";
 
   const showTopbarSelector =
     canAccessAllWarehouses || warehouseOptions.length > 1;
