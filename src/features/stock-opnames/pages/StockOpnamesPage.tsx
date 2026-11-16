@@ -16,6 +16,8 @@ export function StockOpnamesPage() {
   const { can } = usePermission();
   const {
     canAccessAllWarehouses,
+    showWarehouseFilter,
+    isTopbarWarehouseLocked,
     resolveEffectiveWarehouseFilter,
     filterWarehouseChoices,
   } = useWarehouseScope();
@@ -38,24 +40,29 @@ export function StockOpnamesPage() {
 
   const items = query.data?.items ?? [];
   const total = query.data?.total ?? 0;
+  const effectiveFilterWarehouse = showWarehouseFilter ? effectiveWarehouseId : null;
   const hasFilters = Boolean(
-    params.search ||
+    params.search.trim() ||
       params.status !== "all" ||
-      params.warehouse_id ||
+      effectiveFilterWarehouse ||
       params.date_from ||
       params.date_to,
   );
   const activeFilterCount = [
-    params.search,
+    params.search.trim(),
     params.status !== "all",
-    params.warehouse_id,
+    effectiveFilterWarehouse,
     params.date_from,
     params.date_to,
   ].filter(Boolean).length;
 
   function apply(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setParams({ ...draft, offset: 0 });
+    if (draft.date_from && draft.date_to && draft.date_from > draft.date_to) {
+      toast.error("Tanggal mulai tidak boleh lebih akhir dari tanggal akhir.");
+      return;
+    }
+    setParams({ ...draft, search: draft.search.trim(), offset: 0 });
   }
 
   function reset() {
@@ -121,11 +128,13 @@ export function StockOpnamesPage() {
         draft={draft}
         effectiveWarehouseId={effectiveWarehouseId}
         isRefsError={refs.isError}
+        isTopbarWarehouseLocked={isTopbarWarehouseLocked}
         onApply={apply}
         onDraftChange={setDraft}
         onReset={reset}
         onRetryRefs={() => void refs.refetch()}
         scopedWarehouses={scopedWarehouses}
+        showWarehouseFilter={showWarehouseFilter}
       />
 
       <OpnamesDataView

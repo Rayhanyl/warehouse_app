@@ -242,9 +242,7 @@ describe("Tahap 25: Filter Gudang Top Bar & Cakupan Role", () => {
     });
 
     expect(screen.queryByLabelText("Gudang ID")).not.toBeInTheDocument();
-    const warehouseFilterSelect = screen.getByLabelText("Gudang") as HTMLSelectElement;
-    expect(warehouseFilterSelect).toBeInTheDocument();
-    expect(screen.queryByRole("option", { name: /WH-2/i })).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Gudang")).not.toBeInTheDocument();
   });
 
   it("Multi-gudang Non-Super Admin dapat memilih 'Semua gudang saya' atau gudang miliknya, dan StorageLocations memfilter sesuai hak akses", async () => {
@@ -299,6 +297,11 @@ describe("Tahap 25: Filter Gudang Top Bar & Cakupan Role", () => {
       expect(screen.getByText("Rak Cabang B")).toBeInTheDocument();
       expect(screen.queryByText("Rak Utama A")).not.toBeInTheDocument();
     });
+
+    const pageWhSelect = screen.getByLabelText("Filter berdasarkan gudang") as HTMLSelectElement;
+    expect(pageWhSelect).toBeDisabled();
+    expect(pageWhSelect.value).toBe("2");
+    expect(screen.getByText("Mengikuti filter gudang Top Bar")).toBeInTheDocument();
 
     fireEvent.change(select, { target: { value: "1" } });
 

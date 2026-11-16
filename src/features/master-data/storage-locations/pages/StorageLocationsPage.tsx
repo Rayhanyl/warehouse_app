@@ -32,21 +32,35 @@ import type {
 
 export function StorageLocationsPage() {
   const { can } = usePermission();
-  const { activeWarehouseId, filterWarehouseChoices, isWarehouseAllowed } =
-    useWarehouseScope();
+  const {
+    activeWarehouseId,
+    showWarehouseFilter,
+    isTopbarWarehouseLocked,
+    filterWarehouseChoices,
+    isWarehouseAllowed,
+  } = useWarehouseScope();
   const canManage = can("location:manage") || can("master:manage");
 
   const [locations, setLocations] = useState<StorageLocationRecord[]>([]);
+  const [total, setTotal] = useState(0);
+  const [limit, setLimit] = useState(20);
+  const [offset, setOffset] = useState(0);
   const [warehouseOptions, setWarehouseOptions] = useState<
     StorageLocationWarehouseOption[]
   >([]);
-  const scopeKey = String(activeWarehouseId ?? "all");
-  const [loadedScopeKey, setLoadedScopeKey] = useState<string | null>(null);
-  const isLoading = loadedScopeKey !== scopeKey;
   const [searchQuery, setSearchQuery] = useState("");
   const [warehouseFilter, setWarehouseFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] =
     useState<StorageLocationStatusFilter>("all");
+  const effectiveWarehouseParam =
+    activeWarehouseId !== null
+      ? String(activeWarehouseId)
+      : warehouseFilter !== "all"
+        ? warehouseFilter
+        : null;
+  const scopeKey = `${effectiveWarehouseParam ?? "all"}-${limit}-${offset}-${searchQuery}-${statusFilter}`;
+  const [loadedScopeKey, setLoadedScopeKey] = useState<string | null>(null);
+  const isLoading = loadedScopeKey !== scopeKey;
   const [banner, setBanner] = useState<MasterPageNotice | null>(null);
 
   const [detailTarget, setDetailTarget] =
@@ -74,18 +88,18 @@ export function StorageLocationsPage() {
     let active = true;
     void Promise.all([
       fetchStorageLocations({
-        limit: 200,
-        offset: 0,
-        search: "",
-        warehouse_id:
-          activeWarehouseId !== null ? String(activeWarehouseId) : null,
-        status: "all",
+        limit,
+        offset,
+        search: searchQuery,
+        warehouse_id: effectiveWarehouseParam,
+        status: statusFilter,
       }),
       fetchStorageLocationWarehouses(),
     ])
       .then(([locationPage, warehouses]) => {
         if (!active) return;
         setLocations(locationPage.items);
+        setTotal(locationPage.total ?? locationPage.items.length);
         setWarehouseOptions(warehouses);
         setLoadedScopeKey(scopeKey);
       })
@@ -102,7 +116,7 @@ export function StorageLocationsPage() {
     return () => {
       active = false;
     };
-  }, [activeWarehouseId, scopeKey]);
+  }, [effectiveWarehouseParam, limit, offset, scopeKey, searchQuery, statusFilter]);
 
   const scopedWarehouseOptions = useMemo(
     () => filterWarehouseChoices(warehouseOptions),
@@ -149,9 +163,14 @@ export function StorageLocationsPage() {
     statusFilter,
   ]);
 
+  const effectiveTotal =
+    filteredLocations.length < locations.length
+      ? filteredLocations.length
+      : Math.max(total, filteredLocations.length);
+
   const hasActiveFilters =
     searchQuery.trim().length > 0 ||
-    warehouseFilter !== "all" ||
+    (showWarehouseFilter && effectiveWarehouseParam !== null) ||
     statusFilter !== "all";
 
   const handleOpenCreate = () => {
@@ -341,10 +360,22 @@ export function StorageLocationsPage() {
           className="rounded-lg border border-slate-200 bg-white shadow-xs"
         >
           <StorageLocationsFilterBar
-            onSearchChange={setSearchQuery}
-            onStatusChange={setStatusFilter}
-            onWarehouseChange={setWarehouseFilter}
+            effectiveWarehouseFilter={effectiveWarehouseParam ?? "all"}
+            isTopbarWarehouseLocked={isTopbarWarehouseLocked}
+            onSearchChange={(next) => {
+              setSearchQuery(next);
+              setOffset(0);
+            }}
+            onStatusChange={(next) => {
+              setStatusFilter(next);
+              setOffset(0);
+            }}
+            onWarehouseChange={(next) => {
+              setWarehouseFilter(next);
+              setOffset(0);
+            }}
             searchQuery={searchQuery}
+            showWarehouseFilter={showWarehouseFilter}
             statusFilter={statusFilter}
             warehouseFilter={warehouseFilter}
             warehouseOptions={scopedWarehouseOptions}
@@ -355,6 +386,13 @@ export function StorageLocationsPage() {
             filteredLocations={filteredLocations}
             hasActiveFilters={hasActiveFilters}
             isLoading={isLoading}
+            limit={limit}
+            offset={offset}
+            onLimitChange={(nextLimit) => {
+              setLimit(nextLimit);
+              setOffset(0);
+            }}
+            onOffsetChange={setOffset}
             onOpenDeactivate={(location) => {
               setDeleteError(null);
               setDeleteTarget(location);
@@ -363,7 +401,7 @@ export function StorageLocationsPage() {
             onOpenEdit={handleOpenEdit}
             onReactivate={(location) => void handleReactivate(location)}
             reactivatingId={reactivatingId}
-            totalLocationsCount={locations.length}
+            totalLocationsCount={effectiveTotal}
           />
         </section>
       </div>

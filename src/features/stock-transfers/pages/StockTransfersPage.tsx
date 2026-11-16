@@ -20,17 +20,34 @@ const statusClass: Record<StockTransferStatus, string> = { DRAFT: "bg-canvas-50 
 
 function formatDate(value: string) { return new Intl.DateTimeFormat("id-ID", { dateStyle: "medium" }).format(new Date(value)); }
 
+const INITIAL_TRANSFER_FILTERS = {
+  limit: 20,
+  offset: 0,
+  search: "",
+  status: "all",
+  warehouse_id: null as number | null,
+  date_from: "",
+  date_to: "",
+};
+
 export function StockTransfersPage() {
   const { can } = usePermission();
-  const { activeWarehouseId } = useWarehouseScope();
-  const [params, setParams] = useState({ limit: 20, offset: 0, search: "", status: "all", date_from: "", date_to: "" });
-  const [draft, setDraft] = useState(params);
+  const {
+    showWarehouseFilter,
+    isTopbarWarehouseLocked,
+    resolveEffectiveWarehouseFilter,
+    filterWarehouseChoices,
+  } = useWarehouseScope();
+  const [params, setParams] = useState(INITIAL_TRANSFER_FILTERS);
+  const [draft, setDraft] = useState(INITIAL_TRANSFER_FILTERS);
   const [detailId, setDetailId] = useState<number | null>(null);
   const [formOpen, setFormOpen] = useState(false);
   const [editingTransfer, setEditingTransfer] = useState<StockTransfer | null>(null);
-  const query = useTransfers({ ...params, warehouse_id: activeWarehouseId });
+  const effectiveWarehouseId = resolveEffectiveWarehouseFilter(params.warehouse_id);
+  const query = useTransfers({ ...params, warehouse_id: effectiveWarehouseId });
   const detail = useTransfer(detailId);
   const refs = useTransferReferences();
+  const scopedWarehouses = filterWarehouseChoices(refs.data?.warehouses ?? []);
   const create = useTransferMutation("create");
   const update = useTransferMutation("update");
   const approve = useTransferMutation("approve");
@@ -39,7 +56,14 @@ export function StockTransfersPage() {
   const receive = useTransferMutation("receive");
   const isMobile = useIsMobile();
   const canCreate = can("transfer:create");
-  const activeFilterCount = [params.search, params.status !== "all", params.date_from].filter(Boolean).length;
+  const effectiveFilterWarehouse = showWarehouseFilter ? effectiveWarehouseId : null;
+  const activeFilterCount = [
+    params.search.trim(),
+    params.status !== "all",
+    effectiveFilterWarehouse,
+    params.date_from,
+    params.date_to,
+  ].filter(Boolean).length;
 
   async function createTransfer(payload: StockTransferCreatePayload) {
     try { const result = await create.mutateAsync({ payload }); setParams((prev) => ({ ...prev, offset: 0 })); setFormOpen(false); setDetailId(result.id); toast.success(`Draft ${result.transfer_number} berhasil dibuat.`); }
@@ -49,8 +73,18 @@ export function StockTransfersPage() {
     try { const result = await update.mutateAsync({ id, payload }); setFormOpen(false); setEditingTransfer(null); setDetailId(result.id); toast.success(`Draft ${result.transfer_number} berhasil diperbarui.`); }
     catch (error) { toast.error(mapTransferError(error, "Draft transfer belum dapat diperbarui.")); throw error; }
   }
-  function apply(event: FormEvent<HTMLFormElement>) { event.preventDefault(); setParams({ ...draft, offset: 0 }); }
-  function reset() { setDraft({ limit: 20, offset: 0, search: "", status: "all", date_from: "", date_to: "" }); setParams({ limit: 20, offset: 0, search: "", status: "all", date_from: "", date_to: "" }); }
+  function apply(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (draft.date_from && draft.date_to && draft.date_from > draft.date_to) {
+      toast.error("Tanggal mulai tidak boleh lebih akhir dari tanggal akhir.");
+      return;
+    }
+    setParams({ ...draft, search: draft.search.trim(), offset: 0 });
+  }
+  function reset() {
+    setDraft(INITIAL_TRANSFER_FILTERS);
+    setParams(INITIAL_TRANSFER_FILTERS);
+  }
   function openCreateForm() { setEditingTransfer(null); setFormOpen(true); }
 
   if (formOpen) {
@@ -58,7 +92,7 @@ export function StockTransfersPage() {
   }
 
   return <><div className="no-print"><PageHeader title="Transfer stok" description="Pindahkan stok antar lokasi atau gudang melalui persetujuan, pengiriman, dan penerimaan tujuan." action={canCreate ? <button className="inline-flex min-h-11 items-center gap-2 rounded-[var(--radius-md)] bg-teal-600 px-4 text-sm font-semibold text-surface-0 hover:bg-teal-700" onClick={openCreateForm} type="button"><Plus size={17} />Buat transfer</button> : <span className="inline-flex min-h-11 items-center rounded-[var(--radius-md)] border border-line-200 px-3 text-xs font-semibold text-slate-600">Mode baca saja</span>} />
-    <CollapsibleFilterPanel activeCount={activeFilterCount} ariaLabel="Filter daftar transfer stok" className="mb-6 rounded-[var(--radius-lg)] border border-line-200 bg-surface-0 p-4 shadow-[var(--shadow-1)] sm:p-5"><form className="grid gap-3 md:grid-cols-2 lg:grid-cols-4" onSubmit={apply}><input className="h-11 rounded-[var(--radius-md)] border border-line-500 px-3 text-sm text-ink-950 focus:outline-none focus:ring-2 focus:ring-teal-600/20" onChange={(e) => setDraft({ ...draft, search: e.target.value })} placeholder="Cari nomor transfer..." value={draft.search} /><select className="h-11 rounded-[var(--radius-md)] border border-line-500 px-3 text-sm text-ink-950" onChange={(e) => setDraft({ ...draft, status: e.target.value })} value={draft.status}><option value="all">Semua status</option>{Object.entries(statuses).map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select><input className="h-11 rounded-[var(--radius-md)] border border-line-500 px-3 text-sm text-ink-950" onChange={(e) => setDraft({ ...draft, date_from: e.target.value })} type="date" value={draft.date_from} /><div className="flex gap-2"><button className="inline-flex min-h-11 flex-1 items-center justify-center rounded-[var(--radius-md)] bg-ink-950 px-4 text-sm font-semibold text-surface-0 hover:bg-ink-800 sm:flex-initial" type="submit">Terapkan</button><button aria-label="Atur ulang filter" className="grid min-h-11 min-w-11 place-items-center rounded-[var(--radius-md)] border border-line-500 text-ink-950 hover:bg-canvas-50" onClick={reset} type="button"><RotateCcw size={16} /></button></div></form></CollapsibleFilterPanel>
+    <CollapsibleFilterPanel activeCount={activeFilterCount} ariaLabel="Filter daftar transfer stok" className="mb-6 rounded-[var(--radius-lg)] border border-line-200 bg-surface-0 p-4 shadow-[var(--shadow-1)] sm:p-5"><form className="grid gap-3 md:grid-cols-2 lg:grid-cols-4" onSubmit={apply}><label className="text-xs font-semibold text-slate-700">Pencarian<input className="mt-1.5 h-11 w-full rounded-[var(--radius-md)] border border-line-500 px-3 text-sm font-normal text-ink-950 focus:outline-none focus:ring-2 focus:ring-teal-600/20" onChange={(e) => setDraft({ ...draft, search: e.target.value })} placeholder="Cari nomor transfer..." value={draft.search} /></label><label className="text-xs font-semibold text-slate-700">Status<select className="mt-1.5 h-11 w-full rounded-[var(--radius-md)] border border-line-500 px-3 text-sm font-normal text-ink-950" onChange={(e) => setDraft({ ...draft, status: e.target.value })} value={draft.status}><option value="all">Semua status</option>{Object.entries(statuses).map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select></label>{showWarehouseFilter && <label className="text-xs font-semibold text-slate-700">Gudang<select className="mt-1.5 h-11 w-full rounded-[var(--radius-md)] border border-line-500 px-3 text-sm font-normal text-ink-950 disabled:cursor-not-allowed disabled:bg-canvas-50 disabled:text-slate-500" disabled={isTopbarWarehouseLocked} onChange={(e) => setDraft({ ...draft, warehouse_id: e.target.value ? Number(e.target.value) : null })} value={isTopbarWarehouseLocked ? (effectiveWarehouseId ?? "") : (draft.warehouse_id ?? "")}><option value="">Semua gudang</option>{scopedWarehouses.map((wh) => <option key={wh.id} value={wh.id}>{wh.code} · {wh.name}</option>)}</select>{isTopbarWarehouseLocked && <span className="mt-1 block text-[11px] font-medium text-teal-700">Mengikuti filter gudang Top Bar</span>}</label>}<label className="text-xs font-semibold text-slate-700">Tanggal mulai<input aria-label="Tanggal mulai" className="mt-1.5 h-11 w-full rounded-[var(--radius-md)] border border-line-500 px-3 text-sm font-normal text-ink-950" max={draft.date_to || undefined} onChange={(e) => setDraft({ ...draft, date_from: e.target.value })} type="date" value={draft.date_from} /></label><label className="text-xs font-semibold text-slate-700">Tanggal akhir<input aria-label="Tanggal akhir" className="mt-1.5 h-11 w-full rounded-[var(--radius-md)] border border-line-500 px-3 text-sm font-normal text-ink-950" min={draft.date_from || undefined} onChange={(e) => setDraft({ ...draft, date_to: e.target.value })} type="date" value={draft.date_to} /></label><div className="flex items-end gap-2"><button className="inline-flex min-h-11 flex-1 items-center justify-center rounded-[var(--radius-md)] bg-ink-950 px-4 text-sm font-semibold text-surface-0 hover:bg-ink-800 sm:flex-initial" type="submit">Terapkan</button><button aria-label="Atur ulang filter" className="grid min-h-11 min-w-11 place-items-center rounded-[var(--radius-md)] border border-line-500 text-ink-950 hover:bg-canvas-50" onClick={reset} type="button"><RotateCcw size={16} /></button></div></form></CollapsibleFilterPanel>
     {query.isLoading ? <State text="Memuat daftar transfer..." /> : query.isError ? <State text="Daftar transfer belum dapat dimuat." error onRetry={() => void query.refetch()} /> : query.data?.items.length === 0 ? <State text="Belum ada transfer stok" empty action={canCreate ? openCreateForm : undefined} /> : <section className="overflow-hidden rounded-[var(--radius-lg)] border border-line-200 bg-surface-0 shadow-[var(--shadow-1)]">{isMobile ? <ul aria-label="Daftar transfer stok" className="divide-y divide-line-200">{query.data?.items.map((item) => <li className="space-y-3 p-4" key={item.id}><div className="flex items-start justify-between gap-2"><div className="min-w-0"><button className="font-semibold text-teal-700 underline-offset-2 hover:underline" onClick={() => setDetailId(item.id)} type="button">{item.transfer_number}</button><p className="mt-0.5 text-xs text-slate-600 tabular-nums">ID #{item.id} · {formatDate(item.created_at)}</p></div><span className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold ${statusClass[item.status]}`}>{statuses[item.status]}</span></div><div className="grid grid-cols-2 gap-2 rounded-[var(--radius-md)] bg-canvas-50/70 p-3 text-xs"><div><p className="text-slate-600">Asal</p><p className="mt-0.5 font-semibold text-ink-950">{item.source_warehouse_code} · {item.source_location_code}</p></div><div><p className="text-slate-600">Tujuan</p><p className="mt-0.5 font-semibold text-ink-950">{item.destination_warehouse_code} · {item.destination_location_code}</p></div></div><button className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-[var(--radius-md)] border border-line-500 px-3 text-sm font-semibold text-ink-950 hover:bg-canvas-50" onClick={() => setDetailId(item.id)} type="button"><Eye size={16} />Detail</button></li>)}</ul> : <div className="overflow-x-auto"><table className="min-w-[900px] w-full text-left text-sm"><caption className="sr-only">Daftar transfer stok</caption><thead className="bg-canvas-50 text-xs font-semibold text-slate-700"><tr><th className="px-4 py-3">Nomor</th><th className="px-4 py-3">Asal</th><th className="px-4 py-3">Tujuan</th><th className="px-4 py-3">Dibuat</th><th className="px-4 py-3">Status</th><th className="px-4 py-3 text-right">Aksi</th></tr></thead><tbody className="divide-y divide-line-200">{query.data?.items.map((item) => <tr key={item.id}><td className="px-4 py-4"><button className="font-semibold text-teal-700 underline-offset-2 hover:underline" onClick={() => setDetailId(item.id)} type="button">{item.transfer_number}</button><p className="text-xs text-slate-600">ID #{item.id}</p></td><td className="px-4 py-4 text-ink-950">{item.source_warehouse_code} · {item.source_location_code}</td><td className="px-4 py-4 text-ink-950">{item.destination_warehouse_code} · {item.destination_location_code}</td><td className="px-4 py-4 text-slate-700">{formatDate(item.created_at)}</td><td className="px-4 py-4"><span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${statusClass[item.status]}`}>{statuses[item.status]}</span></td><td className="px-4 py-4 text-right"><button className="inline-flex min-h-11 items-center gap-2 rounded-[var(--radius-md)] border border-line-500 px-3 font-semibold text-ink-950" onClick={() => setDetailId(item.id)} type="button"><Eye size={16} />Detail</button></td></tr>)}</tbody></table></div>}</section>}
     </div>
     {detailId !== null && <TransferDetail transfer={detail.data} isLoading={detail.isLoading} can={can} actions={{ approve, ship, cancel, receive }} onEdit={(transfer) => { setEditingTransfer(transfer); setFormOpen(true); setDetailId(null); }} onClose={() => setDetailId(null)} />}

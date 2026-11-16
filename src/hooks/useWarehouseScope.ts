@@ -105,6 +105,8 @@ export function useWarehouseScope() {
 
   const showTopbarSelector =
     canAccessAllWarehouses || warehouseOptions.length > 1;
+  const showWarehouseFilter = showTopbarSelector;
+  const isTopbarWarehouseLocked = selectedWarehouseId !== null;
 
   const isWarehouseAllowed = (warehouseId: number | string): boolean => {
     if (!isAuthenticatedUser || canAccessAllWarehouses) return true;
@@ -152,6 +154,8 @@ export function useWarehouseScope() {
     activeWarehouse,
     activeWarehouseLabel,
     showTopbarSelector,
+    showWarehouseFilter,
+    isTopbarWarehouseLocked,
     setSelectedWarehouseId,
     syncWithAllowedWarehouses,
     isWarehouseAllowed,

@@ -15,6 +15,9 @@ interface PurchaseOrderFilterBarProps {
   draftParams: PurchaseOrderListParams;
   suppliers: ReferenceOption[];
   warehouses: ReferenceOption[];
+  showWarehouseFilter?: boolean;
+  isTopbarWarehouseLocked?: boolean;
+  effectiveWarehouseId?: number | null;
   onDraftChange: (
     updater: (current: PurchaseOrderListParams) => PurchaseOrderListParams,
   ) => void;
@@ -27,6 +30,9 @@ export function PurchaseOrderFilterBar({
   draftParams,
   suppliers,
   warehouses,
+  showWarehouseFilter = true,
+  isTopbarWarehouseLocked = false,
+  effectiveWarehouseId = null,
   onDraftChange,
   onSubmit,
   onReset,
@@ -87,14 +93,18 @@ export function PurchaseOrderFilterBar({
           options={suppliers}
           value={draftParams.supplier_id}
         />
-        <ReferenceSelect
-          label="Gudang tujuan"
-          onChange={(value) =>
-            onDraftChange((current) => ({ ...current, warehouse_id: value }))
-          }
-          options={warehouses}
-          value={draftParams.warehouse_id}
-        />
+        {showWarehouseFilter && (
+          <ReferenceSelect
+            disabled={isTopbarWarehouseLocked}
+            helperText={isTopbarWarehouseLocked ? "Mengikuti filter gudang Top Bar" : undefined}
+            label="Gudang tujuan"
+            onChange={(value) =>
+              onDraftChange((current) => ({ ...current, warehouse_id: value }))
+            }
+            options={warehouses}
+            value={isTopbarWarehouseLocked ? effectiveWarehouseId : draftParams.warehouse_id}
+          />
+        )}
 
         <label className="text-sm font-semibold text-ink-950">
           Tanggal mulai
@@ -202,17 +212,22 @@ function ReferenceSelect({
   value,
   options,
   onChange,
+  disabled = false,
+  helperText,
 }: {
   label: string;
   value: number | null;
   options: ReferenceOption[];
   onChange: (value: number | null) => void;
+  disabled?: boolean;
+  helperText?: string;
 }) {
   return (
     <label className="text-sm font-semibold text-ink-950">
       {label}
       <select
-        className="mt-2 h-11 w-full rounded-[var(--radius-md)] border border-line-500 bg-surface-0 px-3 text-sm font-normal text-ink-950 focus:border-teal-600 focus:outline-none focus:ring-2 focus:ring-teal-600/20"
+        className="mt-2 h-11 w-full rounded-[var(--radius-md)] border border-line-500 bg-surface-0 px-3 text-sm font-normal text-ink-950 focus:border-teal-600 focus:outline-none focus:ring-2 focus:ring-teal-600/20 disabled:cursor-not-allowed disabled:bg-canvas-50 disabled:text-slate-500"
+        disabled={disabled}
         onChange={(event) =>
           onChange(event.target.value ? Number(event.target.value) : null)
         }
@@ -227,6 +242,9 @@ function ReferenceSelect({
             </option>
           ))}
       </select>
+      {helperText && (
+        <span className="mt-1 block text-[11px] font-medium text-teal-700">{helperText}</span>
+      )}
     </label>
   );
 }

@@ -1,5 +1,6 @@
 import { type FormEvent, useState } from "react";
 import { useLocation, useSearchParams } from "react-router-dom";
+import { toast } from "sonner";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { RouteTabNav } from "@/components/shared/RouteTabNav";
 import { StockLookupModal } from "@/components/ui/StockLookupModal";
@@ -56,8 +57,13 @@ function StockPageContent({
 }) {
   const { pathname } = useLocation();
   const { can } = usePermission();
-  const { canAccessAllWarehouses, resolveEffectiveWarehouseFilter, warehouseOptions } =
-    useWarehouseScope();
+  const {
+    canAccessAllWarehouses,
+    showWarehouseFilter,
+    isTopbarWarehouseLocked,
+    resolveEffectiveWarehouseFilter,
+    warehouseOptions,
+  } = useWarehouseScope();
   const canReadLedger = can("ledger:read");
   const [params, setParams] = useState<StockListParams>(() => ({
     ...initialParams,
@@ -102,8 +108,8 @@ function StockPageContent({
         : [["", "Tidak ada gudang"]];
 
   const activeFilterCount = [
-    params.search,
-    effectiveParams.warehouse_id,
+    params.search.trim(),
+    showWarehouseFilter ? effectiveParams.warehouse_id : "",
     params.location_id,
     params.item_id,
     params.category_id,
@@ -150,7 +156,11 @@ function StockPageContent({
 
   function apply(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setParams({ ...draft, offset: 0 });
+    if (draft.date_from && draft.date_to && draft.date_from > draft.date_to) {
+      toast.error("Tanggal mulai tidak boleh lebih akhir dari tanggal akhir.");
+      return;
+    }
+    setParams({ ...draft, search: draft.search.trim(), offset: 0 });
   }
 
   function reset() {
@@ -188,12 +198,14 @@ function StockPageContent({
         effectiveWarehouseId={effectiveParams.warehouse_id}
         isLedgerView={isLedgerView}
         isSummaryView={isSummaryView}
+        isTopbarWarehouseLocked={isTopbarWarehouseLocked}
         isWarehouseView={isWarehouseView}
         onDraftChange={setDraft}
         onOpenLookup={() => setLookupOpen(true)}
         onReset={reset}
         onSubmit={apply}
         scopedWarehouseOptions={scopedWarehouseSelectOptions}
+        showWarehouseFilter={showWarehouseFilter}
       />
 
       {isLedgerView && !canReadLedger ? (

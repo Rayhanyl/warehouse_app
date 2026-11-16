@@ -8,19 +8,31 @@ interface StocksFilterBarProps {
   activeCount: number;
   draftSearch: string;
   draftStatus: StockStatusFilter;
+  draftCategoryId?: number | null;
+  draftUomId?: number | null;
+  categoryOptions?: { id: number; name: string }[];
+  uomOptions?: { id: number; code: string; name: string }[];
   onSearchChange: (value: string) => void;
   onStatusChange: (value: StockStatusFilter) => void;
+  onCategoryChange?: (value: number | null) => void;
+  onUomChange?: (value: number | null) => void;
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
   onReset: () => void;
 }
 
-/** Panel filter daftar barang (SKU) berdasarkan pencarian dan status. */
+/** Panel filter daftar barang (SKU) berdasarkan pencarian, kategori, satuan ukur, dan status. */
 export function StocksFilterBar({
   activeCount,
   draftSearch,
   draftStatus,
+  draftCategoryId = null,
+  draftUomId = null,
+  categoryOptions = [],
+  uomOptions = [],
   onSearchChange,
   onStatusChange,
+  onCategoryChange,
+  onUomChange,
   onSubmit,
   onReset,
 }: StocksFilterBarProps) {
@@ -30,7 +42,7 @@ export function StocksFilterBar({
       ariaLabel="Filter daftar barang"
       title="Filter daftar barang"
     >
-      <form className="grid gap-4 md:grid-cols-3" onSubmit={onSubmit}>
+      <form className="grid gap-4 md:grid-cols-2 lg:grid-cols-4" onSubmit={onSubmit}>
         <label className="text-sm font-semibold text-ink-950">
           Pencarian
           <div className="relative mt-2">
@@ -50,6 +62,42 @@ export function StocksFilterBar({
         </label>
 
         <label className="text-sm font-semibold text-ink-950">
+          Kategori barang
+          <select
+            className="mt-2 h-11 w-full rounded-[var(--radius-md)] border border-line-500 bg-surface-0 px-3 text-sm font-normal text-ink-950 focus:border-teal-600 focus:outline-none focus:ring-2 focus:ring-teal-600/20"
+            onChange={(event) =>
+              onCategoryChange?.(event.target.value ? Number(event.target.value) : null)
+            }
+            value={draftCategoryId ?? ""}
+          >
+            <option value="">Semua kategori</option>
+            {categoryOptions.map((cat) => (
+              <option key={cat.id} value={cat.id}>
+                {cat.name}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label className="text-sm font-semibold text-ink-950">
+          Satuan ukur (UoM)
+          <select
+            className="mt-2 h-11 w-full rounded-[var(--radius-md)] border border-line-500 bg-surface-0 px-3 text-sm font-normal text-ink-950 focus:border-teal-600 focus:outline-none focus:ring-2 focus:ring-teal-600/20"
+            onChange={(event) =>
+              onUomChange?.(event.target.value ? Number(event.target.value) : null)
+            }
+            value={draftUomId ?? ""}
+          >
+            <option value="">Semua satuan</option>
+            {uomOptions.map((uom) => (
+              <option key={uom.id} value={uom.id}>
+                {uom.code} ({uom.name})
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label className="text-sm font-semibold text-ink-950">
           Status barang
           <select
             className="mt-2 h-11 w-full rounded-[var(--radius-md)] border border-line-500 bg-surface-0 px-3 text-sm font-normal text-ink-950 focus:border-teal-600 focus:outline-none focus:ring-2 focus:ring-teal-600/20"
@@ -64,7 +112,7 @@ export function StocksFilterBar({
           </select>
         </label>
 
-        <div className="flex flex-wrap items-end gap-2">
+        <div className="flex flex-wrap items-end gap-2 md:col-span-2 lg:col-span-4">
           <Button className="min-h-11 gap-2 bg-teal-600 hover:bg-teal-700" type="submit">
             <Filter aria-hidden="true" size={16} />
             Terapkan filter

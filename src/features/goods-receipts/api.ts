@@ -108,7 +108,7 @@ export function useGoodsReceiptReferences() {
   return useQuery({
     queryKey: [...goodsReceiptKeys.all, "references"],
     queryFn: async () => {
-      const [issuedRes, partialRes, locationsRes] = await Promise.all([
+      const [issuedRes, partialRes, locationsRes, warehousesRes] = await Promise.all([
         apiClient.get<PurchaseOrderPage>("/purchase-orders", {
           params: { limit: 200, offset: 0, status: "ISSUED", sort_by: "id", sort_dir: "desc" },
         }),
@@ -118,6 +118,10 @@ export function useGoodsReceiptReferences() {
         apiClient.get<{ items: GoodsReceiptLocation[] }>("/locations", {
           params: { limit: 200, offset: 0, is_active: "true" },
         }),
+        apiClient.get<{ items: { id: number; code: string; name: string; is_active?: boolean }[] }>(
+          "/warehouses",
+          { params: { limit: 200, offset: 0 } },
+        ),
       ]);
       const poMap = new Map<number, (typeof issuedRes.data.items)[number]>();
       for (const po of [...issuedRes.data.items, ...partialRes.data.items]) {
@@ -125,7 +129,11 @@ export function useGoodsReceiptReferences() {
       }
       const purchaseOrders = Array.from(poMap.values()).sort((a, b) => b.id - a.id);
 
-      return { purchaseOrders, locations: locationsRes.data.items };
+      return {
+        purchaseOrders,
+        locations: locationsRes.data.items,
+        warehouses: warehousesRes.data.items ?? [],
+      };
     },
   });
 }

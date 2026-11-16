@@ -1,27 +1,38 @@
 import { Edit3, Eye, PowerOff, RotateCcw } from "lucide-react";
 import { ResponsiveDataView, StatusBadge } from "@/components/shared";
 import { Button } from "@/components/ui/button";
+import { MasterDataPagination } from "../../components/MasterDataPagination";
 import type { StockItem } from "../types";
 
 interface StocksDataViewProps {
   items: StockItem[];
+  total?: number;
+  limit?: number;
+  offset?: number;
   isLoading: boolean;
   canManage: boolean;
   onResetFilters: () => void;
   onOpenDetail: (item: StockItem) => void;
   onOpenEdit: (item: StockItem) => void;
   onOpenToggleStatus: (item: StockItem) => void;
+  onLimitChange?: (nextLimit: number) => void;
+  onOffsetChange?: (nextOffset: number) => void;
 }
 
 /** Tampilan responsif (kartu mobile + tabel desktop) untuk daftar master barang (SKU). */
 export function StocksDataView({
   items,
+  total,
+  limit = 20,
+  offset = 0,
   isLoading,
   canManage,
   onResetFilters,
   onOpenDetail,
   onOpenEdit,
   onOpenToggleStatus,
+  onLimitChange = () => {},
+  onOffsetChange = () => {},
 }: StocksDataViewProps) {
   return (
     <section className="overflow-hidden rounded-[var(--radius-lg)] border border-line-200 bg-surface-0 shadow-[var(--shadow-1)]">
@@ -236,11 +247,15 @@ export function StocksDataView({
       />
 
       {!isLoading && items.length > 0 && (
-        <div className="flex flex-col items-start justify-between gap-2 border-t border-line-200 px-4 py-3 text-xs text-slate-600 tabular-nums sm:flex-row sm:items-center">
-          <span>
-            Menampilkan 1 sampai {items.length} dari {items.length} barang
-          </span>
-        </div>
+        <MasterDataPagination
+          itemLabel="barang"
+          limit={limit}
+          offset={offset}
+          onLimitChange={onLimitChange}
+          onOffsetChange={onOffsetChange}
+          pageSize={items.length}
+          total={total ?? items.length}
+        />
       )}
     </section>
   );

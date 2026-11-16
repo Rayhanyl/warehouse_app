@@ -34,6 +34,9 @@ export function SuppliersPage() {
   const canManage = can("master:manage");
 
   const [records, setRecords] = useState<Supplier[]>([]);
+  const [total, setTotal] = useState(0);
+  const [limit, setLimit] = useState(20);
+  const [offset, setOffset] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [draftSearch, setDraftSearch] = useState("");
@@ -61,16 +64,17 @@ export function SuppliersPage() {
   useEffect(() => {
     let active = true;
     void fetchSuppliers({
-      limit: 200,
-      offset: 0,
-      search: "",
-      status: "all",
+      limit,
+      offset,
+      search,
+      status: statusFilter,
       sort_by: "id",
       sort_dir: "asc",
     })
       .then((page) => {
         if (active) {
           setRecords(page.items);
+          setTotal(page.total ?? page.items.length);
           setIsLoading(false);
         }
       })
@@ -87,7 +91,7 @@ export function SuppliersPage() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [limit, offset, search, statusFilter]);
 
   const filteredSuppliers = useMemo(() => {
     const query = search.trim().toLocaleLowerCase();
@@ -109,6 +113,11 @@ export function SuppliersPage() {
     });
   }, [records, search, statusFilter]);
 
+  const effectiveTotal =
+    filteredSuppliers.length < records.length
+      ? filteredSuppliers.length
+      : Math.max(total, filteredSuppliers.length);
+
   function notifySuccess(message: string) {
     setNotice({ type: "success", message });
     toast.success(message);
@@ -116,13 +125,15 @@ export function SuppliersPage() {
 
   function handleApplyFilter(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setSearch(draftSearch);
+    setOffset(0);
+    setSearch(draftSearch.trim());
     setStatusFilter(draftStatus);
   }
 
   function handleResetFilter() {
     setDraftSearch("");
     setDraftStatus("all");
+    setOffset(0);
     setSearch("");
     setStatusFilter("all");
   }
@@ -247,14 +258,15 @@ export function SuppliersPage() {
   async function refreshSuppliers() {
     try {
       const page = await fetchSuppliers({
-        limit: 200,
-        offset: 0,
-        search: "",
-        status: "all",
+        limit,
+        offset,
+        search,
+        status: statusFilter,
         sort_by: "id",
         sort_dir: "asc",
       });
       setRecords(page.items);
+      setTotal(page.total ?? page.items.length);
       void invalidateMasterDependentCaches(queryClient);
     } catch {
       setNotice({
@@ -330,6 +342,13 @@ export function SuppliersPage() {
         <SuppliersDataView
           canManage={canManage}
           isLoading={isLoading}
+          limit={limit}
+          offset={offset}
+          onLimitChange={(nextLimit) => {
+            setLimit(nextLimit);
+            setOffset(0);
+          }}
+          onOffsetChange={setOffset}
           onOpenDetail={setDetailTarget}
           onOpenEdit={openEditDialog}
           onOpenToggleStatus={(supplier) => {
@@ -338,6 +357,7 @@ export function SuppliersPage() {
           }}
           onResetFilters={handleResetFilter}
           suppliers={filteredSuppliers}
+          total={effectiveTotal}
         />
       </div>
 

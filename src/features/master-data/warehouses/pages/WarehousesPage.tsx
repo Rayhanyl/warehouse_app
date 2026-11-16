@@ -37,14 +37,17 @@ export function WarehousesPage() {
   const canManage = can("warehouse:manage") || can("master:manage");
 
   const [records, setRecords] = useState<WarehouseRecord[]>([]);
-  const scopeKey = String(activeWarehouseId ?? "all");
-  const [loadedScopeKey, setLoadedScopeKey] = useState<string | null>(null);
-  const isLoading = loadedScopeKey !== scopeKey;
+  const [total, setTotal] = useState(0);
+  const [limit, setLimit] = useState(20);
+  const [offset, setOffset] = useState(0);
   const [search, setSearch] = useState("");
   const [draftSearch, setDraftSearch] = useState("");
   const [statusFilter, setStatusFilter] =
     useState<WarehouseStatusFilter>("all");
   const [draftStatus, setDraftStatus] = useState<WarehouseStatusFilter>("all");
+  const scopeKey = `${activeWarehouseId ?? "all"}-${limit}-${offset}-${search}-${statusFilter}`;
+  const [loadedScopeKey, setLoadedScopeKey] = useState<string | null>(null);
+  const isLoading = loadedScopeKey !== scopeKey;
   const [notice, setNotice] = useState<MasterPageNotice | null>(null);
 
   const [detailTarget, setDetailTarget] = useState<WarehouseRecord | null>(null);
@@ -69,17 +72,18 @@ export function WarehousesPage() {
   useEffect(() => {
     let active = true;
     void fetchWarehouses({
-      limit: 200,
-      offset: 0,
-      search: "",
+      limit,
+      offset,
+      search,
       ...(activeWarehouseId !== null ? { warehouse_id: activeWarehouseId } : {}),
-      status: "all",
+      status: statusFilter,
       sort_by: "id",
       sort_dir: "asc",
     })
       .then((page) => {
         if (active) {
           setRecords(page.items);
+          setTotal(page.total ?? page.items.length);
           setLoadedScopeKey(scopeKey);
         }
       })
@@ -96,7 +100,7 @@ export function WarehousesPage() {
     return () => {
       active = false;
     };
-  }, [activeWarehouseId, scopeKey]);
+  }, [activeWarehouseId, limit, offset, scopeKey, search, statusFilter]);
 
   const filteredWarehouses = useMemo(() => {
     const query = search.trim().toLocaleLowerCase();
@@ -124,6 +128,11 @@ export function WarehousesPage() {
     });
   }, [activeWarehouseId, isWarehouseAllowed, records, search, statusFilter]);
 
+  const effectiveTotal =
+    filteredWarehouses.length < records.length
+      ? filteredWarehouses.length
+      : Math.max(total, filteredWarehouses.length);
+
   function notifySuccess(message: string) {
     setNotice({ type: "success", message });
     toast.success(message);
@@ -131,13 +140,15 @@ export function WarehousesPage() {
 
   function handleApplyFilter(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setSearch(draftSearch);
+    setOffset(0);
+    setSearch(draftSearch.trim());
     setStatusFilter(draftStatus);
   }
 
   function handleResetFilter() {
     setDraftSearch("");
     setDraftStatus("all");
+    setOffset(0);
     setSearch("");
     setStatusFilter("all");
   }
@@ -278,6 +289,13 @@ export function WarehousesPage() {
         <WarehousesDataView
           canManage={canManage}
           isLoading={isLoading}
+          limit={limit}
+          offset={offset}
+          onLimitChange={(nextLimit) => {
+            setLimit(nextLimit);
+            setOffset(0);
+          }}
+          onOffsetChange={setOffset}
           onOpenDetail={setDetailTarget}
           onOpenEdit={openEditDialog}
           onOpenToggleStatus={(wh) => {
@@ -285,6 +303,7 @@ export function WarehousesPage() {
             setConfirmTarget(wh);
           }}
           onResetFilters={handleResetFilter}
+          total={effectiveTotal}
           warehouses={filteredWarehouses}
         />
       </div>

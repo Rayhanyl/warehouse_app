@@ -1,25 +1,39 @@
 import type { FormEvent, ReactNode } from "react";
-import { ChevronLeft, ChevronRight, Search, ShieldCheck } from "lucide-react";
+import { ChevronLeft, ChevronRight, RotateCcw, Search, ShieldCheck } from "lucide-react";
 
 export function AdminFilterBar({
   children,
   onSubmit,
+  onReset,
 }: {
   children: ReactNode;
   onSubmit: (event: FormEvent) => void;
+  onReset?: () => void;
 }) {
   return (
     <form className="grid gap-3 md:flex md:flex-wrap md:items-end" onSubmit={onSubmit}>
       <div className="grid min-w-0 flex-1 gap-3 sm:grid-cols-2 md:flex md:flex-wrap md:items-end">
         {children}
       </div>
-      <button
-        className="inline-flex min-h-11 items-center justify-center gap-2 rounded-[var(--radius-md)] bg-teal-600 px-4 text-sm font-semibold text-surface-0 hover:bg-teal-700"
-        type="submit"
-      >
-        <Search size={16} />
-        Terapkan
-      </button>
+      <div className="flex flex-wrap items-center gap-2">
+        <button
+          className="inline-flex min-h-11 items-center justify-center gap-2 rounded-[var(--radius-md)] bg-teal-600 px-4 text-sm font-semibold text-surface-0 hover:bg-teal-700"
+          type="submit"
+        >
+          <Search size={16} />
+          Terapkan
+        </button>
+        {onReset && (
+          <button
+            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-[var(--radius-md)] border border-line-500 bg-surface-0 px-3 text-sm font-semibold text-ink-950 hover:bg-canvas-50"
+            onClick={onReset}
+            type="button"
+          >
+            <RotateCcw size={16} />
+            Atur ulang
+          </button>
+        )}
+      </div>
     </form>
   );
 }

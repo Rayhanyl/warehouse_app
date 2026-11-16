@@ -30,7 +30,12 @@ export function GoodsReceiptsPage({
   const { can } = usePermission();
   const canCreate = can("gr:create");
   const canPost = can("gr:post");
-  const { resolveEffectiveWarehouseFilter } = useWarehouseScope();
+  const {
+    showWarehouseFilter,
+    isTopbarWarehouseLocked,
+    filterWarehouseChoices,
+    resolveEffectiveWarehouseFilter,
+  } = useWarehouseScope();
   const [params, setParams] = useState(GR_INITIAL_PARAMS);
   const [draftParams, setDraftParams] = useState(GR_INITIAL_PARAMS);
   const [detailId, setDetailId] = useState<number | null>(null);
@@ -57,19 +62,33 @@ export function GoodsReceiptsPage({
 
   const items = data?.items ?? [];
   const total = data?.total ?? 0;
+  const effectiveFilterWarehouse = showWarehouseFilter ? effectiveWarehouseId : null;
   const hasFilters = Boolean(
-    params.search || params.status !== "all" || params.date_from || params.date_to,
+    params.search.trim() ||
+      params.status !== "all" ||
+      effectiveFilterWarehouse ||
+      params.date_from ||
+      params.date_to,
   );
   const activeFilterCount = [
-    params.search,
+    params.search.trim(),
     params.status !== "all",
+    effectiveFilterWarehouse,
     params.date_from,
     params.date_to,
   ].filter(Boolean).length;
 
   function applyFilters(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setParams({ ...draftParams, offset: 0 });
+    if (
+      draftParams.date_from &&
+      draftParams.date_to &&
+      draftParams.date_from > draftParams.date_to
+    ) {
+      toast.error("Tanggal mulai tidak boleh lebih akhir dari tanggal akhir.");
+      return;
+    }
+    setParams({ ...draftParams, search: draftParams.search.trim(), offset: 0 });
   }
 
   function resetFilters() {
@@ -150,10 +169,12 @@ export function GoodsReceiptsPage({
           activeFilterCount={activeFilterCount}
           canManage={canCreate}
           draftParams={draftParams}
+          effectiveWarehouseId={effectiveWarehouseId}
           hasFilters={hasFilters}
           isError={isError}
           isLoading={isLoading}
           isMobile={isMobile}
+          isTopbarWarehouseLocked={isTopbarWarehouseLocked}
           items={items}
           limit={params.limit}
           offset={params.offset}
@@ -164,7 +185,9 @@ export function GoodsReceiptsPage({
           onResetFilters={resetFilters}
           onRetry={() => void refetch()}
           onSelectDetail={setDetailId}
+          showWarehouseFilter={showWarehouseFilter}
           total={total}
+          warehouses={filterWarehouseChoices(references.data?.warehouses ?? [])}
         />
       </div>
 

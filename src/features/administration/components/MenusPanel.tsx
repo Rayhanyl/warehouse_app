@@ -33,6 +33,11 @@ export function MenusPanel({
     onParamsChange({ ...params, search: draftSearch.trim(), offset: 0 });
   }
 
+  function resetFilters() {
+    setDraftSearch("");
+    onParamsChange({ ...params, search: "", is_active: "", offset: 0 });
+  }
+
   if (query.isLoading) {
     return <AdminState text="Memuat katalog menu..." />;
   }
@@ -56,7 +61,7 @@ export function MenusPanel({
         ariaLabel="Filter menu"
         className="mb-4 rounded-[var(--radius-lg)] border border-line-200 bg-surface-0 p-4 shadow-[var(--shadow-1)]"
       >
-        <AdminFilterBar onSubmit={applyFilters}>
+        <AdminFilterBar onReset={resetFilters} onSubmit={applyFilters}>
           <label className="min-w-0 flex-1 text-sm font-semibold">
             Cari menu
             <div className="relative mt-2">

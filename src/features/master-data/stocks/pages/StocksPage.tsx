@@ -37,11 +37,18 @@ export function StocksPage() {
   const canManage = can("master:manage");
 
   const [records, setRecords] = useState<StockItem[]>([]);
+  const [total, setTotal] = useState(0);
+  const [limit, setLimit] = useState(20);
+  const [offset, setOffset] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [draftSearch, setDraftSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<StockStatusFilter>("all");
   const [draftStatus, setDraftStatus] = useState<StockStatusFilter>("all");
+  const [categoryId, setCategoryId] = useState<number | null>(null);
+  const [draftCategoryId, setDraftCategoryId] = useState<number | null>(null);
+  const [uomId, setUomId] = useState<number | null>(null);
+  const [draftUomId, setDraftUomId] = useState<number | null>(null);
   const [notice, setNotice] = useState<MasterPageNotice | null>(null);
 
   const [detailTarget, setDetailTarget] = useState<StockItem | null>(null);
@@ -68,18 +75,19 @@ export function StocksPage() {
   useEffect(() => {
     let active = true;
     void fetchStockItems({
-      limit: 200,
-      offset: 0,
-      search: "",
-      status: "all",
-      category_id: null,
-      uom_id: null,
+      limit,
+      offset,
+      search,
+      status: statusFilter,
+      category_id: categoryId,
+      uom_id: uomId,
       sort_by: "id",
       sort_dir: "asc",
     })
       .then((page) => {
         if (active) {
           setRecords(page.items);
+          setTotal(page.total ?? page.items.length);
           setIsLoading(false);
         }
       })
@@ -96,7 +104,7 @@ export function StocksPage() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [categoryId, limit, offset, search, statusFilter, uomId]);
 
   useEffect(() => {
     let active = true;
@@ -154,6 +162,12 @@ export function StocksPage() {
       if (statusFilter === "inactive" && item.is_active) {
         return false;
       }
+      if (categoryId !== null && item.category_id !== categoryId) {
+        return false;
+      }
+      if (uomId !== null && item.uom_id !== uomId) {
+        return false;
+      }
       if (!query) {
         return true;
       }
@@ -164,7 +178,12 @@ export function StocksPage() {
         item.category_name.toLocaleLowerCase().includes(query)
       );
     });
-  }, [records, search, statusFilter]);
+  }, [categoryId, records, search, statusFilter, uomId]);
+
+  const effectiveTotal =
+    filteredItems.length < records.length
+      ? filteredItems.length
+      : Math.max(total, filteredItems.length);
 
   function notifySuccess(message: string) {
     setNotice({ type: "success", message });
@@ -173,15 +192,23 @@ export function StocksPage() {
 
   function handleApplyFilter(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setSearch(draftSearch);
+    setOffset(0);
+    setSearch(draftSearch.trim());
     setStatusFilter(draftStatus);
+    setCategoryId(draftCategoryId);
+    setUomId(draftUomId);
   }
 
   function handleResetFilter() {
     setDraftSearch("");
     setDraftStatus("all");
+    setDraftCategoryId(null);
+    setDraftUomId(null);
+    setOffset(0);
     setSearch("");
     setStatusFilter("all");
+    setCategoryId(null);
+    setUomId(null);
   }
 
   function openCreateDialog() {
@@ -321,16 +348,17 @@ export function StocksPage() {
   async function refreshStockItems() {
     try {
       const page = await fetchStockItems({
-        limit: 200,
-        offset: 0,
-        search: "",
-        status: "all",
-        category_id: null,
-        uom_id: null,
+        limit,
+        offset,
+        search,
+        status: statusFilter,
+        category_id: categoryId,
+        uom_id: uomId,
         sort_by: "id",
         sort_dir: "asc",
       });
       setRecords(page.items);
+      setTotal(page.total ?? page.items.length);
       void invalidateMasterDependentCaches(queryClient);
     } catch {
       setNotice({
@@ -395,19 +423,37 @@ export function StocksPage() {
         <MasterNoticeBanner notice={notice} onDismiss={() => setNotice(null)} />
 
         <StocksFilterBar
-          activeCount={(search.trim() ? 1 : 0) + (statusFilter !== "all" ? 1 : 0)}
+          activeCount={
+            (search.trim() ? 1 : 0) +
+            (statusFilter !== "all" ? 1 : 0) +
+            (categoryId !== null ? 1 : 0) +
+            (uomId !== null ? 1 : 0)
+          }
+          categoryOptions={categoryOptions}
+          draftCategoryId={draftCategoryId}
           draftSearch={draftSearch}
           draftStatus={draftStatus}
+          draftUomId={draftUomId}
+          onCategoryChange={setDraftCategoryId}
           onReset={handleResetFilter}
           onSearchChange={setDraftSearch}
           onStatusChange={setDraftStatus}
           onSubmit={handleApplyFilter}
+          onUomChange={setDraftUomId}
+          uomOptions={uomOptions}
         />
 
         <StocksDataView
           canManage={canManage}
           isLoading={isLoading}
           items={filteredItems}
+          limit={limit}
+          offset={offset}
+          onLimitChange={(nextLimit) => {
+            setLimit(nextLimit);
+            setOffset(0);
+          }}
+          onOffsetChange={setOffset}
           onOpenDetail={setDetailTarget}
           onOpenEdit={openEditDialog}
           onOpenToggleStatus={(item) => {
@@ -415,6 +461,7 @@ export function StocksPage() {
             setConfirmTarget(item);
           }}
           onResetFilters={handleResetFilter}
+          total={effectiveTotal}
         />
       </div>
 

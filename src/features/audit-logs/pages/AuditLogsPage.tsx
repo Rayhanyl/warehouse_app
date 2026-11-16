@@ -1,5 +1,6 @@
 import { type FormEvent, useState } from "react";
 import axios from "axios";
+import { toast } from "sonner";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { useIsMobile } from "@/hooks/useIsMobile";
 import { extractApiErrorInfo } from "@/lib/errors";
@@ -52,8 +53,16 @@ export function AuditLogsPage() {
 
   function applyFilters(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (
+      draftFilters.date_from &&
+      draftFilters.date_to &&
+      draftFilters.date_from > draftFilters.date_to
+    ) {
+      toast.error("Tanggal mulai tidak boleh lebih akhir dari tanggal akhir.");
+      return;
+    }
     setOffset(0);
-    setFilters(draftFilters);
+    setFilters({ ...draftFilters, search: draftFilters.search.trim() });
   }
 
   function resetFilters() {

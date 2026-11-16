@@ -1,6 +1,6 @@
 import { type FormEvent, useEffect, useState } from "react";
 import { ChevronLeft, Plus } from "lucide-react";
-import { Link, Navigate, useLocation, useNavigate, useParams } from "react-router-dom";
+import { Link, Navigate, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { useIsMobile } from "@/hooks/useIsMobile";
@@ -26,14 +26,58 @@ import type {
   PurchaseOrder,
   PurchaseOrderCreatePayload,
   PurchaseOrderLine,
+  PurchaseOrderListParams,
+  PurchaseOrderSortField,
+  PurchaseOrderStatus,
   PurchaseOrderUpdatePayload,
+  SortDirection,
 } from "../types";
+
+function parsePoParamsFromSearch(searchParams: URLSearchParams): PurchaseOrderListParams {
+  const offset = Number(searchParams.get("offset") ?? PO_INITIAL_PARAMS.offset);
+  const supplierId = searchParams.get("supplier_id");
+  const warehouseId = searchParams.get("warehouse_id");
+  return {
+    ...PO_INITIAL_PARAMS,
+    offset: Number.isFinite(offset) && offset >= 0 ? offset : 0,
+    search: searchParams.get("search") ?? "",
+    status: (searchParams.get("status") as PurchaseOrderStatus | "all") || "all",
+    supplier_id: supplierId ? Number(supplierId) : null,
+    warehouse_id: warehouseId ? Number(warehouseId) : null,
+    date_from: searchParams.get("date_from") ?? "",
+    date_to: searchParams.get("date_to") ?? "",
+    overdue_only: searchParams.get("overdue_only") === "true",
+    sort_by: (searchParams.get("sort_by") as PurchaseOrderSortField) || PO_INITIAL_PARAMS.sort_by,
+    sort_dir: (searchParams.get("sort_dir") as SortDirection) || PO_INITIAL_PARAMS.sort_dir,
+  };
+}
+
+function buildPoSearchParams(params: PurchaseOrderListParams): URLSearchParams {
+  const next = new URLSearchParams();
+  if (params.search.trim()) next.set("search", params.search.trim());
+  if (params.status !== "all") next.set("status", params.status);
+  if (params.supplier_id) next.set("supplier_id", String(params.supplier_id));
+  if (params.warehouse_id) next.set("warehouse_id", String(params.warehouse_id));
+  if (params.date_from) next.set("date_from", params.date_from);
+  if (params.date_to) next.set("date_to", params.date_to);
+  if (params.overdue_only) next.set("overdue_only", "true");
+  if (params.sort_by !== PO_INITIAL_PARAMS.sort_by) next.set("sort_by", params.sort_by);
+  if (params.sort_dir !== PO_INITIAL_PARAMS.sort_dir) next.set("sort_dir", params.sort_dir);
+  if (params.offset > 0) next.set("offset", String(params.offset));
+  return next;
+}
 
 export function PurchaseOrdersPage() {
   const navigate = useNavigate();
   const location = useLocation();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { can } = usePermission();
-  const { filterWarehouseChoices, resolveEffectiveWarehouseFilter } = useWarehouseScope();
+  const {
+    showWarehouseFilter,
+    isTopbarWarehouseLocked,
+    filterWarehouseChoices,
+    resolveEffectiveWarehouseFilter,
+  } = useWarehouseScope();
   const canCreate = can("po:create");
   const canApproveL1 = can("po:approve_l1");
   const canApproveL2 = can("po:approve_l2");
@@ -41,8 +85,12 @@ export function PurchaseOrdersPage() {
   const canCancel = can("po:cancel");
   const canClose = can("po:close");
 
-  const [params, setParams] = useState(PO_INITIAL_PARAMS);
-  const [draftParams, setDraftParams] = useState(PO_INITIAL_PARAMS);
+  const [params, setParams] = useState<PurchaseOrderListParams>(() =>
+    parsePoParamsFromSearch(searchParams),
+  );
+  const [draftParams, setDraftParams] = useState<PurchaseOrderListParams>(() =>
+    parsePoParamsFromSearch(searchParams),
+  );
   const openPoIdFromState =
     typeof (location.state as { openPurchaseOrderId?: unknown } | null)?.openPurchaseOrderId ===
     "number"
@@ -74,20 +122,21 @@ export function PurchaseOrdersPage() {
 
   const items = data?.items ?? [];
   const total = data?.total ?? 0;
+  const effectiveFilterWarehouse = showWarehouseFilter ? effectiveWarehouseId : null;
   const hasFilters = Boolean(
-    params.search ||
+    params.search.trim() ||
       params.status !== "all" ||
       params.supplier_id ||
-      params.warehouse_id ||
+      effectiveFilterWarehouse ||
       params.date_from ||
       params.date_to ||
       params.overdue_only,
   );
   const activeFilterCount = [
-    params.search,
+    params.search.trim(),
     params.status !== "all",
     params.supplier_id,
-    params.warehouse_id,
+    effectiveFilterWarehouse,
     params.date_from,
     params.date_to,
     params.overdue_only,
@@ -95,12 +144,27 @@ export function PurchaseOrdersPage() {
 
   function applyFilters(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setParams({ ...draftParams, offset: 0 });
+    if (
+      draftParams.date_from &&
+      draftParams.date_to &&
+      draftParams.date_from > draftParams.date_to
+    ) {
+      toast.error("Tanggal mulai tidak boleh lebih akhir dari tanggal akhir.");
+      return;
+    }
+    const nextParams = {
+      ...draftParams,
+      search: draftParams.search.trim(),
+      offset: 0,
+    };
+    setParams(nextParams);
+    setSearchParams(buildPoSearchParams(nextParams), { replace: true });
   }
 
   function resetFilters() {
     setDraftParams(PO_INITIAL_PARAMS);
     setParams(PO_INITIAL_PARAMS);
+    setSearchParams(new URLSearchParams(), { replace: true });
   }
 
   function openAction(
@@ -174,9 +238,12 @@ export function PurchaseOrdersPage() {
         <PurchaseOrderFilterBar
           activeCount={activeFilterCount}
           draftParams={draftParams}
+          effectiveWarehouseId={effectiveWarehouseId}
+          isTopbarWarehouseLocked={isTopbarWarehouseLocked}
           onDraftChange={setDraftParams}
           onReset={resetFilters}
           onSubmit={applyFilters}
+          showWarehouseFilter={showWarehouseFilter}
           suppliers={references.data?.suppliers ?? []}
           warehouses={filterWarehouseChoices(references.data?.warehouses ?? [])}
         />
@@ -191,7 +258,11 @@ export function PurchaseOrdersPage() {
           items={items}
           limit={params.limit}
           offset={params.offset}
-          onPageChange={(nextOffset) => setParams((current) => ({ ...current, offset: nextOffset }))}
+          onPageChange={(nextOffset) => {
+            const nextParams = { ...params, offset: nextOffset };
+            setParams(nextParams);
+            setSearchParams(buildPoSearchParams(nextParams), { replace: true });
+          }}
           onResetFilters={resetFilters}
           onRetry={() => void refetch()}
           onSelectDetail={setDetailId}
@@ -212,7 +283,7 @@ export function PurchaseOrdersPage() {
           onClose={() => setDetailId(null)}
           onEdit={(po) => {
             setDetailId(null);
-            navigate(`${basePath}/${po.id}/edit`);
+            navigate(`${basePath}/${po.id}/edit${location.search}`);
           }}
           purchaseOrder={detail.data}
         />
@@ -304,9 +375,10 @@ export function PurchaseOrderEditPage() {
   const basePath = location.pathname.startsWith("/purchasing")
     ? "/purchasing/purchase-orders"
     : "/purchase-orders";
+  const returnListPath = `${basePath}${location.search}`;
 
   if (!can("po:create") || validId === null) {
-    return <Navigate replace to={basePath} />;
+    return <Navigate replace to={returnListPath} />;
   }
 
   async function updateDraft(payload: PurchaseOrderCreatePayload) {
@@ -325,7 +397,7 @@ export function PurchaseOrderEditPage() {
         payload: updatePayload,
       });
       toast.success(`Draft ${updated.po_number} berhasil diperbarui.`);
-      navigate(basePath, { replace: true, state: { openPurchaseOrderId: updated.id } });
+      navigate(returnListPath, { replace: true, state: { openPurchaseOrderId: updated.id } });
     } catch (updateError) {
       const mapped = mapPurchaseOrderError(
         updateError,
@@ -342,7 +414,7 @@ export function PurchaseOrderEditPage() {
         action={
           <Link
             className="inline-flex min-h-11 items-center gap-2 rounded-[var(--radius-md)] border border-line-500 bg-surface-0 px-4 text-sm font-semibold text-ink-950 hover:bg-canvas-50 focus:outline-none focus:ring-2 focus:ring-teal-600"
-            to={basePath}
+            to={returnListPath}
           >
             <ChevronLeft aria-hidden="true" size={17} />
             Kembali ke daftar
@@ -371,7 +443,7 @@ export function PurchaseOrderEditPage() {
           isReferencesError={references.isError}
           isReferencesLoading={references.isLoading}
           isSubmitting={updateMutation.isPending}
-          onClose={() => navigate(basePath)}
+          onClose={() => navigate(returnListPath)}
           onRetryReferences={() => void references.refetch()}
           onSubmit={updateDraft}
           references={references.data}

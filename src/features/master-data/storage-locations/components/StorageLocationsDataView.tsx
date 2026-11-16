@@ -1,10 +1,13 @@
 import { Eye, Pencil, RotateCcw, Trash2 } from "lucide-react";
 import { ResponsiveDataView, StatusBadge } from "@/components/shared";
+import { MasterDataPagination } from "../../components/MasterDataPagination";
 import type { StorageLocationRecord } from "../types";
 
 interface StorageLocationsDataViewProps {
   filteredLocations: StorageLocationRecord[];
   totalLocationsCount: number;
+  limit?: number;
+  offset?: number;
   hasActiveFilters: boolean;
   isLoading: boolean;
   canManage: boolean;
@@ -13,6 +16,8 @@ interface StorageLocationsDataViewProps {
   onOpenEdit: (location: StorageLocationRecord) => void;
   onOpenDeactivate: (location: StorageLocationRecord) => void;
   onReactivate: (location: StorageLocationRecord) => void;
+  onLimitChange?: (nextLimit: number) => void;
+  onOffsetChange?: (nextOffset: number) => void;
 }
 
 function formatShortDate(iso: string): string {
@@ -29,6 +34,8 @@ function formatShortDate(iso: string): string {
 export function StorageLocationsDataView({
   filteredLocations,
   totalLocationsCount,
+  limit = 20,
+  offset = 0,
   hasActiveFilters,
   isLoading,
   canManage,
@@ -37,6 +44,8 @@ export function StorageLocationsDataView({
   onOpenEdit,
   onOpenDeactivate,
   onReactivate,
+  onLimitChange = () => {},
+  onOffsetChange = () => {},
 }: StorageLocationsDataViewProps) {
   return (
     <>
@@ -226,19 +235,17 @@ export function StorageLocationsDataView({
         )}
       />
 
-      <div className="flex flex-col gap-2 border-t border-slate-200 bg-slate-50 px-4 py-3 text-xs text-slate-600 sm:flex-row sm:items-center sm:justify-between">
-        <span>
-          Menampilkan{" "}
-          <strong className="font-semibold text-slate-900">
-            {filteredLocations.length}
-          </strong>{" "}
-          dari{" "}
-          <strong className="font-semibold text-slate-900">
-            {totalLocationsCount}
-          </strong>{" "}
-          lokasi penyimpanan.
-        </span>
-      </div>
+      {!isLoading && filteredLocations.length > 0 && (
+        <MasterDataPagination
+          itemLabel="lokasi penyimpanan"
+          limit={limit}
+          offset={offset}
+          onLimitChange={onLimitChange}
+          onOffsetChange={onOffsetChange}
+          pageSize={filteredLocations.length}
+          total={totalLocationsCount}
+        />
+      )}
     </>
   );
 }

@@ -17,6 +17,8 @@ export function OpnamesFilterBar({
   draft,
   effectiveWarehouseId,
   canAccessAllWarehouses,
+  showWarehouseFilter = true,
+  isTopbarWarehouseLocked = false,
   scopedWarehouses,
   isRefsError,
   onDraftChange,
@@ -28,6 +30,8 @@ export function OpnamesFilterBar({
   draft: OpnameFilters;
   effectiveWarehouseId: number | null;
   canAccessAllWarehouses: boolean;
+  showWarehouseFilter?: boolean;
+  isTopbarWarehouseLocked?: boolean;
   scopedWarehouses: { id: number; code: string; name: string }[];
   isRefsError: boolean;
   onDraftChange: (updater: (current: OpnameFilters) => OpnameFilters) => void;
@@ -84,27 +88,34 @@ export function OpnamesFilterBar({
           </select>
         </label>
 
-        <label className="text-sm font-semibold text-ink-950">
-          Gudang
-          <select
-            className={OPNAME_FIELD_CLASS}
-            disabled={!canAccessAllWarehouses && scopedWarehouses.length <= 1}
-            onChange={(event) =>
-              onDraftChange((current) => ({
-                ...current,
-                warehouse_id: event.target.value ? Number(event.target.value) : null,
-              }))
-            }
-            value={effectiveWarehouseId ?? ""}
-          >
-            <option value="">{canAccessAllWarehouses ? "Semua gudang" : "Gudang ditugaskan"}</option>
-            {scopedWarehouses.map((warehouse) => (
-              <option key={warehouse.id} value={warehouse.id}>
-                {warehouse.code} · {warehouse.name}
-              </option>
-            ))}
-          </select>
-        </label>
+        {showWarehouseFilter && (
+          <label className="text-sm font-semibold text-ink-950">
+            Gudang
+            <select
+              className={`${OPNAME_FIELD_CLASS} disabled:cursor-not-allowed disabled:bg-canvas-50 disabled:text-slate-500`}
+              disabled={isTopbarWarehouseLocked}
+              onChange={(event) =>
+                onDraftChange((current) => ({
+                  ...current,
+                  warehouse_id: event.target.value ? Number(event.target.value) : null,
+                }))
+              }
+              value={isTopbarWarehouseLocked ? (effectiveWarehouseId ?? "") : (draft.warehouse_id ?? "")}
+            >
+              <option value="">{canAccessAllWarehouses ? "Semua gudang" : "Semua gudang saya"}</option>
+              {scopedWarehouses.map((warehouse) => (
+                <option key={warehouse.id} value={warehouse.id}>
+                  {warehouse.code} · {warehouse.name}
+                </option>
+              ))}
+            </select>
+            {isTopbarWarehouseLocked && (
+              <span className="mt-1 block text-[11px] font-medium text-teal-700">
+                Mengikuti filter gudang Top Bar
+              </span>
+            )}
+          </label>
+        )}
 
         <label className="text-sm font-semibold text-ink-950">
           Tanggal mulai

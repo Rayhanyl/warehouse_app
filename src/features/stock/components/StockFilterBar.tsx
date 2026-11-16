@@ -11,6 +11,8 @@ interface StockFilterBarProps {
   isWarehouseView: boolean;
   isSummaryView: boolean;
   canAccessAllWarehouses: boolean;
+  showWarehouseFilter?: boolean;
+  isTopbarWarehouseLocked?: boolean;
   scopedWarehouseOptions: [string, string][];
   onDraftChange: (next: StockListParams) => void;
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
@@ -26,12 +28,34 @@ export function StockFilterBar({
   isWarehouseView,
   isSummaryView,
   canAccessAllWarehouses,
+  showWarehouseFilter = true,
+  isTopbarWarehouseLocked = false,
   scopedWarehouseOptions,
   onDraftChange,
   onSubmit,
   onReset,
   onOpenLookup,
 }: StockFilterBarProps) {
+  const warehouseFilterElement = !showWarehouseFilter ? null : canAccessAllWarehouses ? (
+    <StockFilterField
+      disabled={isTopbarWarehouseLocked}
+      helperText={isTopbarWarehouseLocked ? "Mengikuti filter gudang Top Bar" : undefined}
+      label="Gudang ID"
+      onChange={(value) => onDraftChange({ ...draft, warehouse_id: value })}
+      type="number"
+      value={isTopbarWarehouseLocked ? effectiveWarehouseId : draft.warehouse_id}
+    />
+  ) : (
+    <StockFilterSelect
+      disabled={isTopbarWarehouseLocked}
+      helperText={isTopbarWarehouseLocked ? "Mengikuti filter gudang Top Bar" : undefined}
+      label="Gudang"
+      onChange={(value) => onDraftChange({ ...draft, warehouse_id: value })}
+      options={scopedWarehouseOptions}
+      value={isTopbarWarehouseLocked ? effectiveWarehouseId : draft.warehouse_id}
+    />
+  );
+
   return (
     <CollapsibleFilterPanel
       activeCount={activeCount}
@@ -59,21 +83,7 @@ export function StockFilterBar({
 
         {isLedgerView ? (
           <>
-            {canAccessAllWarehouses ? (
-              <StockFilterField
-                label="Gudang ID"
-                onChange={(value) => onDraftChange({ ...draft, warehouse_id: value })}
-                type="number"
-                value={draft.warehouse_id}
-              />
-            ) : (
-              <StockFilterSelect
-                label="Gudang"
-                onChange={(value) => onDraftChange({ ...draft, warehouse_id: value })}
-                options={scopedWarehouseOptions}
-                value={effectiveWarehouseId || draft.warehouse_id}
-              />
-            )}
+            {warehouseFilterElement}
             <StockFilterField
               label="Lokasi ID"
               onChange={(value) => onDraftChange({ ...draft, location_id: value })}
@@ -131,21 +141,7 @@ export function StockFilterBar({
           </>
         ) : (
           <>
-            {canAccessAllWarehouses ? (
-              <StockFilterField
-                label="Gudang ID"
-                onChange={(value) => onDraftChange({ ...draft, warehouse_id: value })}
-                type="number"
-                value={draft.warehouse_id}
-              />
-            ) : (
-              <StockFilterSelect
-                label="Gudang"
-                onChange={(value) => onDraftChange({ ...draft, warehouse_id: value })}
-                options={scopedWarehouseOptions}
-                value={effectiveWarehouseId || draft.warehouse_id}
-              />
-            )}
+            {warehouseFilterElement}
             {!isWarehouseView && !isSummaryView && (
               <StockFilterField
                 label="Lokasi ID"
@@ -217,22 +213,30 @@ function StockFilterField({
   value,
   onChange,
   type = "number",
+  disabled = false,
+  helperText,
 }: {
   label: string;
   value: string;
   onChange: (value: string) => void;
   type?: "number" | "date";
+  disabled?: boolean;
+  helperText?: string;
 }) {
   return (
     <label>
       <span className="mb-1.5 block text-xs font-semibold text-slate-700">{label}</span>
       <input
-        className="h-11 w-full rounded-[var(--radius-md)] border border-line-500 px-3 text-sm text-ink-950"
+        className="h-11 w-full rounded-[var(--radius-md)] border border-line-500 px-3 text-sm text-ink-950 disabled:cursor-not-allowed disabled:bg-canvas-50 disabled:text-slate-500"
+        disabled={disabled}
         min={type === "number" ? 1 : undefined}
         onChange={(event) => onChange(event.target.value)}
         type={type}
         value={value}
       />
+      {helperText && (
+        <span className="mt-1 block text-[11px] font-medium text-teal-700">{helperText}</span>
+      )}
     </label>
   );
 }
@@ -242,17 +246,22 @@ function StockFilterSelect({
   value,
   onChange,
   options,
+  disabled = false,
+  helperText,
 }: {
   label: string;
   value: string;
   onChange: (value: string) => void;
   options: [string, string][];
+  disabled?: boolean;
+  helperText?: string;
 }) {
   return (
     <label>
       <span className="mb-1.5 block text-xs font-semibold text-slate-700">{label}</span>
       <select
-        className="h-11 w-full rounded-[var(--radius-md)] border border-line-500 px-3 text-sm text-ink-950"
+        className="h-11 w-full rounded-[var(--radius-md)] border border-line-500 px-3 text-sm text-ink-950 disabled:cursor-not-allowed disabled:bg-canvas-50 disabled:text-slate-500"
+        disabled={disabled}
         onChange={(event) => onChange(event.target.value)}
         value={value}
       >
@@ -262,6 +271,9 @@ function StockFilterSelect({
           </option>
         ))}
       </select>
+      {helperText && (
+        <span className="mt-1 block text-[11px] font-medium text-teal-700">{helperText}</span>
+      )}
     </label>
   );
 }

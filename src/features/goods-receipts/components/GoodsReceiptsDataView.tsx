@@ -16,6 +16,10 @@ export function GoodsReceiptsDataView({
   isError,
   isMobile,
   canManage,
+  warehouses = [],
+  showWarehouseFilter = false,
+  isTopbarWarehouseLocked = false,
+  effectiveWarehouseId = null,
   onDraftChange,
   onApplyFilters,
   onResetFilters,
@@ -35,6 +39,10 @@ export function GoodsReceiptsDataView({
   isError: boolean;
   isMobile: boolean;
   canManage: boolean;
+  warehouses?: { id: number; code: string; name: string; is_active?: boolean }[];
+  showWarehouseFilter?: boolean;
+  isTopbarWarehouseLocked?: boolean;
+  effectiveWarehouseId?: number | null;
   onDraftChange: (
     updater: (current: GoodsReceiptListParams) => GoodsReceiptListParams,
   ) => void;
@@ -94,6 +102,40 @@ export function GoodsReceiptsDataView({
               ))}
             </select>
           </label>
+          {showWarehouseFilter && (
+            <label className="text-sm font-semibold text-ink-950">
+              Gudang
+              <select
+                className="mt-2 h-11 w-full rounded-[var(--radius-md)] border border-line-500 bg-surface-0 px-3 text-sm font-normal text-ink-950 focus:border-teal-600 focus:outline-none focus:ring-2 focus:ring-teal-600/20 disabled:cursor-not-allowed disabled:bg-canvas-50 disabled:text-slate-500"
+                disabled={isTopbarWarehouseLocked}
+                onChange={(event) =>
+                  onDraftChange((current) => ({
+                    ...current,
+                    warehouse_id: event.target.value ? Number(event.target.value) : null,
+                  }))
+                }
+                value={
+                  isTopbarWarehouseLocked
+                    ? (effectiveWarehouseId ?? "")
+                    : (draftParams.warehouse_id ?? "")
+                }
+              >
+                <option value="">Semua gudang</option>
+                {warehouses
+                  .filter((wh) => wh.is_active !== false)
+                  .map((wh) => (
+                    <option key={wh.id} value={wh.id}>
+                      {wh.code} · {wh.name}
+                    </option>
+                  ))}
+              </select>
+              {isTopbarWarehouseLocked && (
+                <span className="mt-1 block text-[11px] font-medium text-teal-700">
+                  Mengikuti filter gudang Top Bar
+                </span>
+              )}
+            </label>
+          )}
           <label className="text-sm font-semibold text-ink-950">
             Tanggal mulai
             <input
